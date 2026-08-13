@@ -1,5 +1,7 @@
 package com.hilotspa.backend.services;
 
+import java.util.UUID;
+
 import com.hilotspa.backend.entities.User;
 import com.hilotspa.backend.model.UserModel;
 import com.hilotspa.backend.repository.UserRepository;
@@ -35,7 +37,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserModel getUserById(Integer id) {
+    public UserModel getUserById(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return userTransform.transform(user);
@@ -49,7 +51,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserModel updateUser(Integer id, UserModel userModel) {
+    public UserModel updateUser(UUID id, UserModel userModel) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
@@ -65,7 +67,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteUser(Integer id) {
+    public void deleteUser(UUID id) {
         userRepository.deleteById(id);
     }
 }

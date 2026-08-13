@@ -1,13 +1,19 @@
 package com.hilotspa.backend.controller;
 
-import com.hilotspa.backend.model.PatientIntakeModel;
-import com.hilotspa.backend.services.PatientIntakeService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import java.util.UUID;
 
 import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.hilotspa.backend.model.PatientIntakeModel;
+import com.hilotspa.backend.services.PatientIntakeService;
 
 @RestController
 @RequestMapping("/api/v1/patient-intake")
@@ -17,13 +23,10 @@ public class PatientIntakeController {
     @Autowired
     private PatientIntakeService patientIntakeService;
 
-    @PostMapping
-    public ResponseEntity<PatientIntakeModel> createPatientIntake(@RequestBody PatientIntakeModel model) {
-        return new ResponseEntity<>(patientIntakeService.createPatientIntake(model), HttpStatus.CREATED);
-    }
+
 
     @GetMapping("/{id}")
-    public ResponseEntity<PatientIntakeModel> getPatientIntakeById(@PathVariable Integer id) {
+    public ResponseEntity<PatientIntakeModel> getPatientIntakeById(@PathVariable UUID id) {
         return ResponseEntity.ok(patientIntakeService.getPatientIntakeById(id));
     }
 
@@ -32,8 +35,4 @@ public class PatientIntakeController {
         return ResponseEntity.ok(patientIntakeService.getAllPatientIntakes());
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<PatientIntakeModel> updatePatientIntake(@PathVariable Integer id, @RequestBody PatientIntakeModel model) {
-        return ResponseEntity.ok(patientIntakeService.updatePatientIntake(id, model));
-    }
 }

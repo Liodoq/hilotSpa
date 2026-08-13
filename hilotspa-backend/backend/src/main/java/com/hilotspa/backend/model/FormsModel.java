@@ -1,16 +1,19 @@
 package com.hilotspa.backend.model;
 
+import java.util.UUID;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.hibernate.annotations.CreationTimestamp;
 
 import lombok.Data;
-import java.time.LocalDateTime;
-
 @Data
 public class FormsModel {
-    private Integer id;
-    private Integer userId;
-    private Integer patientIntakeId;
-    private Integer branchId;
+    private UUID id;
+    private UUID userId;
+    private UUID branchId;
     private String mainComplaint;
     private String mainComplaintDuration;
     private boolean hasTherapy;
@@ -19,4 +22,6 @@ public class FormsModel {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    private List<PatientIntakeModel> painPoints = new ArrayList<>();
 }

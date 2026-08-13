@@ -1,17 +1,26 @@
 package com.hilotspa.backend.entities;
 
+import java.util.UUID;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.hibernate.annotations.CreationTimestamp;
 
-import jakarta.persistence.Entity;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import java.time.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -19,19 +28,19 @@ import lombok.Data;
 public class Forms {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
   
     @ManyToOne  
     @JoinColumn(name = "users_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User user;
 
     @ManyToOne
-    @JoinColumn(name = "patient_intake_id", nullable = false)
-    private PatientIntake patientIntake;
-
-    @ManyToOne
     @JoinColumn(name = "branch_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Branch branch;
 
     private String mainComplaint;
@@ -48,6 +57,10 @@ public class Forms {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @OneToMany(mappedBy = "form", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<PatientIntake> painPoints = new ArrayList<>();
 
 
 

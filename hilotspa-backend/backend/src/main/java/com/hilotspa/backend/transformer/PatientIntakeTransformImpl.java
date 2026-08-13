@@ -1,7 +1,8 @@
 package com.hilotspa.backend.transformer;
 import org.springframework.stereotype.Component;
-import com.hilotspa.backend.entities.*;
-import com.hilotspa.backend.model.*;
+
+import com.hilotspa.backend.entities.PatientIntake;
+import com.hilotspa.backend.model.PatientIntakeModel;
 
 
 @Component
@@ -15,6 +16,7 @@ public class PatientIntakeTransformImpl implements PatientIntakeTransform {
         patientIntakeModel.setCoordinateX(patientIntakeEntity.getCoordinateX());
         patientIntakeModel.setCoordinateY(patientIntakeEntity.getCoordinateY());
         patientIntakeModel.setPainScore(patientIntakeEntity.getPainScore());
+        patientIntakeModel.setBodyView(patientIntakeEntity.getBodyView());
         patientIntakeModel.setComplaintType(patientIntakeEntity.getComplaintType());
         return patientIntakeModel;
     }
@@ -29,6 +31,7 @@ public class PatientIntakeTransformImpl implements PatientIntakeTransform {
         patientIntakeEntity.setCoordinateY(patientIntakeModel.getCoordinateY());
         patientIntakeEntity.setPainScore(patientIntakeModel.getPainScore());
         patientIntakeEntity.setComplaintType(patientIntakeModel.getComplaintType());
+        patientIntakeEntity.setBodyView(patientIntakeModel.getBodyView());
         return patientIntakeEntity;
     }
 }

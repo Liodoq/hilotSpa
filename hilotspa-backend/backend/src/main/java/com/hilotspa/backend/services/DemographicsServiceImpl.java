@@ -1,5 +1,7 @@
 package com.hilotspa.backend.services;
 
+import java.util.UUID;
+
 import com.hilotspa.backend.entities.Demographics;
 import com.hilotspa.backend.model.DemographicsModel;
 import com.hilotspa.backend.repository.DemographicsRepository;
@@ -34,7 +36,7 @@ public class DemographicsServiceImpl implements DemographicsService {
     }
 
     @Override
-    public DemographicsModel getDemographicsById(Integer id) {
+    public DemographicsModel getDemographicsById(UUID id) {
         Demographics demographics = demographicsRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Demographics not found"));
         return demographicsTransform.transform(demographics);
@@ -48,7 +50,7 @@ public class DemographicsServiceImpl implements DemographicsService {
     }
 
     @Override
-    public DemographicsModel updateDemographics(Integer id, DemographicsModel model) {
+    public DemographicsModel updateDemographics(UUID id, DemographicsModel model) {
         Demographics demographics = demographicsRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Demographics not found"));
         

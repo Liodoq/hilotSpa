@@ -1,18 +1,30 @@
 package com.hilotspa.backend.entities;
 
-import jakarta.persistence.*;
-import lombok.Data;
+import java.util.UUID;
+
 import java.time.LocalDateTime;
+
 import org.hibernate.annotations.CreationTimestamp;
-import java.util.List;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @Data
 @Entity
 @Table(name = "users")
 public class User {
     @Id 
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(nullable = false)
     private String lastName;
@@ -39,6 +51,8 @@ public class User {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToOne(mappedBy = "users", cascade = CascadeType.ALL)
-    private List<Demographics> demographics;
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Demographics demographics;
 }

@@ -1,9 +1,13 @@
 package com.hilotspa.backend.entities;
 
+import java.util.UUID;
+
 import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import java.time.*;
 
 @Data
@@ -12,11 +16,13 @@ import java.time.*;
 public class Demographics{
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @OneToOne
-    @JoinColumn(name = "usersId")
+    @JoinColumn(name = "users_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User user;
 
     @Column(nullable = false)

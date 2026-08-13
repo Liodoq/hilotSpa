@@ -1,11 +1,13 @@
 package com.hilotspa.backend.services;
 
+import java.util.UUID;
+
 import com.hilotspa.backend.model.FormsModel;
 import java.util.List;
 
 public interface FormsService {
     FormsModel createForm(FormsModel formsModel);
-    FormsModel getFormById(Integer id);
+    FormsModel getFormById(UUID id);
     List<FormsModel> getAllForms();
-    FormsModel updateForm(Integer id, FormsModel formsModel);
+    FormsModel updateForm(UUID id, FormsModel formsModel);
 }

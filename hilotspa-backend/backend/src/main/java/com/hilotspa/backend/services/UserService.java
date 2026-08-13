@@ -1,12 +1,14 @@
 package com.hilotspa.backend.services;
 
+import java.util.UUID;
+
 import com.hilotspa.backend.model.UserModel;
 import java.util.List;
 
 public interface UserService {
     UserModel createUser(UserModel userModel);
-    UserModel getUserById(Integer id);
+    UserModel getUserById(UUID id);
     List<UserModel> getAllUsers();
-    UserModel updateUser(Integer id, UserModel userModel);
-    void deleteUser(Integer id);
+    UserModel updateUser(UUID id, UserModel userModel);
+    void deleteUser(UUID id);
 }

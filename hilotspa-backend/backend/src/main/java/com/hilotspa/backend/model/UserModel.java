@@ -1,11 +1,13 @@
 package com.hilotspa.backend.model;
 
+import java.util.UUID;
+
 import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
 public class UserModel {
-    private Integer id;
+    private UUID id;
 
     private String lastName;
 

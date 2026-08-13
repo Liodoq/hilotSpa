@@ -31,3 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Secrets ###
+.env
+!.env.example
+
+### FUSE orphans (created when files are edited while open) ###
+.fuse_hidden*

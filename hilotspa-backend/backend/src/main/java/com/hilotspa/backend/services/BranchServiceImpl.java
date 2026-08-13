@@ -1,5 +1,7 @@
 package com.hilotspa.backend.services;
 
+import java.util.UUID;
+
 import com.hilotspa.backend.entities.Branch;
 import com.hilotspa.backend.model.BranchModel;
 import com.hilotspa.backend.repository.BranchRepository;
@@ -29,7 +31,7 @@ public class BranchServiceImpl implements BranchService {
     }
 
     @Override
-    public BranchModel getBranchById(Integer id) {
+    public BranchModel getBranchById(UUID id) {
         Branch branch = branchRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Branch not found"));
         return branchTransform.transform(branch);
@@ -43,7 +45,7 @@ public class BranchServiceImpl implements BranchService {
     }
 
     @Override
-    public BranchModel updateBranch(Integer id, BranchModel model) {
+    public BranchModel updateBranch(UUID id, BranchModel model) {
         Branch branch = branchRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Branch not found"));
         
