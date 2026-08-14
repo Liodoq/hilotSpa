@@ -1,10 +1,13 @@
 package com.hilotspa.backend.entities;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 import jakarta.persistence.Column;
-import jakarta.persistence.EnumType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,35 +21,35 @@ import lombok.ToString;
 
 @Data
 @Entity
-@Table(name = "patient_intake")
-public class PatientIntake{
-    
+@Table(name = "therapist")
+public class Therapist {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false)
-    private String anatomicalRegion;
+    private String firstName;
 
+    @Column(nullable = false)
+    private String lastName;
+
+    // A therapist works at exactly one branch. This is what gives that branch
+    // node sole authority to book them — no cross-node conflict is possible.
     @ManyToOne(optional = false)
-    @JoinColumn(name = "form_id", nullable = false)
+    @JoinColumn(name = "branch_id", nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private Forms form;
+    private Branch branch;
 
-    @Column(nullable = false)
-    private String bodyView;
-
-    @Column(nullable = false)
-    private Integer coordinateX;
-
-    @Column(nullable = false)
-    private Integer coordinateY;
-
-    @Column(nullable = false)
-    private Integer painScore;
-
-    @Column
     @Enumerated(EnumType.STRING)
-    private ComplaintType complaintType;
+    @Column(nullable = false)
+    private TherapistStatus status = TherapistStatus.OFF_DUTY;
+
+    @Column(nullable = false)
+    private boolean active = true;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 }

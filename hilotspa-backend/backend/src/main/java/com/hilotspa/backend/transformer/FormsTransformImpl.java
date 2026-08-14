@@ -18,6 +18,7 @@ public class FormsTransformImpl implements FormsTransform {
         FormsModel formsModel = new FormsModel();
         formsModel.setId(formsEntity.getId());
         formsModel.setMainComplaint(formsEntity.getMainComplaint());
+        formsModel.setMainComplaintOther(formsEntity.getMainComplaintOther());
         formsModel.setMainComplaintDuration(formsEntity.getMainComplaintDuration());
         formsModel.setHasTherapy(formsEntity.isHasTherapy());
         formsModel.setStatus(formsEntity.getStatus());
@@ -44,6 +45,7 @@ public class FormsTransformImpl implements FormsTransform {
         if (formsModel == null) return null;
         Forms formsEntity = new Forms();
         formsEntity.setMainComplaint(formsModel.getMainComplaint());
+        formsEntity.setMainComplaintOther(formsModel.getMainComplaintOther());
         formsEntity.setMainComplaintDuration(formsModel.getMainComplaintDuration());
         formsEntity.setHasTherapy(formsModel.isHasTherapy());
         formsEntity.setStatus(formsModel.getStatus());

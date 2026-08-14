@@ -8,13 +8,16 @@ import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.hilotspa.backend.entities.ComplaintType;
+
 import lombok.Data;
 @Data
 public class FormsModel {
     private UUID id;
     private UUID userId;
     private UUID branchId;
-    private String mainComplaint;
+    private ComplaintType mainComplaint;
+    private String mainComplaintOther;
     private String mainComplaintDuration;
     private boolean hasTherapy;
     private String status;

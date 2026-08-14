@@ -78,6 +78,7 @@ public class FormsServiceImpl implements FormsService {
 
     private void applyFields(Forms form, FormsModel model) {
         form.setMainComplaint(model.getMainComplaint());
+        form.setMainComplaintOther(model.getMainComplaintOther());
         form.setMainComplaintDuration(model.getMainComplaintDuration());
         form.setHasTherapy(model.isHasTherapy());
         form.setStatus(model.getStatus());

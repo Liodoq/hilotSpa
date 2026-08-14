@@ -1,16 +1,18 @@
 package com.hilotspa.backend.services;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-import com.hilotspa.backend.entities.User;
-import com.hilotspa.backend.model.UserModel;
-import com.hilotspa.backend.repository.UserRepository;
-import com.hilotspa.backend.transformer.UserTransform;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import com.hilotspa.backend.entities.Branch;
+import com.hilotspa.backend.entities.User;
+import com.hilotspa.backend.model.UserModel;
+import com.hilotspa.backend.repository.BranchRepository;
+import com.hilotspa.backend.repository.UserRepository;
+import com.hilotspa.backend.transformer.UserTransform;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -20,6 +22,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserTransform userTransform;
+
+    @Autowired
+    private BranchRepository branchRepository;
 
     @Override
     public UserModel createUser(UserModel userModel) {
@@ -32,6 +37,14 @@ public class UserServiceImpl implements UserService {
         user.setAddress(userModel.getAddress());
         user.setEmail(userModel.getEmail());
         user.setRole(userModel.getRole());
+        if (userModel.getBranchId() != null) {
+            Branch branch = branchRepository.findById(userModel.getBranchId())
+                    .orElseThrow(() -> new RuntimeException("Branch not found"));
+            user.setBranch(branch);
+        } else {
+            user.setBranch(null);
+        }
+        
         
         return userTransform.transform(userRepository.save(user));
     }
@@ -62,6 +75,13 @@ public class UserServiceImpl implements UserService {
         user.setAddress(userModel.getAddress());
         user.setEmail(userModel.getEmail());
         user.setRole(userModel.getRole());
+        if (userModel.getBranchId() != null) {
+            Branch branch = branchRepository.findById(userModel.getBranchId())
+                    .orElseThrow(() -> new RuntimeException("Branch not found"));
+            user.setBranch(branch);
+        } else {
+            user.setBranch(null);
+        }
         
         return userTransform.transform(userRepository.save(user));
     }

@@ -2,6 +2,8 @@ package com.hilotspa.backend.model;
 
 import java.util.UUID;
 
+import com.hilotspa.backend.entities.ComplaintType;
+
 import lombok.Data;
 
 @Data
@@ -12,5 +14,5 @@ public class PatientIntakeModel {
     private Integer coordinateX;
     private Integer coordinateY;
     private Integer painScore;
-    private String complaintType;
+    private ComplaintType complaintType;
 }

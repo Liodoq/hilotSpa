@@ -1,11 +1,12 @@
 package com.hilotspa.backend.entities;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 import jakarta.persistence.Column;
-import jakarta.persistence.EnumType;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -18,35 +19,26 @@ import lombok.ToString;
 
 @Data
 @Entity
-@Table(name = "patient_intake")
-public class PatientIntake{
-    
+@Table(name = "room")
+public class Room {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false)
-    private String anatomicalRegion;
+    private String name;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "form_id", nullable = false)
+    @JoinColumn(name = "branch_id", nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private Forms form;
+    private Branch branch;
 
     @Column(nullable = false)
-    private String bodyView;
+    private boolean active = true;
 
-    @Column(nullable = false)
-    private Integer coordinateX;
-
-    @Column(nullable = false)
-    private Integer coordinateY;
-
-    @Column(nullable = false)
-    private Integer painScore;
-
-    @Column
-    @Enumerated(EnumType.STRING)
-    private ComplaintType complaintType;
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 }

@@ -1,9 +1,11 @@
 package com.hilotspa.backend.model;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.hilotspa.backend.entities.Role;
+
 import lombok.Data;
-import java.time.LocalDateTime;
 
 @Data
 public class UserModel {
@@ -21,7 +23,9 @@ public class UserModel {
 
     private String email;
 
-    private String role;
+    private Role role;
+
+    private UUID branchId;
 
     private LocalDateTime createdAt;
 }

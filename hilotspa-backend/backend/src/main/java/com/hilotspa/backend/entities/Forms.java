@@ -10,7 +10,9 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -43,7 +45,13 @@ public class Forms {
     @EqualsAndHashCode.Exclude
     private Branch branch;
 
-    private String mainComplaint;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ComplaintType mainComplaint;
+
+    // Free text. Only meaningful when mainComplaint == ComplaintType.OTHER.
+    @Column
+    private String mainComplaintOther;
 
     private String mainComplaintDuration;
 

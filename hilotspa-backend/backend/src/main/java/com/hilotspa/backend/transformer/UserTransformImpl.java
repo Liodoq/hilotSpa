@@ -1,8 +1,9 @@
 package com.hilotspa.backend.transformer;
 
 import org.springframework.stereotype.Component;
-import com.hilotspa.backend.entities.*;
-import com.hilotspa.backend.model.*;
+
+import com.hilotspa.backend.entities.User;
+import com.hilotspa.backend.model.UserModel;
 
 @Component
 public class UserTransformImpl implements UserTransform {
@@ -19,6 +20,9 @@ public class UserTransformImpl implements UserTransform {
         userModel.setEmail(userEntity.getEmail());
         userModel.setRole(userEntity.getRole());
         userModel.setCreatedAt(userEntity.getCreatedAt());
+        if (userEntity.getBranch() != null) {
+            userModel.setBranchId(userEntity.getBranch().getId());
+        }
         return userModel;
     }
 

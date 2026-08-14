@@ -1,8 +1,7 @@
 package com.hilotspa.backend.controller;
 
-import java.util.UUID;
-
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +20,7 @@ import com.hilotspa.backend.services.PatientIntakeService;
 public class PatientIntakeController {
 
     @Autowired
-    private PatientIntakeService patientIntakeService;
-
-
+    private PatientIntakeService patientIntakeService; 
 
     @GetMapping("/{id}")
     public ResponseEntity<PatientIntakeModel> getPatientIntakeById(@PathVariable UUID id) {
