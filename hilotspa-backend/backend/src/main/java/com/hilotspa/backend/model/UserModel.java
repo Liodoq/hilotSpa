@@ -27,5 +27,14 @@ public class UserModel {
 
     private UUID branchId;
 
+    private boolean enabled = true;
+
+    /**
+     * WRITE-ONLY. Accepted when an administrator creates or resets an account.
+     * UserTransform never populates it, so it is always null on the way out —
+     * a password must never travel back to a client.
+     */
+    private String password;
+
     private LocalDateTime createdAt;
 }

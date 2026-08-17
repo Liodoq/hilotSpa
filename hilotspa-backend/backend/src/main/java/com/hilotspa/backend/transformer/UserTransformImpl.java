@@ -19,6 +19,7 @@ public class UserTransformImpl implements UserTransform {
         userModel.setAddress(userEntity.getAddress());
         userModel.setEmail(userEntity.getEmail());
         userModel.setRole(userEntity.getRole());
+        userModel.setEnabled(userEntity.isEnabled());
         userModel.setCreatedAt(userEntity.getCreatedAt());
         if (userEntity.getBranch() != null) {
             userModel.setBranchId(userEntity.getBranch().getId());
