@@ -53,8 +53,23 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // --- Public ---
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST,   "/api/v1/branches/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,    "/api/v1/branches/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/branches/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST,   "/api/v1/massages/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,    "/api/v1/massages/**").hasRole("ADMIN")
+
+                .requestMatchers("/api/v1/patient-intake/**").hasAnyRole("STAFF", "ADMIN")
+                .requestMatchers("/api/v1/demographics/**").hasAnyRole("STAFF", "ADMIN")
+
+                .requestMatchers(HttpMethod.GET, "/api/v1/branches/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/v1/massages/**").authenticated()
+
                 .anyRequest().authenticated())
             .oauth2ResourceServer(o -> o.jwt(
                 jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
