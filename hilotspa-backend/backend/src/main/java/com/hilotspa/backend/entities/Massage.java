@@ -1,8 +1,7 @@
 package com.hilotspa.backend.entities;
 
-import java.util.UUID;
-
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -26,7 +25,7 @@ public class Massage {
     @Column(nullable = false)
     private Integer durationMinute;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = false)
     private BigDecimal price;
 
 }

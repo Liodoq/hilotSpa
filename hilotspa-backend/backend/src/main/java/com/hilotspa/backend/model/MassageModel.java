@@ -1,8 +1,7 @@
 package com.hilotspa.backend.model;
 
-import java.util.UUID;
-
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import lombok.Data;
 @Data
