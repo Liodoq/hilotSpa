@@ -5,11 +5,15 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.hilotspa.backend.config.CurrentUser;
 import com.hilotspa.backend.entities.Branch;
 import com.hilotspa.backend.entities.Forms;
 import com.hilotspa.backend.entities.PatientIntake;
+import com.hilotspa.backend.entities.Role;
 import com.hilotspa.backend.entities.User;
 import com.hilotspa.backend.model.FormsModel;
 import com.hilotspa.backend.model.PatientIntakeModel;
@@ -35,17 +39,48 @@ public class FormsServiceImpl implements FormsService {
 
     @Override
     public FormsModel createForm(FormsModel model) {
+        UUID actorId = CurrentUser.id()
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Not authenticated"));
+
+        //Form's owner
+        UUID ownerId;
+        UUID branchId;
+
+        if (CurrentUser.isAdmin()) {
+            // Administrator may record on behalf of anyone, at any branch.
+            ownerId = model.getUserId();
+            branchId = model.getBranchId();
+
+        } else if (CurrentUser.hasRole(Role.STAFF)) {
+            // Staff record intake for walk-in clients, but only at their own branch.
+            ownerId = model.getUserId();
+            branchId = CurrentUser.branchId()
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.FORBIDDEN, "Staff account has no branch assigned"));
+
+        } else {
+            // Customer: the form is theirs, whatever the body said.
+            ownerId = actorId;
+            branchId = model.getBranchId();
+        }
+
+        if (ownerId == null || branchId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "userId and branchId are required");
+        }
+
+        Branch branch = branchRepository.findById(branchId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Branch not found"));
+        User user = userRepository.findById(ownerId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "User not found"));
+
         Forms form = new Forms();
         applyFields(form, model);
-
-        Branch branch = branchRepository.findById(model.getBranchId())
-                .orElseThrow(() -> new RuntimeException("Branch not found"));
-        User user = userRepository.findById(model.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
         form.setBranch(branch);
         form.setUser(user);
-
         replacePainPoints(form, model.getPainPoints());
 
         return formsTransform.transform(formsRepository.save(form));
@@ -54,22 +89,44 @@ public class FormsServiceImpl implements FormsService {
     @Override
     public FormsModel getFormById(UUID id) {
         Forms form = formsRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Form not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Form not found"));
+        assertCanAccess(form);
         return formsTransform.transform(form);
     }
 
     @Override
     public List<FormsModel> getAllForms() {
-        return formsRepository.findAll().stream()
-                .map(formsTransform::transform)
-                .collect(Collectors.toList());
+        List<Forms> forms;
+
+        if (CurrentUser.isAdmin()) {
+            forms = formsRepository.findAll();
+
+        } else if (CurrentUser.hasRole(Role.STAFF)) {
+            UUID branchId = CurrentUser.branchId()
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.FORBIDDEN, "Staff account has no branch assigned"));
+            forms = formsRepository.findByBranchId(branchId);
+
+        } else {
+            UUID userId = CurrentUser.id()
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.UNAUTHORIZED, "Not authenticated"));
+            forms = formsRepository.findByUserId(userId);
+        }
+
+        return forms.stream().map(formsTransform::transform).collect(Collectors.toList());
     }
 
     @Override
     public FormsModel updateForm(UUID id, FormsModel model) {
         Forms form = formsRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Form not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Form not found"));
+        assertCanAccess(form);
 
+        // applyFields deliberately does not touch user or branch — ownership is
+        // set once, at creation, and cannot be reassigned by an update.
         applyFields(form, model);
         replacePainPoints(form, model.getPainPoints());
 
@@ -106,4 +163,31 @@ public class FormsServiceImpl implements FormsService {
             form.getPainPoints().add(point);
         }
     }
+
+    private void assertCanAccess(Forms form) {
+        if (CurrentUser.isAdmin()) {
+            return;
+        }
+
+        if (CurrentUser.hasRole(Role.STAFF)) {
+            boolean sameBranch = form.getBranch() != null
+                    && CurrentUser.branchId()
+                        .map(b -> b.equals(form.getBranch().getId()))
+                        .orElse(false);
+            if (sameBranch) {
+                return;
+            }
+        } else {
+            boolean owns = form.getUser() != null
+                    && CurrentUser.id()
+                        .map(u -> u.equals(form.getUser().getId()))
+                        .orElse(false);
+            if (owns) {
+                return;
+            }
+        }
+
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Form not found");
+    }
+    
 }
