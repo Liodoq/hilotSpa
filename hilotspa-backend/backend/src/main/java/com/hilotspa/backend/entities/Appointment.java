@@ -68,7 +68,6 @@ public class Appointment {
     @Column(nullable = false)
     private PaymentStatus paymentStatus = PaymentStatus.UNPAID;
 
-    /** Nullable: a staff-recorded walk-in has no online pre-assessment. */
     @ManyToOne
     @JoinColumn(name = "form_id")
     @ToString.Exclude
