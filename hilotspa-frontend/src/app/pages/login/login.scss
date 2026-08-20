@@ -1,0 +1,33 @@
+:host { display: block; }
+.split { min-height: 100dvh; display: grid; grid-template-columns: 1fr 1fr; }
+
+.pane { background: var(--color-cream); display: flex; align-items: center;
+        justify-content: center; padding: 64px 72px; }
+/* Figma: the left panel is 990 wide with 145px of padding, so the form column
+   is 700. Matching that keeps the proportions on a wide monitor. */
+.stack { width: 100%; max-width: 700px; display: flex; flex-direction: column; gap: 26px; }
+.rightish { display: flex; justify-content: flex-end; }
+.centre { text-align: center; }
+
+.divider { display: flex; align-items: center; gap: 16px; color: var(--color-ink-600); font-size: 19px; }
+.divider i { flex: 1; height: 1.5px; background: var(--color-line); }
+
+.photo {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end;
+  gap: 12px; padding: 72px; overflow: hidden;
+  /* Drop a photo at public/hero.jpg and it appears here. The gradient alone
+     still reads correctly if the file is missing. */
+  background-image:
+    linear-gradient(180deg, rgba(46,66,32,.20) 0%, rgba(46,66,32,.72) 55%, rgba(46,66,32,.95) 100%),
+    url('/hero.jpg');
+  background-color: var(--color-forest-900);
+  background-size: cover; background-position: center;
+}
+.quote { font-size: 40px; font-weight: 600; color: #fff; line-height: 1.35; margin: 0; }
+
+@media (max-width: 1000px) {
+  .split { grid-template-columns: 1fr; }
+  .photo { min-height: 260px; padding: 32px; }
+  .quote { font-size: 26px; }
+  .pane { padding: 40px 24px; }
+}

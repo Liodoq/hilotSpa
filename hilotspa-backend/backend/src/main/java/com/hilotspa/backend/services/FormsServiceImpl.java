@@ -139,6 +139,7 @@ public class FormsServiceImpl implements FormsService {
         form.setMainComplaintDuration(model.getMainComplaintDuration());
         form.setHasTherapy(model.isHasTherapy());
         form.setStatus(model.getStatus());
+        form.setIntent(model.getIntent());
         form.setRemarks(model.getRemarks());
     }
 

@@ -1,0 +1,35 @@
+<app-shell [step]="1" backLabel="Back to home" [nextDisabled]="!draft().intent"
+           (back)="leave()" (next)="next()" (exit)="leave()">
+
+  <div class="head">
+    <h1 class="t">What brings you in today?</h1>
+    <p class="s">Choose one. Your therapist reads this before your session starts.</p>
+  </div>
+
+  <div class="choices">
+    <button type="button" class="choice" [class.on]="draft().intent === 'PAIN'"
+            [attr.aria-pressed]="draft().intent === 'PAIN'" (click)="choose('PAIN')">
+      <span class="icon"><i></i></span>
+      <span class="badge">RECOMMENDED IF SOMETHING HURTS</span>
+      <span class="ct">I have a specific pain or complaint</span>
+      <span class="cb">You will mark where it hurts on a body diagram and answer a few short
+        questions. Your therapist sees the map before you sit down.</span>
+      <span class="cm">About 3 minutes</span>
+    </button>
+
+    <button type="button" class="choice" [class.on]="draft().intent === 'LEISURE'"
+            [attr.aria-pressed]="draft().intent === 'LEISURE'" (click)="choose('LEISURE')">
+      <span class="icon"><i></i></span>
+      <span class="ct">I am here to relax</span>
+      <span class="cb">Skip the pain map and go straight to our relaxation packages. We still
+        record your visit so your history stays complete.</span>
+      <span class="cm">About 30 seconds</span>
+    </button>
+  </div>
+
+  <div class="note">
+    <span class="b"></span>
+    Either answer records a completed assessment &mdash; that is what unlocks the booking
+    assistant. Choosing &ldquo;relax&rdquo; does not skip the record, only the questions.
+  </div>
+</app-shell>

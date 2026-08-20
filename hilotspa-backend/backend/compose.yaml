@@ -11,6 +11,11 @@ services:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   backend:
     build: .
@@ -18,18 +23,29 @@ services:
     restart: on-failure
     ports:
       - "${SERVER_PORT:-8080}:8080"
+
+    # Pass the WHOLE .env into the container. Listing variables one by one meant
+    # that every new secret had to be remembered in two places — and JWT_SECRET
+    # was not, so application.properties could not resolve
+    # hilotspa.jwt.secret=${JWT_SECRET}, the context failed to start, and
+    # restart: on-failure turned it into a silent crash loop with nothing
+    # listening on 8080.
+    env_file:
+      - .env
+
+    # These win over anything of the same name in .env (Compose gives
+    # `environment` precedence over `env_file`). They exist because the values
+    # that are correct on the host are wrong inside the compose network.
     environment:
-      # Inside the compose network the DB hostname is "db", not localhost.
-      DB_HOST: db
-      DB_PORT: 5432
+      DB_HOST: db          # .env says localhost, which is correct for run.ps1
+      DB_PORT: 5432        # the container talks to 5432 directly, not the published port
       DB_NAME: ${POSTGRES_DB}
       DB_USERNAME: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
-      NODE_ID: ${NODE_ID}
-      NODE_NAME: ${NODE_NAME}
-      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
+
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:

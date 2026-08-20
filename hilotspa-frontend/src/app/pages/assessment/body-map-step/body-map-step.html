@@ -1,0 +1,111 @@
+<app-shell [step]="3" [wide]="true" (back)="back()" (next)="next()" (exit)="leave()"
+           [hint]="draft().points.length + ' spot(s) marked. You can change them on the review step.'">
+
+  <div class="head">
+    <h1 class="t t-s">Circle the area of pain</h1>
+    <p class="s">Tap the body where it hurts. Add as many spots as you need &mdash; the bigger
+      the pain score, the bigger the circle.</p>
+  </div>
+
+  <div class="layout">
+    <div class="card maps">
+      <div class="editor">
+        @if (selected(); as p) {
+          <h2 class="etitle">Editing spot {{ indexOf(p.key) }}</h2>
+
+          <div class="field">
+            <label class="lab" for="region">Area</label>
+            <select id="region" class="input" [value]="p.region"
+                    (change)="update(p.key, { region: anyVal($event) })">
+              @for (r of regions; track r.value) {
+                <option [value]="r.value">{{ r.label }}</option>
+              }
+            </select>
+            <span class="help">Filled in from where you tapped. Change it if we guessed wrong.</span>
+          </div>
+
+          <p class="lab mt">How bad is it right now?</p>
+          <div class="scale" role="group" aria-label="Pain score, 1 to 10">
+            @for (n of scores; track n) {
+              <button type="button" [class.on]="p.score === n"
+                      [attr.aria-pressed]="p.score === n"
+                      (click)="update(p.key, { score: n })">{{ n }}</button>
+            }
+          </div>
+          <div class="ends">
+            <span>Barely notice it</span><span>Worst I have felt</span>
+          </div>
+
+          <p class="lab mt">What does it feel like?</p>
+          <div class="chips">
+            @for (q of qualities; track q) {
+              <button type="button" class="chip" [class.on]="p.qualities.includes(q)"
+                      [attr.aria-pressed]="p.qualities.includes(q)"
+                      (click)="toggleQuality(p.key, q)">{{ q }}</button>
+            }
+          </div>
+
+          <div class="acts">
+            <button type="button" class="btn btn-quiet" (click)="remove(p.key)">Remove</button>
+            <button type="button" class="btn btn-primary" (click)="selectedKey.set(null)">Done</button>
+          </div>
+        } @else {
+          <div class="placeholder">
+            <h2 class="etitle">Nothing selected</h2>
+            <p class="s">Tap anywhere on the body to add a spot, or pick one you already
+              marked to change it.</p>
+          </div>
+        }
+      </div>
+
+      <div class="figures">
+        <div class="pair">
+          <app-body-map view="FRONT" [points]="draft().points" [selectedKey]="selectedKey()"
+                        (place)="place('FRONT', $event)" (select)="selectedKey.set($event)" />
+          <app-body-map view="BACK" [points]="draft().points" [selectedKey]="selectedKey()"
+                        (place)="place('BACK', $event)" (select)="selectedKey.set($event)" />
+        </div>
+        <div class="legend">
+          <span class="legrow"><i class="sev s-low"></i>1&ndash;3 Mild</span>
+          <span class="legrow"><i class="sev s-mid"></i>4&ndash;6 Moderate</span>
+          <span class="legrow"><i class="sev s-high"></i>7&ndash;10 Severe</span>
+        </div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="card list">
+        <div class="lh">
+          <h2 class="etitle">Spots you marked</h2>
+          <span class="count">{{ draft().points.length }}</span>
+        </div>
+
+        @for (p of draft().points; track p.key) {
+          <div class="pt" [class.sel]="p.key === selectedKey()">
+            <button type="button" class="mk static" [class]="'mk static ' + sev(p.score)"
+                    (click)="selectedKey.set(p.key)"
+                    [attr.aria-label]="'Edit spot ' + indexOf(p.key)">{{ indexOf(p.key) }}</button>
+            <div class="meta">
+              <div class="mt1">{{ label(p.region) }}
+                <span class="dim">&middot; {{ p.view.toLowerCase() }}</span></div>
+              <div class="mt2">Severity {{ p.score }}@if (p.qualities.length) { &middot; {{ p.qualities.join(', ') }} }</div>
+            </div>
+            <button type="button" class="x" (click)="remove(p.key)"
+                    [attr.aria-label]="'Remove spot ' + indexOf(p.key)">&times;</button>
+          </div>
+        } @empty {
+          <div class="empty">Tap the diagram to add your first spot.</div>
+        }
+
+        @if (draft().points.length) {
+          <div class="empty">Tap the diagram to add another spot.</div>
+        }
+      </div>
+
+      <div class="note">
+        <span class="b"></span>
+        This is not a diagnosis. It tells your bone setter where to begin.
+      </div>
+    </aside>
+  </div>
+</app-shell>

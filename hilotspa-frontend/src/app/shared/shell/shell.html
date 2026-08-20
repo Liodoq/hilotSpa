@@ -1,0 +1,35 @@
+<div class="frame">
+  <header class="topbar">
+    <div class="brand">
+      <app-logo [size]="60" />
+      <div>
+        <b>Knead Wellness Spa</b>
+        <small>Pre-assessment</small>
+      </div>
+    </div>
+
+    <div class="step">Step {{ step() }} of {{ total() }}</div>
+
+    <button type="button" class="link" (click)="exit.emit()">Save and finish later</button>
+  </header>
+
+  <div class="track" role="progressbar"
+       [attr.aria-valuenow]="step()" aria-valuemin="1" [attr.aria-valuemax]="total()">
+    <i [style.width.%]="progress()"></i>
+  </div>
+
+  <main class="body">
+    <div class="col" [class.wide]="wide()">
+      <ng-content />
+    </div>
+  </main>
+
+  <footer class="footer">
+    <button type="button" class="btn btn-ghost" (click)="back.emit()">{{ backLabel() }}</button>
+    <div class="right">
+      <span class="hint">{{ hint() }}</span>
+      <button type="button" class="btn btn-primary"
+              [disabled]="nextDisabled()" (click)="next.emit()">{{ nextLabel() }}</button>
+    </div>
+  </footer>
+</div>

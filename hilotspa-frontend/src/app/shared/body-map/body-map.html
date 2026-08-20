@@ -1,0 +1,46 @@
+<div class="maplab">{{ view() }}</div>
+
+<div class="figure" (click)="onPlace($event)"
+     [attr.aria-label]="'Tap to mark where it hurts on the ' + view().toLowerCase() + ' of the body'">
+  <svg viewBox="0 0 300 640" role="img" [attr.aria-label]="view() + ' view of the body'">
+    <g fill="var(--color-sage-100)" stroke="var(--color-sage-300)" stroke-width="2.5" stroke-linejoin="round">
+      <ellipse cx="150" cy="46" rx="34" ry="41" />
+      <rect x="138" y="80" width="24" height="24" rx="9" />
+      <rect x="88" y="98" width="124" height="58" rx="27" />
+      <rect x="100" y="112" width="100" height="104" rx="30" />
+      <rect x="104" y="198" width="92" height="94" rx="30" />
+      <rect x="62" y="112" width="30" height="192" rx="15" />
+      <rect x="208" y="112" width="30" height="192" rx="15" />
+      <ellipse cx="77" cy="315" rx="15" ry="23" />
+      <ellipse cx="223" cy="315" rx="15" ry="23" />
+      <rect x="110" y="276" width="38" height="292" rx="19" />
+      <rect x="152" y="276" width="38" height="292" rx="19" />
+      <ellipse cx="129" cy="576" rx="19" ry="14" />
+      <ellipse cx="171" cy="576" rx="19" ry="14" />
+    </g>
+    @if (view() === 'BACK') {
+      <g stroke="var(--color-sage-300)" stroke-width="2" fill="none" stroke-linecap="round">
+        <line x1="150" y1="108" x2="150" y2="286" />
+        <path d="M118 140 C132 152 132 168 124 182" />
+        <path d="M182 140 C168 152 168 168 176 182" />
+      </g>
+    } @else {
+      <g stroke="var(--color-sage-300)" stroke-width="2" fill="none" stroke-linecap="round">
+        <line x1="150" y1="150" x2="150" y2="200" />
+        <path d="M126 214 C138 222 162 222 174 214" />
+      </g>
+    }
+  </svg>
+
+  @for (p of visible(); track p.key) {
+    <span class="halo" [class]="'halo ' + sev(p.score)"
+          [style.left.%]="p.x" [style.top.%]="p.y"
+          [style.width.px]="haloSize(p.score)" [style.height.px]="haloSize(p.score)"></span>
+
+    <button type="button" class="mk"
+            [class]="'mk ' + sev(p.score) + (p.key === selectedKey() ? ' sel' : '')"
+            [style.left.%]="p.x" [style.top.%]="p.y"
+            [attr.aria-label]="'Spot ' + indexOf(p.key) + ', severity ' + p.score"
+            (click)="onSelect($event, p.key)">{{ indexOf(p.key) }}</button>
+  }
+</div>

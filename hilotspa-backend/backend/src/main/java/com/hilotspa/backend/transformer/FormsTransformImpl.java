@@ -23,6 +23,7 @@ public class FormsTransformImpl implements FormsTransform {
         formsModel.setHasTherapy(formsEntity.isHasTherapy());
         formsModel.setStatus(formsEntity.getStatus());
         formsModel.setRemarks(formsEntity.getRemarks());
+        formsModel.setIntent(formsEntity.getIntent());
         formsModel.setCreatedAt(formsEntity.getCreatedAt());
         if (formsEntity.getBranch() != null) {
         formsModel.setBranchId(formsEntity.getBranch().getId());
@@ -50,6 +51,7 @@ public class FormsTransformImpl implements FormsTransform {
         formsEntity.setHasTherapy(formsModel.isHasTherapy());
         formsEntity.setStatus(formsModel.getStatus());
         formsEntity.setRemarks(formsModel.getRemarks());
+        formsEntity.setIntent(formsModel.getIntent());
         return formsEntity;
     }
 }

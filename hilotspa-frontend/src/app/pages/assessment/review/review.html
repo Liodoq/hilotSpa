@@ -1,0 +1,104 @@
+<app-shell [step]="6" [wide]="true" nextLabel="Submit my assessment"
+           hint="This is the only step that writes to your record."
+           [nextDisabled]="!draft().consented || busy()"
+           (back)="back()" (next)="submit()" (exit)="leave()">
+
+  <div class="head">
+    <h1 class="t t-s">Check this before we save it</h1>
+    <p class="s">Your bone setter reads this before your session. Change anything that is not right.</p>
+  </div>
+
+  <div class="layout">
+    <div class="cards">
+      <section class="rev">
+        <div class="rh"><b>About you</b>
+          <button type="button" class="link" (click)="go('demographics')">Edit</button></div>
+        <div class="kv">
+          <div><span>Why you came in</span>
+            {{ draft().intent === 'LEISURE' ? 'Here to relax' : 'A specific pain or complaint' }}</div>
+          @if (draft().birthDate) { <div><span>Born</span> {{ draft().birthDate }}</div> }
+          @if (draft().sex) { <div><span>Sex</span> {{ draft().sex }}</div> }
+          @if (draft().civilStatus) { <div><span>Status</span> {{ draft().civilStatus }}</div> }
+          @if (draft().occupation) { <div><span>Occupation</span> {{ draft().occupation }}</div> }
+          @if (draft().height) { <div><span>Height</span> {{ draft().height }} cm</div> }
+          @if (draft().weight) { <div><span>Weight</span> {{ draft().weight }} kg</div> }
+        </div>
+      </section>
+
+      @if (!store.isLeisure()) {
+        <section class="rev">
+          <div class="rh"><b>Where it hurts</b>
+            <button type="button" class="link" (click)="go('body-map')">Edit</button></div>
+
+          @if (draft().points.length) {
+            <div class="wh">
+              <div class="thumbs">
+                <app-body-map view="FRONT" [points]="draft().points" />
+                <app-body-map view="BACK" [points]="draft().points" />
+              </div>
+              <ol class="plist">
+                @for (p of draft().points; track p.key) {
+                  <li><b>{{ $index + 1 }}.</b> {{ label(p.region) }} &middot;
+                    {{ p.view.toLowerCase() }} &mdash; severity {{ p.score }}@if (p.qualities.length) {, {{ p.qualities.join(', ').toLowerCase() }} }</li>
+                }
+              </ol>
+            </div>
+          } @else {
+            <p class="help">No spots marked. You can go back and add some.</p>
+          }
+        </section>
+
+        <section class="rev">
+          <div class="rh"><b>Complaints</b>
+            <button type="button" class="link" (click)="go('complaints')">Edit</button></div>
+          <div class="kv">
+            <div><span>Bothers you most</span> {{ mainLabel() || 'not chosen' }}</div>
+            @if (draft().duration) { <div><span>How long</span> {{ draft().duration }}</div> }
+            @if (others().length) { <div><span>Also ticked</span> {{ others().join(', ') }}</div> }
+            @if (draft().mainComplaintOther) {
+              <div><span>In your words</span> {{ draft().mainComplaintOther }}</div> }
+          </div>
+        </section>
+
+        <section class="rev">
+          <div class="rh"><b>History and safety</b>
+            <button type="button" class="link" (click)="go('history')">Edit</button></div>
+          <div class="kv">
+            <div><span>Illness / injury</span>
+              {{ draft().hadIllness ? (draft().illnessDetail || 'yes') : 'none reported' }}</div>
+            <div><span>Therapy before</span>
+              {{ draft().hasTherapy ? (draft().therapyKind + (draft().therapyWhen ? ', ' + draft().therapyWhen : '')) : 'none' }}</div>
+            <div><span>Flagged</span> {{ draft().flags.length ? draft().flags.join(', ') : 'nothing' }}</div>
+            @if (draft().pressure) { <div><span>Pressure</span> {{ draft().pressure }}</div> }
+          </div>
+        </section>
+      }
+    </div>
+
+    <aside class="side-col">
+      <div class="side">
+        <h4>What happens after you submit</h4>
+        <ul>
+          <li>Your bone setter sees this before you sit down.</li>
+          <li>The booking assistant unlocks and suggests services that are safe for you.</li>
+          <li>Anything you flagged is filtered out before a service is ever suggested.</li>
+        </ul>
+      </div>
+
+      <button type="button" class="consent" [attr.aria-pressed]="draft().consented"
+              (click)="store.patch({ consented: !draft().consented })">
+        <span class="tile-box" [class.on]="draft().consented"></span>
+        <span class="ctext">I confirm the information above is accurate, and I agree that
+          Knead Wellness Spa may keep it as part of my treatment record.</span>
+      </button>
+
+      @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
+
+      <button type="button" class="btn btn-primary btn-block big"
+              [disabled]="!draft().consented || busy()" (click)="submit()">
+        {{ busy() ? 'Saving…' : 'Submit my assessment' }}
+      </button>
+      <p class="help centre">Takes a second. You can update it any time at the front desk.</p>
+    </aside>
+  </div>
+</app-shell>

@@ -1,0 +1,35 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+   HilotSpa design tokens — Knead Wellness Spa
+   Names mirror the `HilotSpa` variable collection in Figma exactly.
+
+   NOTE THE `static`. A plain `@theme { }` only emits the CSS custom properties
+   for theme keys Tailwind can SEE being used — and it looks for utility classes
+   in templates, not for var() calls inside a .scss file. Our components read
+   these through var(), so without `static` Tailwind emitted the colours and
+   dropped --radius-* and the tap size, which collapsed every input to the
+   browser default height with square corners. `static` emits all of them.
+
+   Contrast is against white. WCAG AA needs 4.5:1 for text.
+   --------------------------------------------------------------------------- */
+@theme static {
+  --color-forest-900: #2E4220;  /* 10.96:1 */
+  --color-forest-700: #466231;  /*  6.88:1  brand primary */
+  --color-forest-500: #5F7F45;  /*  4.56:1 */
+  --color-sage-300:   #A7BE92;  /*  decorative only */
+  --color-sage-100:   #E4EBDC;  /*  surface tint */
+  --color-gold-500:   #C8A035;  /*  2.46:1 — DECORATIVE ONLY, never text */
+  --color-gold-700:   #8A6D1F;  /*  4.90:1 — gold that carries text */
+  --color-cream:      #FBF9F4;  /*  page background, never pure white */
+  --color-ink-900:    #2B2A26;  /* 14.36:1  body text */
+  --color-ink-600:    #5A5750;  /*  7.21:1  secondary text */
+  --color-line:       #D7D2C6;  /*  borders */
+  --color-danger-600: #A33B27;  /*  6.54:1 */
+
+  --font-sans: 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+}

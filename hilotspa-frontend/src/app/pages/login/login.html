@@ -1,0 +1,52 @@
+<div class="split">
+  <section class="pane">
+    <div class="stack">
+      <app-logo [size]="132" />
+
+      <div class="head">
+        <h1 class="t">Welcome back</h1>
+        <p class="s">Log in to start your pre-assessment or check a booking.</p>
+      </div>
+
+      <div class="field">
+        <label class="lab" for="email">Email address</label>
+        <input id="email" class="input" type="email" autocomplete="email"
+               placeholder="you&#64;email.com"
+               [value]="email()" (input)="email.set(val($event))"
+               (keyup.enter)="submit()">
+      </div>
+
+      <div class="field">
+        <label class="lab" for="password">Password</label>
+        <input id="password" class="input" type="password" autocomplete="current-password"
+               placeholder="Your password"
+               [value]="password()" (input)="password.set(val($event))"
+               (keyup.enter)="submit()">
+      </div>
+
+      <div class="rightish">
+        <button type="button" class="link">Forgot your password?</button>
+      </div>
+
+      @if (error()) {
+        <p class="err" role="alert">{{ error() }}</p>
+      }
+
+      <button type="button" class="btn btn-primary btn-block"
+              [disabled]="busy() || !canSubmit()" (click)="submit()">
+        {{ busy() ? 'Logging in…' : 'Log in' }}
+      </button>
+
+      <div class="divider"><i></i><span>or</span><i></i></div>
+
+      <a class="btn btn-ghost btn-block" routerLink="/register">Create a new account</a>
+
+      <p class="help centre">Walk-in guest? Our front desk can create your account for you.</p>
+    </div>
+  </section>
+
+  <aside class="photo">
+    <p class="kicker">KNEAD WELLNESS SPA &middot; BULAN, SORSOGON</p>
+    <p class="quote">&ldquo;I point to where it hurts, and they already know what to do.&rdquo;</p>
+  </aside>
+</div>

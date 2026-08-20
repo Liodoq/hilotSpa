@@ -1,0 +1,12 @@
+:host { display: block; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 620px; gap: 22px; align-items: start; }
+.qcol { display: flex; flex-direction: column; gap: 18px; }
+.q { display: flex; flex-direction: column; gap: 16px; padding: 26px; }
+.qt { font-size: 22px; font-weight: 600; color: var(--color-forest-900); line-height: 1.35; margin: 0; }
+.seg.narrow { max-width: 420px; }
+.safety { display: flex; flex-direction: column; gap: 16px; }
+.block { display: flex; flex-direction: column; gap: 20px; padding: 26px; }
+.bt { font-size: 23px; font-weight: 600; color: var(--color-forest-900); margin: 0; }
+
+@media (max-width: 1300px) { .layout { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } .row { flex-direction: column; } }

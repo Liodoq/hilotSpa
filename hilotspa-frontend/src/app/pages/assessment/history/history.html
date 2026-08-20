@@ -1,0 +1,105 @@
+<app-shell [step]="5" [wide]="true" (back)="back()" (next)="next()" (exit)="leave()">
+
+  <div class="head">
+    <h1 class="t t-s">A little history</h1>
+    <p class="s">Two questions from the paper form, and a short safety check.
+      Short answers are fine.</p>
+  </div>
+
+  <div class="layout">
+    <div class="qcol">
+      <div class="card q">
+        <h2 class="qt">Have you had any serious or chronic illness, operations,
+          traumatic accidents, or injury?</h2>
+
+        <div class="seg narrow" role="group" aria-label="Illness or injury">
+          <button type="button" class="opt" [class.on]="draft().hadIllness === true"
+                  [attr.aria-pressed]="draft().hadIllness === true"
+                  (click)="store.patch({ hadIllness: true })"><span class="dot"></span>Yes</button>
+          <button type="button" class="opt" [class.on]="draft().hadIllness === false"
+                  [attr.aria-pressed]="draft().hadIllness === false"
+                  (click)="store.patch({ hadIllness: false, illnessDetail: '' })">
+            <span class="dot"></span>No</button>
+        </div>
+
+        @if (draft().hadIllness) {
+          <div class="field">
+            <label class="lab" for="ill">What happened, and when?</label>
+            <textarea id="ill" class="input" rows="3"
+                      placeholder="Slipped disc, 2019. Had physical therapy for three months."
+                      [value]="draft().illnessDetail"
+                      (input)="store.patch({ illnessDetail: val($event) })"></textarea>
+          </div>
+        }
+      </div>
+
+      <div class="card q">
+        <h2 class="qt">Have you had any therapy before?</h2>
+
+        <div class="seg narrow" role="group" aria-label="Therapy before">
+          <button type="button" class="opt" [class.on]="draft().hasTherapy === true"
+                  [attr.aria-pressed]="draft().hasTherapy === true"
+                  (click)="store.patch({ hasTherapy: true })"><span class="dot"></span>Yes</button>
+          <button type="button" class="opt" [class.on]="draft().hasTherapy === false"
+                  [attr.aria-pressed]="draft().hasTherapy === false"
+                  (click)="store.patch({ hasTherapy: false, therapyKind: '', therapyWhen: '' })">
+            <span class="dot"></span>No</button>
+        </div>
+
+        @if (draft().hasTherapy) {
+          <div class="row">
+            <div class="field">
+              <label class="lab" for="tk">What kind?</label>
+              <select id="tk" class="input" [value]="draft().therapyKind"
+                      (change)="store.patch({ therapyKind: val($event) })">
+                <option value="">Choose one</option>
+                @for (k of therapyKinds; track k) { <option [value]="k">{{ k }}</option> }
+              </select>
+            </div>
+            <div class="field">
+              <label class="lab" for="tw">When was the last time?</label>
+              <input id="tw" class="input" placeholder="March 2026"
+                     [value]="draft().therapyWhen"
+                     (input)="store.patch({ therapyWhen: val($event) })">
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <aside class="safety">
+      <div class="card block">
+        <div>
+          <h2 class="bt">Does any of this apply to you right now?</h2>
+          <p class="help">Tick anything true. Tick nothing if none apply.</p>
+        </div>
+
+        <div class="grid2">
+          @for (f of flags; track f) {
+            <button type="button" class="tile" [class.on]="draft().flags.includes(f)"
+                    [attr.aria-pressed]="draft().flags.includes(f)"
+                    (click)="store.toggleFlag(f)">
+              <span class="box"></span>{{ f }}
+            </button>
+          }
+        </div>
+
+        <div class="field">
+          <span class="lab" id="preslab">Preferred pressure</span>
+          <div class="seg" role="group" aria-labelledby="preslab">
+            @for (p of pressures; track p) {
+              <button type="button" class="opt" [class.on]="draft().pressure === p"
+                      [attr.aria-pressed]="draft().pressure === p"
+                      (click)="store.patch({ pressure: p })"><span class="dot"></span>{{ p }}</button>
+            }
+          </div>
+        </div>
+
+        <p class="footnote">
+          The rules behind this were written and signed by our own bone setter.
+          The system applies them &mdash; it does not make a medical judgment.
+        </p>
+      </div>
+    </aside>
+  </div>
+</app-shell>

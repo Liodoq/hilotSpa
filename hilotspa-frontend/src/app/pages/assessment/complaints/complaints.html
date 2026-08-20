@@ -1,0 +1,79 @@
+<app-shell [step]="4" [wide]="true" (back)="back()" (next)="next()" (exit)="leave()"
+           [nextDisabled]="!draft().mainComplaint">
+
+  <div class="head">
+    <h1 class="t t-s">What are your main complaints?</h1>
+    <p class="s">Tick everything that applies, then tell us which one bothers you most.</p>
+  </div>
+
+  <div class="layout">
+    <div class="card left">
+      <input class="input" type="search" placeholder="Type to filter — for example &ldquo;back&rdquo;"
+             [value]="filter()" (input)="filter.set(val($event))"
+             aria-label="Filter the list of conditions">
+
+      <div class="grid4">
+        @for (c of shown(); track c.value) {
+          <button type="button" class="tile" [class.on]="draft().complaints.includes(c.value)"
+                  [attr.aria-pressed]="draft().complaints.includes(c.value)"
+                  (click)="store.toggleComplaint(c.value)">
+            <span class="box"></span>{{ c.label }}
+          </button>
+        } @empty {
+          <p class="help">Nothing matches &ldquo;{{ filter() }}&rdquo;. Try a shorter word,
+            or tick <b>Others</b> below.</p>
+        }
+      </div>
+
+      <div class="others">
+        <button type="button" class="tile othertile" [class.on]="draft().complaints.includes('OTHER')"
+                [attr.aria-pressed]="draft().complaints.includes('OTHER')"
+                (click)="store.toggleComplaint('OTHER')">
+          <span class="box"></span>Others
+        </button>
+        <input class="input" placeholder="Describe it in your own words"
+               [disabled]="!draft().complaints.includes('OTHER')"
+               [value]="draft().mainComplaintOther ?? ''"
+               (input)="store.patch({ mainComplaintOther: val($event) || null })">
+      </div>
+    </div>
+
+    <aside class="right">
+      <div class="card block">
+        <div>
+          <h2 class="bt">Which one bothers you most?</h2>
+          <p class="help">This becomes your chief complaint.</p>
+        </div>
+
+        <div class="seg stack" role="group" aria-label="Chief complaint">
+          @for (c of ticked(); track c.value) {
+            <button type="button" class="opt" [class.on]="draft().mainComplaint === c.value"
+                    [attr.aria-pressed]="draft().mainComplaint === c.value"
+                    (click)="store.patch({ mainComplaint: c.value })">
+              <span class="dot"></span>{{ c.label }}
+            </button>
+          } @empty {
+            <p class="help">Tick a condition on the left and it will appear here.</p>
+          }
+        </div>
+
+        <div>
+          <h2 class="bt">How long have you had it?</h2>
+          <div class="chips mt">
+            @for (d of durations; track d) {
+              <button type="button" class="chip" [class.on]="draft().duration === d"
+                      [attr.aria-pressed]="draft().duration === d"
+                      (click)="store.patch({ duration: d })">{{ d }}</button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="b"></span>
+        {{ draft().complaints.length }} ticked. Only the one you pick above is stored as the
+        chief complaint &mdash; the rest stay on your record.
+      </div>
+    </aside>
+  </div>
+</app-shell>

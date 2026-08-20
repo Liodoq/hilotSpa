@@ -1,0 +1,89 @@
+<div class="split">
+  <section class="pane">
+    <div class="stack">
+      <div class="head">
+        <h1 class="t">Create your account</h1>
+        <p class="s">One account keeps your assessments and bookings in one place.</p>
+      </div>
+
+      <div class="fields">
+        <div class="row">
+          <div class="field">
+            <label class="lab" for="fn">First name *</label>
+            <input id="fn" class="input" placeholder="Juan" autocomplete="given-name"
+                   [value]="firstName()" (input)="firstName.set(val($event))">
+          </div>
+          <div class="field">
+            <label class="lab" for="mn">Middle name</label>
+            <input id="mn" class="input" placeholder="Cruz" autocomplete="additional-name"
+                   [value]="middleName()" (input)="middleName.set(val($event))">
+          </div>
+          <div class="field">
+            <label class="lab" for="ln">Surname *</label>
+            <input id="ln" class="input" placeholder="Dela Cruz" autocomplete="family-name"
+                   [value]="lastName()" (input)="lastName.set(val($event))">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label class="lab" for="ct">Contact number *</label>
+            <input id="ct" class="input" placeholder="0917 000 0000" inputmode="tel" autocomplete="tel"
+                   [value]="contact()" (input)="contact.set(val($event))">
+          </div>
+          <div class="field">
+            <label class="lab" for="em">Email address *</label>
+            <input id="em" class="input" type="email" placeholder="you&#64;email.com" autocomplete="email"
+                   [value]="email()" (input)="email.set(val($event))">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label class="lab" for="ad">Address *</label>
+            <input id="ad" class="input" placeholder="Purok, Barangay, Bulan, Sorsogon"
+                   autocomplete="street-address"
+                   [value]="address()" (input)="address.set(val($event))">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label class="lab" for="pw">Password *</label>
+            <input id="pw" class="input" type="password" placeholder="At least 8 characters"
+                   autocomplete="new-password"
+                   [value]="password()" (input)="password.set(val($event))">
+          </div>
+          <div class="field">
+            <label class="lab" for="pw2">Confirm password *</label>
+            <input id="pw2" class="input" type="password" placeholder="Re-type your password"
+                   autocomplete="new-password"
+                   [value]="confirm()" (input)="confirm.set(val($event))">
+          </div>
+        </div>
+      </div>
+
+      <p class="help">Fields marked * are required. We never share your details.</p>
+
+      @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
+
+      <button type="button" class="btn btn-primary btn-block"
+              [disabled]="busy() || !canSubmit()" (click)="submit()">
+        {{ busy() ? 'Creating your account…' : 'Create account' }}
+      </button>
+
+      <p class="help centre">
+        Already have an account?
+        <a class="link" routerLink="/login">Log in</a>
+      </p>
+    </div>
+  </section>
+
+  <aside class="photo">
+    <app-logo [size]="150" class="badge" />
+    <div class="bottom">
+      <p class="kicker">KNEAD WELLNESS SPA &middot; BULAN, SORSOGON</p>
+      <p class="quote">Traditional hilot,<br>guided by your own body map.</p>
+    </div>
+  </aside>
+</div>

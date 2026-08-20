@@ -1,13 +1,13 @@
 package com.hilotspa.backend.model;
 
-import java.util.UUID;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.hilotspa.backend.entities.AssessmentIntent;
 import com.hilotspa.backend.entities.ComplaintType;
 
 import lombok.Data;
@@ -22,6 +22,7 @@ public class FormsModel {
     private boolean hasTherapy;
     private String status;
     private String remarks;
+    private AssessmentIntent intent;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

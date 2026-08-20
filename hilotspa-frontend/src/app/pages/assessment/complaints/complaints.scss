@@ -1,0 +1,17 @@
+:host { display: block; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 460px; gap: 22px; align-items: start; }
+.left { display: flex; flex-direction: column; gap: 18px; padding: 26px; }
+.right { display: flex; flex-direction: column; gap: 16px; }
+.block { display: flex; flex-direction: column; gap: 20px; padding: 28px; }
+.bt { font-size: 23px; font-weight: 600; color: var(--color-forest-900); margin: 0; }
+.mt { margin-top: 12px; }
+.others { display: flex; gap: 14px; align-items: center; }
+.othertile { width: 240px; flex: 0 0 240px; }
+
+@media (max-width: 1300px) { .layout { grid-template-columns: 1fr; } }
+@media (max-width: 1000px) { .grid4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 620px) {
+  .grid4 { grid-template-columns: 1fr; }
+  .others { flex-direction: column; align-items: stretch; }
+  .othertile { width: 100%; flex: none; }
+}
