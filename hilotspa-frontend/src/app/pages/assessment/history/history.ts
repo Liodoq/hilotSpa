@@ -2,7 +2,6 @@ import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Shell } from '../../../shared/shell/shell';
 import { AssessmentStore } from '../../../core/assessment.store';
-import { AuthService } from '../../../core/auth.service';
 
 /**
  * C6 — both history questions are quoted verbatim from Appendix A.
@@ -19,7 +18,6 @@ import { AuthService } from '../../../core/auth.service';
 })
 export class History {
   private router = inject(Router);
-  private auth = inject(AuthService);
   protected store = inject(AssessmentStore);
   protected draft = this.store.draft;
 
@@ -44,5 +42,5 @@ export class History {
 
   back(): void { this.router.navigateByUrl('/assessment/complaints'); }
   next(): void { this.router.navigateByUrl('/assessment/review'); }
-  leave(): void { this.store.reset(); this.auth.logout(); }
+  leave(): void { this.router.navigateByUrl('/home'); }
 }

@@ -18,39 +18,44 @@
             Tell us where it hurts before you come in, and your bone setter will already know
             what to look at.</p>
         </div>
-        <button type="button" class="btn heroBtn" (click)="startAssessment()">Start pre-assessment</button>
+        <button type="button" class="btn heroBtn" (click)="startAssessment()">New pre-assessment</button>
       </section>
 
       <section>
         <h2 class="t-s" style="margin-bottom:14px">Your next visit</h2>
-        <div class="card visit">
-          <div class="datechip">
-            <div class="m">{{ next.month }}</div><div class="d">{{ next.dayNum }}</div><div class="w">{{ next.day }}</div>
-          </div>
-          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
-            <div style="font-size:25px;font-weight:600;color:var(--color-forest-900)">
-              {{ next.service }} — {{ next.minutes }} minutes</div>
-            <div style="font-size:19px;color:var(--color-ink-600)">
-              {{ next.time }} · {{ next.therapist }} · {{ next.room }} · {{ next.branch }}</div>
-            <div style="display:flex;gap:10px;margin-top:8px">
-              <span class="pill ok"><i class="dotx"></i>Confirmed</span>
-              <span class="pill mute">₱ {{ next.price }} · pay at counter</span>
+        @if (next(); as v) {
+          <div class="card visit">
+            <div class="datechip">
+              <div class="m">{{ v.month }}</div><div class="d">{{ v.dayNum }}</div><div class="w">{{ v.day }}</div>
+            </div>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+              <div style="font-size:25px;font-weight:600;color:var(--color-forest-900)">
+                {{ v.service }} — {{ v.minutes }} minutes</div>
+              <div style="font-size:19px;color:var(--color-ink-600)">
+                {{ v.time }} · {{ v.therapist }} · {{ v.room }} · {{ v.branch }}</div>
+              <div style="display:flex;gap:10px;margin-top:8px">
+                <span class="pill ok"><i class="dotx"></i>Confirmed</span>
+                <span class="pill mute">₱ {{ v.price }} · pay at counter</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;flex:0 0 auto">
+              <button type="button" class="btn btn-ghost btn-sm" (click)="reschedule()">Reschedule</button>
+              <button type="button" class="btn btn-danger btn-sm" (click)="cancelVisit()">Cancel</button>
             </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:10px;flex:0 0 auto">
-            <button type="button" class="btn btn-ghost btn-sm"
-                    (click)="toast.show('Pick a new time for ' + next.date)">Reschedule</button>
-            <button type="button" class="btn btn-danger btn-sm"
-                    (click)="toast.show('Cancelled. The slot is free again.')">Cancel</button>
+        } @else {
+          <div class="card" style="text-align:center;padding:34px;display:flex;flex-direction:column;gap:14px;align-items:center">
+            <p class="s">No upcoming visit. Start a pre-assessment and the assistant will find you a time.</p>
+            <button type="button" class="btn btn-primary" (click)="startAssessment()">New pre-assessment</button>
           </div>
-        </div>
+        }
       </section>
 
       <section>
         <h2 class="t-s" style="margin-bottom:14px">Past sessions</h2>
         <div class="card" style="padding:6px 22px">
           <table class="tbl">
-            @for (v of past; track v.date) {
+            @for (v of past(); track v.id) {
               <tr>
                 <td class="tnum" style="width:150px">{{ v.date }}</td>
                 <td><b>{{ v.service }}</b></td>
@@ -60,8 +65,7 @@
                   @else { <span class="pill mute">no pain recorded</span> }
                 </td>
                 <td style="text-align:right">
-                  <button type="button" class="link"
-                          (click)="toast.show('Opening your session report…')">View report</button>
+                  <button type="button" class="link" (click)="viewReport(v.id)">View report</button>
                 </td>
               </tr>
             }
@@ -88,12 +92,9 @@
           </div>
         </div>
         <hr class="hr" style="margin:20px 0">
-        <div style="display:flex;gap:12px;flex-wrap:wrap">
-          <button type="button" class="btn btn-ghost" style="flex:1;min-width:200px"
-                  (click)="startAssessment()">Update my assessment</button>
-          <button type="button" class="btn btn-quiet" style="flex:1;min-width:180px"
-                  (click)="editProfile()">My details</button>
-        </div>
+        <!-- "Start pre-assessment" and "Update my assessment" did the same thing
+             from two places. One action, named for what it actually does. -->
+        <button type="button" class="btn btn-quiet btn-block" (click)="editProfile()">My details</button>
       </div>
 
       <div class="note"><span class="b"></span>

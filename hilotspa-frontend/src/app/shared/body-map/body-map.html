@@ -1,7 +1,8 @@
 <div class="maplab">{{ view() }}</div>
 
-<div class="figure" [class.ro]="!interactive()" (click)="onPlace($event)"
-     [attr.aria-label]="'Tap to mark where it hurts on the ' + view().toLowerCase() + ' of the body'">
+<div class="figure" [class.ro]="!interactive()" [class.locked]="locked()"
+     (click)="onPlace($event)" (mousemove)="onHover($event)" (mouseleave)="hover.set(null)"
+     [attr.aria-label]="'Tap a marked position on the ' + view().toLowerCase() + ' of the body'">
   <svg viewBox="0 0 300 640" role="img" [attr.aria-label]="view() + ' view of the body'">
     <g fill="var(--color-sage-100)" stroke="var(--color-sage-300)" stroke-width="2.5" stroke-linejoin="round">
       <ellipse cx="150" cy="46" rx="34" ry="41" />
@@ -32,13 +33,30 @@
     }
   </svg>
 
+  <!-- the positions you may mark, shown faintly so the map is discoverable -->
+  @if (interactive()) {
+    @for (h of spots(); track h.id) {
+      <span class="pin" [class.taken]="isTaken(h.id)"
+            [style.left.%]="h.x" [style.top.%]="h.y" aria-hidden="true"></span>
+    }
+  }
+
+  <!-- hover preview: the circle that shows where the marker will land -->
+  @if (interactive() && !locked() && hover(); as h) {
+    @if (!isTaken(h.id)) {
+      <span class="ghost" [style.left.%]="h.x" [style.top.%]="h.y" aria-hidden="true"></span>
+      <span class="ghostlabel" [style.left.%]="h.x" [style.top.%]="h.y">{{ labelFor(h) }}</span>
+    }
+  }
+
   @for (p of visible(); track p.key) {
     <span class="halo" [class]="'halo ' + sev(p.score)"
           [style.left.%]="p.x" [style.top.%]="p.y"
           [style.width.px]="haloSize(p.score)" [style.height.px]="haloSize(p.score)"></span>
 
-    <button type="button" class="mk" [disabled]="!interactive()"
+    <button type="button" class="mk"
             [class]="'mk ' + sev(p.score) + (p.key === selectedKey() ? ' sel' : '')"
+            [disabled]="!interactive()"
             [style.left.%]="p.x" [style.top.%]="p.y"
             [attr.aria-label]="'Spot ' + indexOf(p.key) + ', severity ' + p.score"
             (click)="onSelect($event, p.key)">{{ indexOf(p.key) }}</button>

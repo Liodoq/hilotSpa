@@ -28,13 +28,28 @@ export class Register {
   // There is deliberately NO role field here. RegisterRequest on the server has
   // none either, and the service hardcodes CUSTOMER — this endpoint is
   // unauthenticated, so anything it accepts is attacker-controlled.
+  pwFocused = signal(false);
+
+  /** Each rule is checked live, so the popover doubles as feedback rather than
+   *  a list you read once and then fail anyway. */
+  pwRules = computed(() => {
+    const v = this.password();
+    return [
+      { label: 'At least 8 characters', ok: v.length >= 8 },
+      { label: 'One capital letter', ok: /[A-Z]/.test(v) },
+      { label: 'One small letter', ok: /[a-z]/.test(v) },
+      { label: 'One special character', ok: /[^A-Za-z0-9]/.test(v) },
+    ];
+  });
+  pwValid = computed(() => this.pwRules().every(r => r.ok));
+
   canSubmit = computed(() =>
     this.firstName().trim() !== '' &&
     this.lastName().trim() !== '' &&
     this.contact().trim() !== '' &&
     this.address().trim() !== '' &&
     this.email().trim() !== '' &&
-    this.password().length >= 8 &&
+    this.pwValid() &&
     this.password() === this.confirm());
 
   val(ev: Event): string { return (ev.target as HTMLInputElement).value; }
@@ -45,8 +60,8 @@ export class Register {
       this.error.set('The two passwords do not match.');
       return;
     }
-    if (this.password().length < 8) {
-      this.error.set('Please use at least 8 characters for your password.');
+    if (!this.pwValid()) {
+      this.error.set('Your password does not meet all four requirements yet.');
       return;
     }
     this.busy.set(true);

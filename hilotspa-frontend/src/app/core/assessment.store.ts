@@ -4,14 +4,17 @@ import {
   FormsModel, PatientIntakeModel,
 } from './models';
 import { Profile, ProfileStore } from './profile.store';
+import { Side } from './body-hotspots';
 
 /** One marker on the body map, before it becomes a PatientIntakeModel. */
 export interface PainPoint {
   key: string;             // client-side only, for tracking in @for
+  hotspotId: string;       // which fixed anatomical position was tapped
   view: BodyView;
   x: number;               // 0-100, percentage of the figure's width
   y: number;               // 0-100, percentage of the figure's height
   region: AnatomicalRegion;
+  side: Side;              // the CLIENT's own left/right — the form's L/R columns
   score: number;           // 1-10
   qualities: string[];     // Pain / Stiff / Weak / Numb, from the paper form
 }
@@ -55,6 +58,11 @@ export class AssessmentStore {
   private profileStore = inject(ProfileStore);
   readonly draft = signal<AssessmentDraft>(structuredClone(EMPTY));
 
+  /** Set when someone picks a service on C8 before assessing. The assistant
+   *  opens with it instead of asking a question it already has the answer to.
+   *  Cleared with the draft. */
+  readonly wantedService = signal<string | null>(null);
+
   readonly isLeisure = computed(() => this.draft().intent === 'LEISURE');
   readonly pointCount = computed(() => this.draft().points.length);
 
@@ -63,6 +71,7 @@ export class AssessmentStore {
   }
 
   reset(): void { this.draft.set(structuredClone(EMPTY)); }
+  resetAll(): void { this.reset(); this.wantedService.set(null); }
 
   /* ---- pain points ---- */
   addPoint(p: Omit<PainPoint, 'key'>): string {
@@ -87,8 +96,15 @@ export class AssessmentStore {
     this.draft.update(d => {
       const on = d.complaints.includes(c);
       const complaints = on ? d.complaints.filter(x => x !== c) : [...d.complaints, c];
-      // if the chief complaint was just unticked, it can no longer be chief
-      const mainComplaint = on && d.mainComplaint === c ? null : d.mainComplaint;
+
+      let mainComplaint = d.mainComplaint;
+      // Unticking the chief complaint clears it — it can no longer be chief.
+      if (on && mainComplaint === c) mainComplaint = null;
+      // With exactly one condition ticked there is nothing to choose between,
+      // so choosing it for them removes a step that only ever has one answer.
+      if (complaints.length === 1) mainComplaint = complaints[0];
+      if (complaints.length === 0) mainComplaint = null;
+
       return { ...d, complaints, mainComplaint };
     });
   }
@@ -110,6 +126,8 @@ export class AssessmentStore {
       coordinateY: Math.round(p.y * 10),
       painScore: p.score,
       complaintType: d.mainComplaint,
+      // NOTE: p.side is NOT sent. PatientIntake has no column for it, but the
+      // findings table on the paper form has L and R columns. Logged as §H8.
     }));
 
     return {

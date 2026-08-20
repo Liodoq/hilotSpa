@@ -1,0 +1,94 @@
+<app-nav />
+<main class="wrap">
+  @if (session(); as s) {
+    <div class="col">
+      <div class="topline">
+        <button type="button" class="link" (click)="back()">&larr; Back to my sessions</button>
+        <span class="pill mute">Read only</span>
+      </div>
+
+      <div class="head">
+        <h1 class="t">{{ s.service }}</h1>
+        <p class="s">{{ s.date }} · {{ s.minutes }} minutes · {{ s.therapist }} · {{ s.room }} ·
+          {{ s.branch }}</p>
+      </div>
+
+      <!-- A past session is a record of what happened. It is not a form.
+           "View report" used to open the editable review step, which meant a
+           finished session could be rewritten from the home page. -->
+      <div class="note"><span class="b"></span>
+        <span>This is your record of a finished session. It cannot be changed here — if something
+        is wrong, tell the front desk and they will correct it on your file.</span>
+      </div>
+
+      <div class="cols">
+        <div class="card" style="display:flex;flex-direction:column;gap:18px">
+          <h2 class="t-s" style="font-size:23px">What was treated</h2>
+          <div class="kv">
+            <div><span>Chief complaint</span> {{ s.complaint }}</div>
+            <div><span>Service</span> {{ s.service }}</div>
+            <div><span>Bone setter</span> {{ s.therapist }}</div>
+          </div>
+
+          <hr class="hr">
+
+          <h2 class="t-s" style="font-size:23px">Pain before and after</h2>
+          @if (s.before !== null) {
+            <div class="ba">
+              <div class="baBox">
+                <div class="help">BEFORE</div>
+                <div class="baNum" [class]="'baNum ' + sev(s.before)">{{ s.before }}</div>
+              </div>
+              <span class="arrow" aria-hidden="true">&rarr;</span>
+              <div class="baBox">
+                <div class="help">AFTER</div>
+                @if (s.after !== null) {
+                  <div class="baNum" [class]="'baNum ' + sev(s.after)">{{ s.after }}</div>
+                } @else {
+                  <div class="baNum pending">—</div>
+                }
+              </div>
+              @if (s.after !== null) {
+                <div class="delta">
+                  <b>{{ s.before - s.after }} points lower</b>
+                  <div class="help">recorded by your bone setter at the end of the session</div>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="s">No pain was recorded for this visit — it was booked as a relaxation session.</p>
+          }
+
+          <hr class="hr">
+          <h2 class="t-s" style="font-size:23px">Notes</h2>
+          <p style="font-size:19px;line-height:1.55;color:var(--color-ink-600)">{{ s.notes }}</p>
+        </div>
+
+        <aside style="display:flex;flex-direction:column;gap:16px">
+          <div class="card" style="display:flex;flex-direction:column;gap:14px">
+            <h2 class="t-s" style="font-size:23px">Where it hurt</h2>
+            @if (s.before !== null) {
+              <div class="thumbs">
+                <app-body-map view="FRONT" [points]="points" [interactive]="false" />
+                <app-body-map view="BACK"  [points]="points" [interactive]="false" />
+              </div>
+              <p class="help">From the pre-assessment you completed before this session.</p>
+            } @else {
+              <p class="s" style="font-size:19px">No body map for this visit.</p>
+            }
+          </div>
+          <button type="button" class="btn btn-primary btn-block" (click)="again()">
+            Book this again</button>
+        </aside>
+      </div>
+    </div>
+  } @else {
+    <div class="col" style="text-align:center;padding-top:60px">
+      <h1 class="t">We could not find that session</h1>
+      <p class="s">It may belong to another account.</p>
+      <button type="button" class="btn btn-ghost" style="align-self:center" (click)="back()">
+        Back to my sessions</button>
+    </div>
+  }
+</main>
+<app-toast />

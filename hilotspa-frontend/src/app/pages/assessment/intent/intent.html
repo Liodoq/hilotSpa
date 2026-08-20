@@ -1,5 +1,9 @@
-<app-shell [step]="1" backLabel="Back to home" [nextDisabled]="!draft().intent"
-           (back)="leave()" (next)="next()" (exit)="leave()">
+<app-shell [step]="1" backLabel="Back to home" [nextDisabled]="!draft().intent || busy()"
+           [nextLabel]="draft().intent === 'LEISURE' ? (busy() ? 'Saving…' : 'Continue to booking') : 'Continue'"
+           [hint]="draft().intent === 'LEISURE'
+             ? 'We save your visit and take you straight to the booking assistant.'
+             : 'Nothing is saved until you submit on the last step.'"
+           (back)="back()" (next)="next()" (exit)="back()">
 
   <div class="head">
     <h1 class="t">What brings you in today?</h1>
@@ -29,7 +33,6 @@
 
   <div class="note">
     <span class="b"></span>
-    Either answer records a completed assessment &mdash; that is what unlocks the booking
-    assistant. Choosing &ldquo;relax&rdquo; does not skip the record, only the questions.
+    Either answer records a completed assessment &mdash; that is what unlocks the booking assistant. Choosing &ldquo;relax&rdquo; saves it in one tap and takes you straight there; it skips the questions, never the record.
   </div>
 </app-shell>

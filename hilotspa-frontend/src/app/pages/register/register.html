@@ -9,7 +9,7 @@
       <div class="fields">
         <div class="row">
           <div class="field">
-            <label class="lab" for="fn">First name *</label>
+            <label class="lab" for="fn">First name<span class="req" [class.done]="firstName().trim()" aria-hidden="true">*</span></label>
             <input id="fn" class="input" placeholder="Juan" autocomplete="given-name"
                    [value]="firstName()" (input)="firstName.set(val($event))">
           </div>
@@ -19,7 +19,7 @@
                    [value]="middleName()" (input)="middleName.set(val($event))">
           </div>
           <div class="field">
-            <label class="lab" for="ln">Surname *</label>
+            <label class="lab" for="ln">Surname<span class="req" [class.done]="lastName().trim()" aria-hidden="true">*</span></label>
             <input id="ln" class="input" placeholder="Dela Cruz" autocomplete="family-name"
                    [value]="lastName()" (input)="lastName.set(val($event))">
           </div>
@@ -27,12 +27,12 @@
 
         <div class="row">
           <div class="field">
-            <label class="lab" for="ct">Contact number *</label>
+            <label class="lab" for="ct">Contact number<span class="req" [class.done]="contact().trim()" aria-hidden="true">*</span></label>
             <input id="ct" class="input" placeholder="0917 000 0000" inputmode="tel" autocomplete="tel"
                    [value]="contact()" (input)="contact.set(val($event))">
           </div>
           <div class="field">
-            <label class="lab" for="em">Email address *</label>
+            <label class="lab" for="em">Email address<span class="req" [class.done]="email().trim()" aria-hidden="true">*</span></label>
             <input id="em" class="input" type="email" placeholder="you&#64;email.com" autocomplete="email"
                    [value]="email()" (input)="email.set(val($event))">
           </div>
@@ -40,7 +40,7 @@
 
         <div class="row">
           <div class="field">
-            <label class="lab" for="ad">Address *</label>
+            <label class="lab" for="ad">Address<span class="req" [class.done]="address().trim()" aria-hidden="true">*</span></label>
             <input id="ad" class="input" placeholder="Purok, Barangay, Bulan, Sorsogon"
                    autocomplete="street-address"
                    [value]="address()" (input)="address.set(val($event))">
@@ -48,14 +48,24 @@
         </div>
 
         <div class="row">
-          <div class="field">
-            <label class="lab" for="pw">Password *</label>
+          <div class="field pw">
+            <label class="lab" for="pw">Password<span class="req" [class.done]="pwValid()" aria-hidden="true">*</span></label>
             <input id="pw" class="input" type="password" placeholder="At least 8 characters"
-                   autocomplete="new-password"
-                   [value]="password()" (input)="password.set(val($event))">
+                   autocomplete="new-password" aria-describedby="pwrules"
+                   [value]="password()" (input)="password.set(val($event))"
+                   (focus)="pwFocused.set(true)" (blur)="pwFocused.set(false)"
+                   (mouseenter)="pwFocused.set(true)">
+            @if (pwFocused() || (password() && !pwValid())) {
+              <div class="pw-rules" id="pwrules" role="status">
+                <b>Your password needs</b>
+                @for (r of pwRules(); track r.label) {
+                  <span class="pw-rule" [class.ok]="r.ok"><span class="box"></span>{{ r.label }}</span>
+                }
+              </div>
+            }
           </div>
           <div class="field">
-            <label class="lab" for="pw2">Confirm password *</label>
+            <label class="lab" for="pw2">Confirm password<span class="req" [class.done]="confirm() && confirm() === password()" aria-hidden="true">*</span></label>
             <input id="pw2" class="input" type="password" placeholder="Re-type your password"
                    autocomplete="new-password"
                    [value]="confirm()" (input)="confirm.set(val($event))">
@@ -63,7 +73,7 @@
         </div>
       </div>
 
-      <p class="help">Fields marked * are required. We never share your details.</p>
+      <p class="help">A red <span class="req" aria-hidden="true">*</span> marks what is still needed. It disappears as you fill each one in. We never share your details.</p>
 
       @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
 

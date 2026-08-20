@@ -1,41 +1,50 @@
 <app-nav />
 <main class="wrap">
   <div class="col">
-    <div class="head">
-      <h1 class="t">{{ returning() ? 'One thing before we start' : 'Your details' }}</h1>
-      <p class="s">
-        @if (returning()) {
-          We just need this once. Your therapist uses it to judge pressure and technique —
-          it does not change between visits, so we will not ask again.
-        } @else {
-          Kept on your profile and reused for every visit. Your name and contact number are
-          already on your account.
-        }
-      </p>
+    <div class="topline">
+      <div class="head">
+        <h1 class="t">{{ returning() ? 'One thing before we start' : 'Your details' }}</h1>
+        <p class="s">
+          @if (returning()) {
+            We just need this once. Your therapist uses it to judge pressure and technique —
+            it does not change between visits, so we will not ask again.
+          } @else if (editing()) {
+            Change what you need, then save.
+          } @else {
+            Kept on your profile and reused for every visit. Your name and contact number are
+            already on your account.
+          }
+        </p>
+      </div>
+      @if (!editing()) {
+        <button type="button" class="btn btn-ghost" (click)="startEdit()">Edit</button>
+      }
     </div>
 
-    <div class="card panel">
+    <!-- Read only until Edit is pressed. A profile that is permanently editable
+         invites accidental changes to a record the bone setter relies on. -->
+    <div class="card panel" [class.locked]="!editing()">
       <div class="row">
         <div class="field">
-          <label class="lab" for="dob">Date of birth *</label>
-          <input id="dob" class="input" type="date"
-                 [value]="p().birthDate ?? ''" (input)="store.patch({ birthDate: val($event) || null })">
+          <label class="lab" for="dob">Date of birth<span class="req" [class.done]="p().birthDate" aria-hidden="true">*</span></label>
+          <app-date-picker [value]="p().birthDate" [disabled]="!editing()" [minYear]="1920"
+                           placeholder="Choose your date of birth"
+                           (changed)="store.patch({ birthDate: $event })" />
           <span class="help">Used to work out your age.</span>
         </div>
         <div class="field">
           <label class="lab" for="age">Age</label>
-          <input id="age" class="input ro" readonly
-                 [value]="store.age() === null ? '—' : store.age() + ' years old'">
+          <div class="input ro">{{ store.age() === null ? '—' : store.age() + ' years old' }}</div>
           <span class="help">Filled in for you from your birth date.</span>
         </div>
       </div>
 
       <div class="row">
         <div class="field">
-          <span class="lab" id="sexlab">Sex *</span>
+          <span class="lab" id="sexlab">Sex<span class="req" [class.done]="p().sex" aria-hidden="true">*</span></span>
           <div class="seg" role="group" aria-labelledby="sexlab">
             @for (s of sexes; track s) {
-              <button type="button" class="opt" [class.on]="p().sex === s"
+              <button type="button" class="opt" [class.on]="p().sex === s" [disabled]="!editing()"
                       [attr.aria-pressed]="p().sex === s" (click)="store.patch({ sex: s })">
                 <span class="dot"></span>{{ s }}
               </button>
@@ -43,11 +52,12 @@
           </div>
         </div>
         <div class="field">
-          <label class="lab" for="cs">Civil status *</label>
-          <select id="cs" class="input" [value]="p().civilStatus ?? ''"
+          <label class="lab" for="cs">Civil status<span class="req" [class.done]="p().civilStatus" aria-hidden="true">*</span></label>
+          <select id="cs" class="input" [disabled]="!editing()" [value]="p().civilStatus ?? ''"
                   (change)="store.patch({ civilStatus: val($event) || null })">
             <option value="">Choose one</option>
-            @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
+            @for (s of statuses; track s) {
+              <option [value]="s" [selected]="s === p().civilStatus">{{ s }}</option> }
           </select>
         </div>
       </div>
@@ -55,37 +65,39 @@
       <div class="row">
         <div class="field">
           <label class="lab" for="occ">Occupation</label>
-          <input id="occ" class="input" placeholder="Sari-sari store owner"
+          <input id="occ" class="input" placeholder="Sari-sari store owner" [disabled]="!editing()"
                  [value]="p().occupation ?? ''" (input)="store.patch({ occupation: val($event) || null })">
           <span class="help">Heavy lifting and desk work strain the body differently.</span>
         </div>
         <div class="field">
           <span class="lab">Height <span class="tag">Optional</span></span>
-          <input class="input" inputmode="numeric" placeholder="158 (cm)"
+          <input class="input" inputmode="numeric" placeholder="158 (cm)" [disabled]="!editing()"
                  [value]="p().height ?? ''" (input)="store.patch({ height: num($event) })">
         </div>
         <div class="field">
           <span class="lab">Weight <span class="tag">Optional</span></span>
-          <input class="input" inputmode="numeric" placeholder="62 (kg)"
+          <input class="input" inputmode="numeric" placeholder="62 (kg)" [disabled]="!editing()"
                  [value]="p().weight ?? ''" (input)="store.patch({ weight: num($event) })">
         </div>
       </div>
     </div>
 
     <div class="note"><span class="b"></span>
-      <span>Height and weight are optional. Leave them blank if you would rather not say — it will not
-      stop you from booking.</span>
+      <span>Height and weight are optional. Leave them blank if you would rather not say — it will
+      not stop you from booking.</span>
     </div>
 
-    <div class="actions">
-      <button type="button" class="btn btn-quiet" (click)="cancel()">
-        {{ returning() ? 'Not now' : 'Back' }}</button>
-      <button type="button" class="btn btn-primary" [disabled]="!store.isComplete()" (click)="save()">
-        {{ returning() ? 'Save and continue' : 'Save my details' }}</button>
-    </div>
-    @if (!store.isComplete()) {
-      <p class="help" style="text-align:right">Date of birth, sex and civil status are needed before
-        an assessment.</p>
+    @if (editing()) {
+      <div class="actions">
+        <button type="button" class="btn btn-quiet" (click)="cancel()">
+          {{ returning() ? 'Not now' : 'Cancel' }}</button>
+        <button type="button" class="btn btn-primary" [disabled]="!store.isComplete()" (click)="save()">
+          {{ returning() ? 'Save and continue' : 'Save my details' }}</button>
+      </div>
+      @if (!store.isComplete()) {
+        <p class="help" style="text-align:right">Date of birth, sex and civil status are needed
+          before an assessment.</p>
+      }
     }
   </div>
 </main>

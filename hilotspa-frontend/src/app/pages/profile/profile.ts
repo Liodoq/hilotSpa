@@ -1,7 +1,8 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AppNav } from '../../shared/app-nav/app-nav';
 import { Toast } from '../../shared/toast/toast';
+import { DatePicker } from '../../shared/date-picker/date-picker';
 import { ProfileStore } from '../../core/profile.store';
 import { ToastService } from '../../core/toast.service';
 
@@ -15,7 +16,7 @@ import { ToastService } from '../../core/toast.service';
  */
 @Component({
   selector: 'app-profile',
-  imports: [AppNav, Toast],
+  imports: [AppNav, Toast, DatePicker],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
 })
@@ -29,6 +30,17 @@ export class Profile {
   protected statuses = ['Single', 'Married', 'Widowed', 'Separated'];
 
   protected p = this.store.profile;
+
+  /** Fields are read-only until Edit is pressed. An incomplete profile — or one
+   *  reached mid-assessment by profileGuard — opens straight into edit mode,
+   *  because there is nothing to protect yet. */
+  editing = signal(!this.store.isComplete());
+  private snapshot = { ...this.store.profile() };
+
+  startEdit(): void {
+    this.snapshot = { ...this.store.profile() };
+    this.editing.set(true);
+  }
 
   /** True when the guard sent them here mid-flow. */
   returning = computed(() => !!this.route.snapshot.queryParamMap.get('next'));
@@ -46,9 +58,18 @@ export class Profile {
     this.store.save();
     // TODO — POST to /api/v1/demographics once a CUSTOMER is allowed to (B43).
     const next = this.route.snapshot.queryParamMap.get('next');
+    this.editing.set(false);
+    this.wasComplete = true;
     this.toast.show('Saved to your profile');
-    setTimeout(() => this.router.navigateByUrl(next ?? '/home'), 450);
+    if (next) setTimeout(() => this.router.navigateByUrl(next), 450);
   }
 
-  cancel(): void { this.router.navigateByUrl('/home'); }
+  cancel(): void {
+    if (this.returning() || !this.wasComplete) { this.router.navigateByUrl('/home'); return; }
+    this.store.profile.set({ ...this.snapshot });   // discard, do not persist
+    this.editing.set(false);
+    this.toast.show('No changes made');
+  }
+
+  private wasComplete = this.store.isComplete();
 }

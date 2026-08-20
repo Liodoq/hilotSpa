@@ -24,7 +24,7 @@
             <div class="field"><label class="lab" for="sv">Service</label>
               <select id="sv" class="input" [value]="service()" (change)="service.set(val($event))">
                 @for (s of services; track s.id) {
-                  <option [value]="s.name">{{ s.name }} — {{ s.minutes }} min — ₱{{ s.price }}</option>
+                  <option [value]="s.name" [selected]="s.name === service()">{{ s.name }} — {{ s.minutes }} min — ₱{{ s.price }}</option>
                 }
               </select></div>
             <div class="field"><label class="lab" for="tm">Start time</label>
@@ -34,12 +34,12 @@
           <div class="row">
             <div class="field"><label class="lab" for="th">Therapist</label>
               <select id="th" class="input" [value]="therapist()" (change)="therapist.set(val($event))">
-                @for (t of freeStaff; track t.id) { <option [value]="t.name">{{ t.name }}</option> }
+                @for (t of freeStaff; track t.id) { <option [value]="t.name" [selected]="t.name === therapist()">{{ t.name }}</option> }
               </select>
               <span class="help">Only therapists free for the whole booking are listed.</span></div>
             <div class="field"><label class="lab" for="rm">Room</label>
               <select id="rm" class="input" [value]="room()" (change)="room.set(val($event))">
-                @for (r of freeRooms; track r.id) { <option [value]="r.name">{{ r.name }}</option> }
+                @for (r of freeRooms; track r.id) { <option [value]="r.name" [selected]="r.name === room()">{{ r.name }}</option> }
               </select>
               <span class="help">Only rooms free for the whole booking are listed.</span></div>
           </div>

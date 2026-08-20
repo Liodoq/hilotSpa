@@ -9,6 +9,8 @@ import { AnatomicalRegion, BodyView } from './models';
 export interface DemoService {
   id: string; name: string; minutes: number; price: number;
   blurb: string; therapists: string; suitable: boolean; reason?: string; best?: boolean;
+  /** public/services/{id}.jpg — the card falls back to a tinted panel if absent */
+  about?: string; helps?: string[]; avoid?: string[];
 }
 export interface DemoAppointment {
   ref: string; service: string; minutes: number; date: string; day: string; month: string;
@@ -32,18 +34,31 @@ export interface DemoAccount { name: string; email: string; role: string; branch
 export interface DemoRule { service: string; condition: string; indicated: boolean; reason: string; }
 export interface DemoAudit { time: string; who: string; whoRole: string; action: string;
   record: string; node: string; queued?: boolean; }
-export interface DemoPoint { key: string; view: BodyView; x: number; y: number;
-  region: AnatomicalRegion; score: number; qualities: string[]; }
+export interface DemoPoint { key: string; hotspotId: string; view: BodyView; x: number; y: number;
+  region: AnatomicalRegion; side: 'LEFT' | 'RIGHT' | 'CENTRE'; score: number; qualities: string[]; }
 
 /* TODO Sprint 2 — GET /api/v1/massages, filtered by ServiceProtocol */
 export const SERVICES: DemoService[] = [
   { id: 'svc-back', name: 'Hilot sa Likod', minutes: 60, price: 750, suitable: true, best: true,
     blurb: 'Traditional back-focused hilot. Works along the lumbar and S.I. joint — the two areas you marked.',
-    therapists: 'Marites, Josie' },
+    therapists: 'Marites, Josie',
+    about: 'The house treatment. Our bone setter works along the spine and the muscles either side of '
+         + 'it, using warm oil and the slow pressure hilot is known for. Most clients who come in with '
+         + 'lower back pain book this one.',
+    helps: ['Lower Back Pain', 'Sciatica', 'Stiff Neck', 'Upper Back Pain'],
+    avoid: ['Fracture or surgery in the last 6 weeks'] },
   { id: 'svc-full', name: 'Full Body Massage', minutes: 90, price: 900, suitable: true,
-    blurb: 'Whole-body relaxation with light attention to the lower back.', therapists: '3 therapists' },
+    blurb: 'Whole-body relaxation with light attention to the lower back.', therapists: '3 therapists',
+    about: 'Ninety minutes, head to feet, at a pressure you choose. Good if nothing hurts in '
+         + 'particular and you simply want to leave lighter than you arrived.',
+    helps: ['General tension', 'Poor sleep', 'Long hours on your feet'],
+    avoid: ['Fracture or surgery in the last 6 weeks'] },
   { id: 'svc-foot', name: 'Foot Reflexology', minutes: 45, price: 550, suitable: true,
-    blurb: 'Pressure-point work on the feet. Safe alongside back treatment.', therapists: '2 therapists' },
+    blurb: 'Pressure-point work on the feet. Safe alongside back treatment.', therapists: '2 therapists',
+    about: 'Forty-five minutes on the feet and lower legs. Gentle, and safe to book on the same day '
+         + 'as a back treatment.',
+    helps: ['Plantar Fasciitis', 'Tired legs', 'Poor circulation'],
+    avoid: ['Open wound or skin infection on the feet'] },
   { id: 'svc-deep', name: 'Deep Tissue Massage', minutes: 60, price: 850, suitable: false,
     blurb: 'Contraindicated with high blood pressure by the spa’s own protocol.',
     therapists: '', reason: 'High blood pressure' },
@@ -68,9 +83,12 @@ export const PAST_VISITS = [
 
 /* TODO Sprint 1 — this comes from the customer's own last Forms record */
 export const LAST_POINTS: DemoPoint[] = [
-  { key: 'd1', view: 'FRONT', x: 63, y: 22, region: 'SHOULDER', score: 8, qualities: ['Pain'] },
-  { key: 'd2', view: 'BACK',  x: 50, y: 47, region: 'LUMBAR',   score: 7, qualities: ['Pain', 'Stiff'] },
-  { key: 'd3', view: 'FRONT', x: 78, y: 41, region: 'ELBOW',    score: 5, qualities: ['Stiff'] },
+  { key: 'd1', hotspotId: 'f-sh-l', view: 'FRONT', x: 67, y: 19, region: 'SHOULDER', side: 'LEFT',
+    score: 8, qualities: ['Pain'] },
+  { key: 'd2', hotspotId: 'b-lumb', view: 'BACK',  x: 50, y: 38, region: 'LUMBAR',   side: 'CENTRE',
+    score: 7, qualities: ['Pain', 'Stiff'] },
+  { key: 'd3', hotspotId: 'f-el-l', view: 'FRONT', x: 76, y: 33, region: 'ELBOW',    side: 'LEFT',
+    score: 5, qualities: ['Stiff'] },
 ];
 
 /* TODO Sprint 3 — GET /api/v1/appointments?branch={own}&date=today */

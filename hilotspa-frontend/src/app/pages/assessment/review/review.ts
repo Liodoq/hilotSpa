@@ -52,8 +52,21 @@ export class Review {
       this.store.isLeisure() ? '/assessment/intent' : '/assessment/history');
   }
 
+  /** The rule the database cannot express: a chief complaint is required when
+   *  intent = PAIN and forbidden when LEISURE. Mirrors the guard that belongs
+   *  in FormsServiceImpl.createForm (§B45). */
+  problem = computed<string | null>(() => {
+    const d = this.draft();
+    if (d.intent === 'LEISURE') return null;
+    if (!d.points.length) return 'Mark at least one spot on the body map before submitting.';
+    if (!d.mainComplaint) return 'Choose which complaint bothers you most before submitting.';
+    return null;
+  });
+
   async submit(): Promise<void> {
     if (this.busy() || !this.draft().consented) return;
+    const problem = this.problem();
+    if (problem) { this.error.set(problem); return; }
     this.busy.set(true);
     this.error.set('');
     try {
@@ -69,7 +82,10 @@ export class Review {
 
       await this.api.createForm(this.store.toFormsModel(branchId));
       this.store.reset();
-      await this.router.navigateByUrl('/assessment/intent');
+      // Submitting used to return to the start of the wizard, which read as
+      // "nothing happened". The assessment is what unlocks the assistant, so
+      // that is where a completed assessment goes.
+      await this.router.navigateByUrl('/book');
     } catch (e: unknown) {
       console.error('[review] submit failed', e);
       this.error.set(describeHttpError(e, 'We could not save your assessment.'));
@@ -78,5 +94,5 @@ export class Review {
     }
   }
 
-  leave(): void { this.store.reset(); this.auth.logout(); }
+  leave(): void { this.router.navigateByUrl('/home'); }
 }

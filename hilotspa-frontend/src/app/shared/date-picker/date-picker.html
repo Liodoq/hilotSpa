@@ -1,0 +1,43 @@
+<button type="button" class="input trigger" [class.ro]="disabled()"
+        [disabled]="disabled()" [attr.aria-expanded]="open()" aria-haspopup="dialog"
+        (click)="toggle()">
+  <span [class.ph]="!value()">{{ display() }}</span>
+  <span class="cal" aria-hidden="true"></span>
+</button>
+
+@if (open()) {
+  <div class="panel" role="dialog" aria-label="Choose a date">
+    <div class="pnav">
+      <button type="button" class="nav" (click)="shift(-1)" aria-label="Previous month">&lsaquo;</button>
+      <select class="sel" [value]="month()" (change)="month.set(+num($event))" aria-label="Month">
+        @for (m of months; track m; let i = $index) {
+          <option [value]="i" [selected]="i === month()">{{ m }}</option>
+        }
+      </select>
+      <select class="sel" [value]="year()" (change)="year.set(+num($event))" aria-label="Year">
+        @for (y of years(); track y) { <option [value]="y" [selected]="y === year()">{{ y }}</option> }
+      </select>
+      <button type="button" class="nav" (click)="shift(1)" aria-label="Next month">&rsaquo;</button>
+    </div>
+
+    <div class="dow" aria-hidden="true">
+      @for (d of dow; track d) { <span>{{ d }}</span> }
+    </div>
+
+    <div class="grid">
+      @for (c of cells(); track $index) {
+        @if (c === null) { <span class="pad"></span> }
+        @else {
+          <button type="button" class="day" [class.on]="isSelected(c)" [class.today]="isToday(c)"
+                  [attr.aria-pressed]="isSelected(c)" (click)="pick(c)">{{ c }}</button>
+        }
+      }
+    </div>
+
+    <div class="pfoot">
+      <button type="button" class="link" (click)="clear()">Clear</button>
+      <button type="button" class="btn btn-primary btn-sm" (click)="open.set(false)">Done</button>
+    </div>
+  </div>
+  <button type="button" class="scrim" aria-label="Close calendar" (click)="open.set(false)"></button>
+}

@@ -13,9 +13,11 @@ export const routes: Routes = [
   /* ---- customer ---- */
   { path: 'home',     canActivate: [authGuard], loadComponent: () => import('./pages/home/home').then(m => m.Home) },
   { path: 'services', canActivate: [authGuard], loadComponent: () => import('./pages/services/services').then(m => m.Services) },
+  { path: 'services/:id', canActivate: [authGuard], loadComponent: () => import('./pages/service-detail/service-detail').then(m => m.ServiceDetail) },
   { path: 'book',     canActivate: [authGuard], loadComponent: () => import('./pages/book/book').then(m => m.Book) },
   { path: 'booking',  canActivate: [authGuard], loadComponent: () => import('./pages/booking/booking').then(m => m.Booking) },
   { path: 'profile',  canActivate: [authGuard], loadComponent: () => import('./pages/profile/profile').then(m => m.Profile) },
+  { path: 'report/:id', canActivate: [authGuard], loadComponent: () => import('./pages/session-report/session-report').then(m => m.SessionReport) },
 
   /* ---- the pre-assessment wizard: one form across FIVE screens.
          Demographics used to be step 2. They belong to the person rather than

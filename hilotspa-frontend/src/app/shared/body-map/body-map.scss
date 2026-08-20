@@ -1,3 +1,21 @@
 :host { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
+/* the markable positions, faint until you come near them */
+.pin { position: absolute; transform: translate(-50%, -50%); width: 13px; height: 13px;
+  border-radius: 50%; background: var(--color-sage-300); opacity: .5;
+  pointer-events: none; transition: opacity .14s ease; }
+.pin.taken { opacity: 0; }
+.figure:hover .pin { opacity: .85; }
+
+/* where the marker would land */
+.ghost { position: absolute; transform: translate(-50%, -50%); width: 46px; height: 46px;
+  border-radius: 50%; border: 3px dashed var(--color-forest-700);
+  background: rgba(70, 98, 49, .14); pointer-events: none; }
+.ghostlabel { position: absolute; transform: translate(-50%, -50%) translateY(-38px);
+  background: var(--color-ink-900); color: #fff; font-size: 14px; font-weight: 600;
+  white-space: nowrap; padding: 6px 11px; border-radius: 8px; pointer-events: none; z-index: 4; }
+
 .figure.ro { cursor: default; }
+.figure.locked { cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) { .pin { transition: none; } }

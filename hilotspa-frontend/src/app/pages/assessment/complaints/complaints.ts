@@ -2,7 +2,6 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Shell } from '../../../shared/shell/shell';
 import { AssessmentStore } from '../../../core/assessment.store';
-import { AuthService } from '../../../core/auth.service';
 import { COMPLAINTS } from '../../../core/models';
 
 /**
@@ -20,7 +19,6 @@ import { COMPLAINTS } from '../../../core/models';
 })
 export class Complaints {
   private router = inject(Router);
-  private auth = inject(AuthService);
   protected store = inject(AssessmentStore);
   protected draft = this.store.draft;
 
@@ -44,5 +42,5 @@ export class Complaints {
 
   back(): void { this.router.navigateByUrl('/assessment/body-map'); }
   next(): void { this.router.navigateByUrl('/assessment/history'); }
-  leave(): void { this.store.reset(); this.auth.logout(); }
+  leave(): void { this.router.navigateByUrl('/home'); }
 }

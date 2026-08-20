@@ -11,9 +11,23 @@
     <a routerLink="/about"    routerLinkActive="on">ABOUT</a>
   </nav>
 
-  <div style="display:flex;align-items:center;gap:14px">
+  <div class="account">
     <span style="font-size:19px;font-weight:500">{{ auth.fullName() || 'Guest' }}</span>
-    <button type="button" class="avatar" [attr.aria-label]="'Account menu for ' + auth.fullName()"
-            (click)="auth.logout()">{{ initials() }}</button>
+    <button type="button" class="avatar" [attr.aria-expanded]="open()" aria-haspopup="menu"
+            [attr.aria-label]="'Account menu for ' + auth.fullName()"
+            (click)="open.set(!open())">{{ initials() }}</button>
+
+    @if (open()) {
+      <!-- Clicking the avatar used to sign you out immediately. One stray click
+           and the whole assessment was gone. It opens a menu now. -->
+      <div class="menu" role="menu">
+        <button type="button" role="menuitem" (click)="go('/home')">Home</button>
+        <button type="button" role="menuitem" (click)="go('/profile')">My details</button>
+        <button type="button" role="menuitem" (click)="go('/booking')">My bookings</button>
+        <hr class="hr">
+        <button type="button" role="menuitem" class="danger" (click)="signOut()">Sign out</button>
+      </div>
+      <button type="button" class="scrim" aria-label="Close menu" (click)="open.set(false)"></button>
+    }
   </div>
 </header>

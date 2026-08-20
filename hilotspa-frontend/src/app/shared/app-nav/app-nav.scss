@@ -1,0 +1,13 @@
+
+.account { display: flex; align-items: center; gap: 14px; position: relative; }
+.menu { position: absolute; top: calc(100% + 12px); right: 0; z-index: 20; min-width: 250px;
+  background: #fff; border: 1.5px solid var(--color-line); border-radius: var(--radius-md);
+  box-shadow: 0 14px 34px rgba(46, 66, 32, .18); padding: 8px; display: flex; flex-direction: column; }
+.menu button { min-height: 56px; border: 0; background: none; text-align: left; padding: 0 16px;
+  font: 500 19px/1 var(--font-sans); color: var(--color-ink-900); border-radius: 10px; cursor: pointer; }
+.menu button:hover { background: var(--color-sage-100); }
+.menu button:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: -2px; }
+.menu .danger { color: var(--color-danger-600); }
+.menu .danger:hover { background: #F7E7E3; }
+.menu .hr { margin: 6px 10px; }
+.scrim { position: fixed; inset: 0; z-index: 10; background: transparent; border: 0; cursor: default; }

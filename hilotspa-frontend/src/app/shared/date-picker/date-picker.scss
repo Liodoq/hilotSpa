@@ -1,0 +1,39 @@
+:host { display: block; position: relative; }
+
+.trigger { display: flex; align-items: center; justify-content: space-between; text-align: left;
+  cursor: pointer; font-family: var(--font-sans); }
+.trigger .ph { color: var(--color-ink-600); }
+.trigger.ro { background: var(--color-sage-100); cursor: default; }
+.cal { width: 22px; height: 22px; border: 2px solid var(--color-ink-600); border-radius: 6px;
+  position: relative; flex: 0 0 auto; }
+.cal::before { content: ""; position: absolute; inset: -5px 4px auto 4px; height: 5px;
+  border-left: 2px solid var(--color-ink-600); border-right: 2px solid var(--color-ink-600); }
+
+.panel { position: absolute; top: calc(100% + 10px); left: 0; z-index: 25; width: 372px;
+  background: #fff; border: 1.5px solid var(--color-line); border-radius: var(--radius-lg);
+  box-shadow: 0 16px 40px rgba(46, 66, 32, .2); padding: 18px; }
+
+.pnav { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.nav { width: 48px; height: 48px; border-radius: 50%; border: 1.5px solid var(--color-line);
+  background: #fff; font-size: 24px; line-height: 1; color: var(--color-forest-900); cursor: pointer; }
+.nav:hover { background: var(--color-sage-100); border-color: var(--color-forest-500); }
+.sel { flex: 1; height: 48px; border: 1.5px solid var(--color-line); border-radius: 999px;
+  background: #fff; padding: 0 16px; font: 500 18px/1 var(--font-sans);
+  color: var(--color-ink-900); cursor: pointer; }
+
+.dow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 6px; }
+.dow span { text-align: center; font-size: 14px; font-weight: 600; letter-spacing: .6px;
+  color: var(--color-ink-600); }
+
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.pad { height: 44px; }
+.day { height: 44px; border-radius: 50%; border: 0; background: none; cursor: pointer;
+  font: 500 18px/1 var(--font-sans); color: var(--color-ink-900); }
+.day:hover { background: var(--color-sage-100); }
+.day.today { box-shadow: inset 0 0 0 2px var(--color-sage-300); }
+.day.on { background: var(--color-forest-700); color: #fff; font-weight: 700; }
+.day:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 2px; }
+
+.pfoot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px;
+  padding-top: 14px; border-top: 1px solid var(--color-line); }
+.scrim { position: fixed; inset: 0; z-index: 20; background: transparent; border: 0; cursor: default; }

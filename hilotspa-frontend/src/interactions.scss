@@ -149,3 +149,30 @@ tr[data-row].on{background:var(--color-sage-100)}
     transition-duration:.001ms!important}
   .btn:hover,.card.click:hover,.mic:hover,.mk:hover,.mk.static:hover{transform:none!important}
 }
+
+/* ---------------------------------------------------------------------------
+   Required-field marker.
+   Red while the field is empty, gone once it is filled. A permanent asterisk
+   tells you nothing after the first second — this one only marks what is still
+   outstanding. aria-hidden because the label already ends in "required".
+   --------------------------------------------------------------------------- */
+.req { color: var(--color-danger-600); font-weight: 700; margin-left: 2px; }
+.req.done { display: none; }
+
+/* ---------------------------------------------------------------------------
+   Password rules, shown on focus or hover rather than as permanent clutter.
+   --------------------------------------------------------------------------- */
+.pw { position: relative; }
+.pw-rules { position: absolute; top: calc(100% + 10px); left: 0; z-index: 15; width: 320px;
+  background: #fff; border: 1.5px solid var(--color-line); border-radius: var(--radius-md);
+  box-shadow: 0 12px 30px rgba(46, 66, 32, .16); padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 9px; }
+.pw-rules b { font-size: 16px; color: var(--color-ink-600); font-weight: 600;
+  letter-spacing: .6px; text-transform: uppercase; }
+.pw-rule { display: flex; align-items: center; gap: 10px; font-size: 17px; color: var(--color-ink-600); }
+.pw-rule .box { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--color-line);
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
+.pw-rule.ok { color: var(--color-forest-900); font-weight: 600; }
+.pw-rule.ok .box { background: var(--color-forest-700); border-color: var(--color-forest-700); }
+.pw-rule.ok .box::after { content: ""; width: 9px; height: 5px; border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff; transform: rotate(-45deg) translate(1px, -1px); }

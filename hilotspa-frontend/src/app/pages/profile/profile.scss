@@ -2,5 +2,9 @@
 .wrap { padding: 36px 48px 56px; display: flex; justify-content: center; }
 .col { width: 100%; max-width: 1240px; display: flex; flex-direction: column; gap: 22px; }
 .panel { display: flex; flex-direction: column; gap: 24px; }
+.panel.locked { background: #FCFBF8; }
+.panel.locked .input:disabled, .panel.locked .opt:disabled { opacity: 1; background: var(--color-sage-100); }
+.panel.locked .opt:disabled { cursor: default; }
+.topline { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .actions { display: flex; justify-content: flex-end; gap: 14px; }
 @media (max-width: 900px) { .row { flex-direction: column; } .wrap { padding: 20px; } }

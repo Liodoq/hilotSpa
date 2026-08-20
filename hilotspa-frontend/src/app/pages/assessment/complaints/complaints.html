@@ -42,7 +42,12 @@
       <div class="card block">
         <div>
           <h2 class="bt">Which one bothers you most?</h2>
-          <p class="help">This becomes your chief complaint.</p>
+          @if (ticked().length === 1) {
+            <p class="help">Only one ticked, so we picked it for you. Tick more on the left if
+              several apply.</p>
+          } @else {
+            <p class="help">This becomes your chief complaint.</p>
+          }
         </div>
 
         <div class="seg stack" role="group" aria-label="Chief complaint">

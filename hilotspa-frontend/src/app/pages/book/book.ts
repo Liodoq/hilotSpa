@@ -4,6 +4,7 @@ import { AppNav } from '../../shared/app-nav/app-nav';
 import { Toast } from '../../shared/toast/toast';
 import { ToastService } from '../../core/toast.service';
 import { SERVICES } from '../../core/demo';
+import { AssessmentStore } from '../../core/assessment.store';
 
 interface Msg { text: string; mine: boolean; at: string; spoken?: boolean; }
 
@@ -27,13 +28,21 @@ interface Msg { text: string; mine: boolean; at: string; spoken?: boolean; }
 export class Book {
   private router = inject(Router);
   protected toast = inject(ToastService);
+  private store = inject(AssessmentStore);
+
+  /** Set on C8 before the assessment. The assistant should not ask a question
+   *  it already has the answer to. */
+  protected wanted = this.store.wantedService();
 
   protected offer = { month: 'AUG', dayNum: '23', day: 'Sunday', service: 'Hilot sa Likod',
     minutes: 60, time: '2:00 PM – 3:00 PM', therapist: 'Therapist Marites', room: 'Room 2', price: 750 };
 
   messages = signal<Msg[]>([
-    { text: 'Kumusta po, Ana. Nakita ko sa assessment ninyo — lower back pain, severity 8. ' +
-            'Gusto ninyo po ba ng <b>Hilot sa Likod</b>?', mine: false, at: '2:41 PM' },
+    { text: this.wanted
+        ? `Kumusta po. Nakita ko sa assessment ninyo — lower back pain, severity 8. ` +
+          `Pinili ninyo po ang <b>${this.wanted}</b>. Kailan po kayo pwede?`
+        : 'Kumusta po, Ana. Nakita ko sa assessment ninyo — lower back pain, severity 8. ' +
+          'Gusto ninyo po ba ng <b>Hilot sa Likod</b>?', mine: false, at: '2:41 PM' },
     { text: 'Opo. Pwede ba sa Sunday hapon?', mine: true, at: '2:41 PM', spoken: true },
     { text: 'May bakante po tayo. Ito ang pinakamalapit sa hiningi ninyo:', mine: false, at: '2:42 PM' },
   ]);

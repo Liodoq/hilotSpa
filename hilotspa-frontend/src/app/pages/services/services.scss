@@ -4,6 +4,10 @@
 .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
 .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .svc { display: flex; flex-direction: column; gap: 12px; }
+/* Drop a photo at public/services/{id}.jpg. The tinted panel stands in until then. */
+.thumb { height: 168px; border-radius: var(--radius-md); background-color: var(--color-sage-100);
+  background-size: cover; background-position: center; border: 1px solid var(--color-line); }
+.svc.out .thumb { filter: grayscale(1); opacity: .55; }
 .svc.best { border: 2.5px solid var(--color-forest-700); }
 .svc.out { background: #F4F2EC; border-style: dashed; cursor: default; }
 .svc.out:hover { transform: none; box-shadow: none; border-color: var(--color-line); }

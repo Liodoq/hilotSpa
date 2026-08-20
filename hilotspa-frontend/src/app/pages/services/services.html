@@ -26,13 +26,15 @@
 
     <div class="grid">
       @for (s of shown(); track s.id) {
-        <article class="card click svc" [class.best]="s.best" [class.out]="!s.suitable">
+        <article class="card click svc" [class.best]="s.best" [class.out]="!s.suitable"
+                 (click)="open(s)" [attr.tabindex]="s.suitable ? 0 : -1" [attr.role]="s.suitable ? 'button' : null">
           @if (s.suitable) {
             <span class="pill ok" style="align-self:flex-start"><i class="dotx"></i>
               {{ s.best ? 'BEST MATCH FOR LOWER BACK PAIN' : 'ALSO SUITABLE' }}</span>
           } @else {
             <span class="pill bad" style="align-self:flex-start">NOT ADVISED FOR YOU</span>
           }
+          <div class="thumb" [style.background-image]="'url(/services/' + s.id + '.jpg)'"></div>
           <h2 class="svcName">{{ s.name }}</h2>
           <p class="s" style="font-size:19px">{{ s.blurb }}</p>
           @if (s.suitable) {
@@ -45,7 +47,8 @@
             <div class="price">₱ {{ s.price }}</div>
             @if (s.suitable) {
               <button type="button" class="btn btn-sm" [class.btn-primary]="s.best"
-                      [class.btn-ghost]="!s.best" (click)="choose(s)">Choose</button>
+                      [class.btn-ghost]="!s.best" (click)="open(s); $event.stopPropagation()">
+                View &amp; book</button>
             }
           </div>
         </article>

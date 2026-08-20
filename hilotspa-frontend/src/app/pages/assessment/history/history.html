@@ -53,7 +53,8 @@
               <select id="tk" class="input" [value]="draft().therapyKind"
                       (change)="store.patch({ therapyKind: val($event) })">
                 <option value="">Choose one</option>
-                @for (k of therapyKinds; track k) { <option [value]="k">{{ k }}</option> }
+                @for (k of therapyKinds; track k) {
+                  <option [value]="k" [selected]="k === draft().therapyKind">{{ k }}</option> }
               </select>
             </div>
             <div class="field">

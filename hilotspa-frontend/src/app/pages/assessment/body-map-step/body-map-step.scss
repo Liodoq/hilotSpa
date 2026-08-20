@@ -1,6 +1,6 @@
 :host { display: block; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 22px; align-items: start; }
-.maps { display: grid; grid-template-columns: 440px minmax(0, 1fr); gap: 30px; padding: 26px 28px; }
+
 
 .editor { align-self: start; border: 2.5px solid var(--color-forest-700);
           border-radius: var(--radius-lg); padding: 24px; }
@@ -30,3 +30,10 @@
   .maps { grid-template-columns: 1fr; }
 }
 @media (max-width: 700px) { .pair { flex-direction: column; align-items: center; } }
+
+/* --- rebuilt for fixed hotspots --- */
+.mapcard { display: grid; grid-template-columns: 430px minmax(0, 1fr); gap: 28px; padding: 24px 26px; }
+.editor.idle { border-style: dashed; border-color: var(--color-line); }
+.ehead { display: flex; gap: 14px; align-items: center; }
+.ename { font-size: 22px; font-weight: 600; color: var(--color-forest-900); margin: 0; }
+@media (max-width: 1400px) { .mapcard { grid-template-columns: 1fr; } }

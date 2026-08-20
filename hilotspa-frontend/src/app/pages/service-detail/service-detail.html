@@ -1,0 +1,83 @@
+<app-nav />
+@if (service(); as s) {
+  <main class="wrap">
+    <div class="col">
+      <button type="button" class="link" (click)="back()">&larr; All services</button>
+
+      <div class="hero" [style.background-image]="'url(/services/' + s.id + '.jpg)'">
+        <div class="scrim"></div>
+        <div class="heroText">
+          @if (s.best) { <span class="pill ok"><i class="dotx"></i>BEST MATCH FOR YOUR ASSESSMENT</span> }
+          <h1 class="t" style="color:#fff">{{ s.name }}</h1>
+          <p style="font-size:21px;color:var(--color-sage-100)">{{ s.minutes }} minutes · ₱{{ s.price }} ·
+            pay at counter</p>
+        </div>
+      </div>
+
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+          <div class="card">
+            <h2 class="t-s" style="font-size:24px;margin-bottom:10px">About this treatment</h2>
+            <p style="font-size:20px;line-height:1.6;color:var(--color-ink-600)">{{ s.about ?? s.blurb }}</p>
+          </div>
+
+          @if (s.helps?.length) {
+            <div class="card">
+              <h2 class="t-s" style="font-size:24px;margin-bottom:12px">Often booked for</h2>
+              <div class="chips">
+                @for (h of s.helps; track h) { <span class="chip">{{ h }}</span> }
+              </div>
+            </div>
+          }
+
+          @if (s.avoid?.length) {
+            <div class="card">
+              <h2 class="t-s" style="font-size:24px;margin-bottom:12px">Not advised if</h2>
+              <div class="chips">
+                @for (a of s.avoid; track a) { <span class="chip" style="border-color:var(--color-danger-600)">{{ a }}</span> }
+              </div>
+              <p class="help" style="margin-top:12px">These rules were written and signed by our bone
+                setter, Gary O. Trinidad. Your pre-assessment is checked against them before anything
+                is offered to you.</p>
+            </div>
+          }
+        </div>
+
+        <aside style="display:flex;flex-direction:column;gap:16px">
+          <div class="card" style="display:flex;flex-direction:column;gap:14px">
+            <div>
+              <div class="help">PRICE</div>
+              <div style="font-size:34px;font-weight:600;color:var(--color-forest-900)">₱ {{ s.price }}</div>
+              <div class="help">{{ s.minutes }} minutes · {{ s.therapists }}</div>
+            </div>
+            <hr class="hr">
+
+            @if (!s.suitable) {
+              <div class="note bad"><span class="b"></span>
+                <span>Not advised for you — {{ s.reason }} is on your record.</span></div>
+              <button type="button" class="btn btn-quiet btn-block" (click)="back()">See other services</button>
+            } @else {
+              <button type="button" class="btn btn-primary btn-block" (click)="book(s)">Book this</button>
+              <!-- Process Rule #2: the assistant is gated behind a completed
+                   assessment, so choosing a service starts one rather than
+                   jumping to a booking the system could not safely make. -->
+              <p class="help">Next: a short pre-assessment, then the booking assistant finds you a
+                time. It takes about three minutes.</p>
+            }
+          </div>
+
+          <div class="note"><span class="b"></span>
+            <span>Nothing is charged online. You settle at the counter after your session.</span></div>
+        </aside>
+      </div>
+    </div>
+  </main>
+} @else {
+  <main class="wrap">
+    <div class="col" style="text-align:center;padding-top:60px">
+      <h1 class="t">We could not find that service</h1>
+      <button type="button" class="btn btn-ghost" style="align-self:center" (click)="back()">All services</button>
+    </div>
+  </main>
+}
+<app-toast />

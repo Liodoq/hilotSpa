@@ -38,9 +38,13 @@ export class Services {
     return this.all;   // "Recommended for you" — suitable first, exclusions still visible
   });
 
-  choose(s: DemoService): void {
-    this.toast.show(`${s.name} selected — let's find a time`);
-    setTimeout(() => this.router.navigateByUrl('/book'), 500);
+  /** Each service gets its own page, with a photo and what it is actually for. */
+  open(s: DemoService): void {
+    if (!s.suitable) {
+      this.toast.show(`${s.name} is not advised with ${s.reason}`, 3000);
+      return;
+    }
+    this.router.navigateByUrl(`/services/${s.id}`);
   }
 
   explain(): void {

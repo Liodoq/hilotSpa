@@ -1,6 +1,6 @@
 <app-shell [step]="5" [wide]="true" nextLabel="Submit my assessment"
            hint="This is the only step that writes to your record."
-           [nextDisabled]="!draft().consented || busy()"
+           [nextDisabled]="!draft().consented || busy() || !!problem()"
            (back)="back()" (next)="submit()" (exit)="leave()">
 
   <div class="head">
@@ -40,7 +40,7 @@
               </div>
               <ol class="plist">
                 @for (p of draft().points; track p.key) {
-                  <li><b>{{ $index + 1 }}.</b> {{ label(p.region) }} &middot;
+                  <li><b>{{ $index + 1 }}.</b> {{ label(p.region) }}@if (p.side !== 'CENTRE') { &middot; {{ p.side.toLowerCase() }} } &middot;
                     {{ p.view.toLowerCase() }} &mdash; severity {{ p.score }}@if (p.qualities.length) {, {{ p.qualities.join(', ').toLowerCase() }} }</li>
                 }
               </ol>
@@ -94,13 +94,13 @@
           Knead Wellness Spa may keep it as part of my treatment record.</span>
       </button>
 
+      @if (problem(); as p) { <p class="err" role="alert">{{ p }}</p> }
       @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
 
-      <button type="button" class="btn btn-primary btn-block big"
-              [disabled]="!draft().consented || busy()" (click)="submit()">
-        {{ busy() ? 'Saving…' : 'Submit my assessment' }}
-      </button>
-      <p class="help centre">Takes a second. You can update it any time at the front desk.</p>
+      <!-- The submit button lives in the footer only. Two of them on one screen
+           made it ambiguous which one actually saved. -->
+      <p class="help centre">Tick the box above, then use <b>Submit my assessment</b> at the
+        bottom of the page. You can update it any time at the front desk.</p>
     </aside>
   </div>
 </app-shell>
