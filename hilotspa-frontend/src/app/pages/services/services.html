@@ -1,0 +1,63 @@
+<app-nav />
+<main class="wrap">
+  <div class="col">
+    <div class="top">
+      <div class="head">
+        <h1 class="t">Services we can offer you</h1>
+        <p class="s">Filtered against your assessment of 2 August. Prices are what you pay at the counter.</p>
+      </div>
+      <div class="chips" role="group" aria-label="Filter services">
+        @for (f of filters; track f) {
+          <button type="button" class="chip" [class.on]="filter() === f"
+                  [attr.aria-pressed]="filter() === f" (click)="filter.set(f)">{{ f }}</button>
+        }
+      </div>
+    </div>
+
+    @if (hidden().length) {
+      <div class="note warm"><span class="b"></span>
+        <span><b>{{ hidden().length }} services are hidden.</b>
+          {{ hiddenNames() }} {{ hidden().length === 1 ? 'is' : 'are' }} not advised with
+          {{ hidden()[0].reason }}, which you told us about on 2 August. That rule was written and
+          signed by our bone setter, Gary O. Trinidad — not decided by the app.
+          <button type="button" class="link" (click)="explain()">See why</button></span>
+      </div>
+    }
+
+    <div class="grid">
+      @for (s of shown(); track s.id) {
+        <article class="card click svc" [class.best]="s.best" [class.out]="!s.suitable">
+          @if (s.suitable) {
+            <span class="pill ok" style="align-self:flex-start"><i class="dotx"></i>
+              {{ s.best ? 'BEST MATCH FOR LOWER BACK PAIN' : 'ALSO SUITABLE' }}</span>
+          } @else {
+            <span class="pill bad" style="align-self:flex-start">NOT ADVISED FOR YOU</span>
+          }
+          <h2 class="svcName">{{ s.name }}</h2>
+          <p class="s" style="font-size:19px">{{ s.blurb }}</p>
+          @if (s.suitable) {
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <span class="pill mute">{{ s.minutes }} min</span>
+              <span class="pill mute">{{ s.therapists }}</span>
+            </div>
+          }
+          <div class="foot">
+            <div class="price">₱ {{ s.price }}</div>
+            @if (s.suitable) {
+              <button type="button" class="btn btn-sm" [class.btn-primary]="s.best"
+                      [class.btn-ghost]="!s.best" (click)="choose(s)">Choose</button>
+            }
+          </div>
+        </article>
+      }
+
+      <article class="card ask">
+        <h2 class="svcName" style="font-size:22px">Not sure which one?</h2>
+        <p class="s" style="font-size:19px;text-align:center">Ask the booking assistant.
+          It can only offer what is on this page.</p>
+        <button type="button" class="btn btn-primary btn-sm" routerLink="/book">Ask the assistant</button>
+      </article>
+    </div>
+  </div>
+</main>
+<app-toast />

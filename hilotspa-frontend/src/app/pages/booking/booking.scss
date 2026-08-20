@@ -1,0 +1,14 @@
+:host { display: block; min-height: 100dvh; background: var(--color-cream); }
+.wrap { padding: 36px 48px 56px; display: flex; justify-content: center; }
+.col { width: 100%; max-width: 1400px; display: flex; flex-direction: column; gap: 22px; }
+.hero { display: flex; gap: 20px; align-items: center; }
+.check { width: 84px; height: 84px; border-radius: 50%; background: var(--color-forest-700);
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
+.check i { width: 32px; height: 17px; border-left: 6px solid #fff; border-bottom: 6px solid #fff;
+  transform: rotate(-45deg) translate(3px, -5px); display: block; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 460px; gap: 22px; align-items: start; }
+.refbar { background: var(--color-forest-900); color: #fff; padding: 22px 30px;
+  display: flex; align-items: center; justify-content: space-between; }
+.k { width: 210px; color: var(--color-ink-600); }
+@media (max-width: 1200px) { .cols { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .wrap { padding: 20px; } .k { width: 130px; } }

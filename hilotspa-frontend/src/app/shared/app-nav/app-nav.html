@@ -1,0 +1,19 @@
+<header class="appbar">
+  <a class="brand" routerLink="/home" aria-label="Knead Wellness Spa, home">
+    <app-logo [size]="58" />
+    <span><b>Knead Wellness Spa</b><small>Bulan, Sorsogon</small></span>
+  </a>
+
+  <nav class="navlinks" aria-label="Main">
+    <a routerLink="/home"     routerLinkActive="on">HOME</a>
+    <a routerLink="/services" routerLinkActive="on">SERVICES</a>
+    <a routerLink="/booking"  routerLinkActive="on">MY BOOKINGS</a>
+    <a routerLink="/about"    routerLinkActive="on">ABOUT</a>
+  </nav>
+
+  <div style="display:flex;align-items:center;gap:14px">
+    <span style="font-size:19px;font-weight:500">{{ auth.fullName() || 'Guest' }}</span>
+    <button type="button" class="avatar" [attr.aria-label]="'Account menu for ' + auth.fullName()"
+            (click)="auth.logout()">{{ initials() }}</button>
+  </div>
+</header>

@@ -1,0 +1,151 @@
+/* ---------------------------------------------------------------------------
+   HilotSpa — interaction layer
+   Loaded after styles.scss (see angular.json). Kept as its own file so the
+   interaction rules stay identifiable and can be reviewed in one place.
+
+   Everything here targets class names that already exist in styles.scss, so
+   nothing else has to change. Three rules it follows:
+
+     1. Hover is a hint, focus is a promise. No information is carried by
+        hover alone — a keyboard user sees the same state.
+     2. Every interactive element gets a visible :focus-visible ring. NFR#4 is
+        about motor and visual difficulty, and that includes people who cannot
+        aim a mouse.
+     3. Nothing moves for a user who asked for less motion.
+
+   In Angular the .on class becomes a binding — [class.on]="value === x" for a
+   radio group, [class.on]="set.has(x)" for a checkbox group — and the
+   [attr.aria-pressed] you already have stays as it is.
+   --------------------------------------------------------------------------- */
+
+/* ===========================================================================
+   INTERACTION LAYER
+   Every rule below is written against class names that already exist in the
+   Angular app's src/styles.scss, so this whole block ports across unchanged.
+   Three principles:
+     1. Hover is a hint, focus is a promise. Hover styling never carries
+        information that focus styling doesn't also carry.
+     2. Every interactive element has a visible :focus-visible ring. NFR#4 is
+        about motor and visual difficulty, and that includes people who cannot
+        use a mouse accurately.
+     3. Nothing moves for someone who asked for less motion.
+   =========================================================================== */
+
+/* ---- the focus ring, once, for everything ---- */
+:where(.btn,.chip,.tile,.opt,.navitem,.link,.pt,.slot,.x,.mk,.scale button,.card.click,
+       .input,.avatar,.navlinks span,tr[data-row]):focus-visible{
+  outline:3px solid var(--color-forest-500); outline-offset:3px; border-radius:8px;
+}
+
+/* ---- buttons ---- */
+.btn{transition:background-color .14s ease, border-color .14s ease, color .14s ease,
+     transform .10s ease, box-shadow .14s ease}
+.btn:hover{transform:translateY(-1px); box-shadow:0 6px 16px rgba(46,66,32,.16)}
+.btn:active{transform:translateY(0); box-shadow:none}
+.btn-primary:hover{background:var(--color-forest-900)}
+.btn-ghost:hover{background:var(--color-sage-100)}
+.btn-quiet:hover{background:#F4F2EC; border-color:var(--color-ink-600)}
+.btn-danger:hover{background:var(--color-danger-600); color:#fff}
+.btn[aria-disabled="true"],.btn:disabled{opacity:.45; cursor:not-allowed;
+  transform:none!important; box-shadow:none!important}
+
+/* ---- links ---- */
+.link{transition:color .14s ease; cursor:pointer}
+.link:hover{color:var(--color-forest-900); text-decoration-thickness:2px}
+
+/* ---- selectable controls ---- */
+.chip,.tile,.opt{transition:background-color .14s ease, border-color .14s ease,
+  box-shadow .14s ease, transform .10s ease; cursor:pointer;
+  -webkit-user-select:none; user-select:none}
+.chip:hover:not(.on),.tile:hover:not(.on),.opt:hover:not(.on){
+  border-color:var(--color-forest-500); background:#FCFBF8}
+.chip:active,.tile:active,.opt:active{transform:scale(.985)}
+.chip.on:hover,.tile.on:hover,.opt.on:hover{box-shadow:0 4px 12px rgba(46,66,32,.14)}
+
+/* ---- inputs ---- */
+.input{transition:border-color .14s ease, box-shadow .14s ease}
+.input:hover:not(:disabled){border-color:var(--color-ink-600)}
+.input:disabled{background:#F4F2EC; color:var(--color-ink-600); cursor:not-allowed;
+  border-color:var(--color-line)}
+.input:disabled::placeholder{color:#9A968D}
+.input:focus,.input:focus-visible{outline:3px solid var(--color-forest-500); outline-offset:1px;
+  border-color:var(--color-forest-700)}
+
+/* ---- cards you can click ---- */
+.card.click{transition:border-color .14s ease, box-shadow .16s ease, transform .12s ease; cursor:pointer}
+.card.click:hover{border-color:var(--color-forest-500); box-shadow:0 10px 26px rgba(46,66,32,.13);
+  transform:translateY(-2px)}
+
+/* ---- rows, slots, queue items ---- */
+tbody tr,table tr{transition:background-color .12s ease}
+tr[data-row]{cursor:pointer}
+tr[data-row]:hover{background:var(--color-cream)}
+tr[data-row].on{background:var(--color-sage-100)}
+.slot{transition:border-color .14s ease, box-shadow .14s ease; cursor:pointer}
+.slot:hover{border-color:var(--color-forest-500); box-shadow:0 6px 16px rgba(46,66,32,.10)}
+.pt{transition:border-color .14s ease, background-color .14s ease}
+.pt:hover:not(.sel){border-color:var(--color-forest-500); background:#FCFBF8}
+.x{transition:background-color .14s ease, color .14s ease, border-color .14s ease; cursor:pointer}
+.x:hover{background:#F7E7E3; border-color:var(--color-danger-600); color:var(--color-danger-600)}
+
+/* ---- navigation ---- */
+.navitem{transition:background-color .14s ease, color .14s ease; cursor:pointer}
+.navitem:hover:not(.on){background:rgba(255,255,255,.08); color:#fff}
+.navlinks span{transition:color .14s ease; cursor:pointer; padding-bottom:6px;
+  border-bottom:3px solid transparent}
+.navlinks span:hover:not(.on){color:var(--color-forest-900); border-bottom-color:var(--color-sage-300)}
+.avatar{transition:box-shadow .14s ease; cursor:pointer}
+.avatar:hover{box-shadow:0 0 0 3px var(--color-sage-300)}
+
+/* ---- body map markers ---- */
+.mk{transition:transform .12s ease, box-shadow .14s ease}
+.mk:hover{transform:translate(-50%,-50%) scale(1.14); box-shadow:0 4px 14px rgba(0,0,0,.38); z-index:3}
+/* .mk.static is in normal flow (transform:none), so it must NOT pick up the
+   centring translate on hover or it jumps up and left by half its size. */
+.mk.static:hover{transform:scale(1.12)}
+.mk:disabled{cursor:default}
+.mk:disabled:hover{transform:none; box-shadow:0 3px 10px rgba(0,0,0,.28)}
+.mk.static:disabled:hover{transform:none}
+.mk[data-tip]{position:absolute}
+.mk[data-tip]::after{content:attr(data-tip); position:absolute; bottom:calc(100% + 10px); left:50%;
+  transform:translateX(-50%); background:var(--color-ink-900); color:#fff; font-size:14px;
+  font-weight:500; white-space:nowrap; padding:7px 12px; border-radius:8px; opacity:0;
+  pointer-events:none; transition:opacity .14s ease}
+.mk[data-tip]:hover::after,.mk[data-tip]:focus-visible::after{opacity:1}
+.figure[data-place]{cursor:crosshair}
+
+/* ---- pain scale ---- */
+.scale button{transition:background-color .12s ease, border-color .12s ease, color .12s ease}
+.scale button:hover:not(.on){border-color:var(--color-danger-600); background:#FBF3F1}
+
+/* ---- microphone, listening state ---- */
+.mic{transition:transform .12s ease, box-shadow .16s ease; cursor:pointer}
+.mic:hover{transform:scale(1.05)}
+.mic.live{background:var(--color-danger-600); animation:pulse 1.4s ease-out infinite}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(163,59,39,.55)}
+  70%{box-shadow:0 0 0 22px rgba(163,59,39,0)}
+  100%{box-shadow:0 0 0 0 rgba(163,59,39,0)}
+}
+
+/* ---- toast ---- */
+.toast{position:absolute; left:50%; bottom:34px; transform:translate(-50%,20px);
+  background:var(--color-forest-900); color:#fff; font-size:19px; font-weight:500;
+  padding:16px 26px; border-radius:14px; box-shadow:0 14px 34px rgba(46,66,32,.34);
+  display:flex; align-items:center; gap:14px; opacity:0; pointer-events:none;
+  transition:opacity .2s ease, transform .2s ease; z-index:40; max-width:80%}
+.toast.show{opacity:1; transform:translate(-50%,0)}
+.toast .tick{width:24px;height:24px;border-radius:50%;background:var(--color-sage-300);flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center}
+.toast .tick::after{content:"";width:11px;height:6px;border-left:2.5px solid var(--color-forest-900);
+  border-bottom:2.5px solid var(--color-forest-900);transform:rotate(-45deg) translate(1px,-1px)}
+
+/* ---- filtering ---- */
+[data-hidden="true"]{display:none!important}
+
+/* ---- respect the user's motion preference ---- */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important; animation-iteration-count:1!important;
+    transition-duration:.001ms!important}
+  .btn:hover,.card.click:hover,.mic:hover,.mk:hover,.mk.static:hover{transform:none!important}
+}

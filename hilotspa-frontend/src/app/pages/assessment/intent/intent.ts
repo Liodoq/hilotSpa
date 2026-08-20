@@ -31,9 +31,12 @@ export class Intent {
   }
 
   next(): void {
-    // The leisure path skips the body map, the complaint checklist and the
-    // history questions — but still lands on review, and still saves.
-    this.router.navigateByUrl('/assessment/demographics');
+    // Demographics used to sit here as step 2. They are on the profile now, so
+    // a returning client goes straight to the map.
+    // The leisure path skips the map, the checklist and the history questions —
+    // but still lands on review, and still saves a completed record.
+    this.router.navigateByUrl(
+      this.store.isLeisure() ? '/assessment/review' : '/assessment/body-map');
   }
 
   leave(): void {

@@ -1,0 +1,87 @@
+<app-dash-shell role="ADMIN" scopeNote="Global settings — every node receives these">
+  <span bar class="pill warn"><i class="dotx"></i>1 node will receive this when it reconnects</span>
+
+  <div class="stack">
+    <div class="chips" role="tablist" aria-label="Configuration section">
+      @for (t of tabs; track t) {
+        <button type="button" class="chip" role="tab" [class.on]="tab() === t"
+                [attr.aria-selected]="tab() === t" (click)="tab.set(t)">{{ t }}</button>
+      }
+    </div>
+
+    @if (tab() === 'Service protocol') {
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+          <div class="head">
+            <h1 class="t" style="font-size:36px">Which service for which condition</h1>
+            <p class="s">One row per service and condition. <b>Indicated</b> lets the assistant suggest it.
+              <b>Contraindicated</b> removes it before the assistant is ever asked.</p>
+          </div>
+
+          <div class="card" style="padding:8px 22px">
+            <table class="tbl">
+              <tr><th style="width:270px">SERVICE</th><th style="width:290px">CONDITION</th>
+                  <th style="width:230px">RULE</th><th>REASON</th></tr>
+              @for (r of rules(); track r.service + r.condition) {
+                <tr>
+                  <td><b>{{ r.service }}</b></td>
+                  <td>{{ r.condition }}</td>
+                  <td>
+                    <button type="button" class="pill" [class.ok]="r.indicated" [class.bad]="!r.indicated"
+                            style="border:0;cursor:pointer;font-family:inherit"
+                            [attr.aria-label]="'Toggle rule for ' + r.service + ' and ' + r.condition"
+                            (click)="toggle(r.service, r.condition)">
+                      {{ r.indicated ? 'INDICATED' : 'CONTRAINDICATED' }}</button>
+                  </td>
+                  <td class="help">{{ r.reason }}</td>
+                </tr>
+              }
+            </table>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <button type="button" class="btn btn-primary"
+              (click)="toast.show('New rule — it stays unsigned until the practitioner reviews it', 3000)">Add a rule</button>
+            <button type="button" class="btn btn-ghost"
+              (click)="toast.show('Exported. Print it for Gary O. Trinidad to sign.', 3000)">Export for signature</button>
+          </div>
+        </div>
+
+        <aside style="display:flex;flex-direction:column;gap:16px">
+          <div class="card" style="display:flex;flex-direction:column;gap:12px;border:2.5px solid var(--color-forest-700)">
+            <h2 class="t-s" style="font-size:22px">Who authored these rules</h2>
+            <div style="font-size:20px"><b>Gary O. Trinidad</b>
+              <div class="help">Bone setter, Knead Wellness Spa</div></div>
+            <div><span class="pill ok"><i class="dotx"></i>Signed 12 Aug 2026</span></div>
+            <hr class="hr">
+            <p class="help">The system does not generate medical judgments. It enforces this
+              establishment's own protocol, authored and signed by its practitioner. The signed sheet
+              is Appendix C.</p>
+            <button type="button" class="btn btn-ghost btn-sm btn-block"
+              (click)="toast.show('Opening Appendix C — signed 12 Aug 2026')">View signed copy</button>
+          </div>
+
+          <div class="card" style="display:flex;flex-direction:column;gap:10px">
+            <h2 class="t-s" style="font-size:22px">Unsigned rules</h2>
+            <div class="note bad" style="padding:12px 16px;font-size:17px"><span class="b"></span>
+              <span><b>9 seeded rows</b> are still marked
+              <span class="mono">SEED — not yet reviewed by a practitioner</span>. They are excluded
+              from live recommendations.</span></div>
+            <button type="button" class="btn btn-quiet btn-sm btn-block"
+              (click)="toast.show('9 seeded rules — excluded from live recommendations until signed', 3200)">
+              Review the 9</button>
+          </div>
+
+          <div class="note warm"><span class="b"></span>
+            <span>Saving broadcasts to every node. Sorsogon City is offline and will receive this on
+            reconnect — until then it applies the last protocol it received.</span></div>
+        </aside>
+      </div>
+    } @else {
+      <div class="card" style="padding:40px;text-align:center">
+        <h2 class="t-s">{{ tab() }}</h2>
+        <p class="s" style="margin-top:8px">Not built yet. The protocol table was first because it is
+          what makes the “we do not give medical advice” argument true.</p>
+      </div>
+    }
+  </div>
+</app-dash-shell>

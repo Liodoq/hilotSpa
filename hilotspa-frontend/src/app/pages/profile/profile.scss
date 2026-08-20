@@ -1,0 +1,6 @@
+:host { display: block; min-height: 100dvh; background: var(--color-cream); }
+.wrap { padding: 36px 48px 56px; display: flex; justify-content: center; }
+.col { width: 100%; max-width: 1240px; display: flex; flex-direction: column; gap: 22px; }
+.panel { display: flex; flex-direction: column; gap: 24px; }
+.actions { display: flex; justify-content: flex-end; gap: 14px; }
+@media (max-width: 900px) { .row { flex-direction: column; } .wrap { padding: 20px; } }

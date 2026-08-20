@@ -1,0 +1,15 @@
+:host { display: block; }
+.cols { display: grid; grid-template-columns: 380px minmax(0, 1fr) 400px; gap: 18px; align-items: start; }
+.thumbs { display: flex; gap: 10px; justify-content: center; }
+.thumbs ::ng-deep .figure { width: 140px; }
+.thumbs ::ng-deep .figure svg { width: 140px; height: 298px; }
+.thumbs ::ng-deep .mk { width: 30px; height: 30px; font-size: 14px; border-width: 2px; }
+.thumbs ::ng-deep .halo { display: none; }
+.findings th { font-size: 13px; letter-spacing: .4px; padding: 0 6px 10px; }
+.findings td { font-size: 17px; padding: 10px 6px; }
+.qcell { width: 44px; height: 40px; border: 1.5px solid var(--color-line); border-radius: 8px;
+  background: #fff; font-size: 18px; color: var(--color-forest-900); cursor: pointer; }
+.qcell.on { background: var(--color-sage-100); border-color: var(--color-forest-700); font-weight: 700; }
+.qcell:hover:not(.on) { border-color: var(--color-forest-500); }
+.qcell:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 2px; }
+@media (max-width: 1500px) { .cols { grid-template-columns: 1fr; } }

@@ -1,8 +1,9 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import {
   AnatomicalRegion, AssessmentIntent, BodyView, ComplaintType,
   FormsModel, PatientIntakeModel,
 } from './models';
+import { Profile, ProfileStore } from './profile.store';
 
 /** One marker on the body map, before it becomes a PatientIntakeModel. */
 export interface PainPoint {
@@ -17,12 +18,8 @@ export interface PainPoint {
 
 export interface AssessmentDraft {
   intent: AssessmentIntent | null;
-  birthDate: string | null;
-  sex: string | null;
-  civilStatus: string | null;
-  occupation: string | null;
-  height: number | null;
-  weight: number | null;
+  // Demographics are NOT here. They belong to the person, not the visit — see
+  // ProfileStore. Asking for them every booking was the bug, not the feature.
   points: PainPoint[];
   complaints: ComplaintType[];
   mainComplaint: ComplaintType | null;
@@ -39,8 +36,7 @@ export interface AssessmentDraft {
 }
 
 const EMPTY: AssessmentDraft = {
-  intent: null, birthDate: null, sex: null, civilStatus: null, occupation: null,
-  height: null, weight: null, points: [], complaints: [], mainComplaint: null,
+  intent: null, points: [], complaints: [], mainComplaint: null,
   mainComplaintOther: null, duration: null, hadIllness: null, illnessDetail: '',
   hasTherapy: null, therapyKind: '', therapyWhen: '', flags: [], pressure: null,
   consented: false,
@@ -56,6 +52,7 @@ const EMPTY: AssessmentDraft = {
  */
 @Injectable({ providedIn: 'root' })
 export class AssessmentStore {
+  private profileStore = inject(ProfileStore);
   readonly draft = signal<AssessmentDraft>(structuredClone(EMPTY));
 
   readonly isLeisure = computed(() => this.draft().intent === 'LEISURE');
@@ -125,7 +122,7 @@ export class AssessmentStore {
       mainComplaintDuration: d.duration,
       hasTherapy: d.hasTherapy === true,
       status: 'SUBMITTED',
-      remarks: buildRemarks(d),
+      remarks: buildRemarks(d, this.profileStore.profile()),
       painPoints: points,
     };
   }
@@ -137,9 +134,9 @@ export class AssessmentStore {
  * `remarks` rather than silently dropped. Delete this the moment those
  * columns exist — a text blob is not queryable and cannot be shown back.
  */
-function buildRemarks(d: AssessmentDraft): string {
+function buildRemarks(d: AssessmentDraft, p: Profile): string {
   const bits: string[] = [];
-  if (d.occupation) bits.push(`Occupation: ${d.occupation}`);
+  if (p.occupation) bits.push(`Occupation: ${p.occupation}`);
   if (d.hadIllness) bits.push(`Illness/injury: ${d.illnessDetail || 'yes, no detail given'}`);
   if (d.hasTherapy) bits.push(`Therapy before: ${d.therapyKind || 'unspecified'}, ${d.therapyWhen || 'date unknown'}`);
   if (d.flags.length) bits.push(`Flagged: ${d.flags.join(', ')}`);

@@ -1,0 +1,53 @@
+<app-dash-shell role="STAFF"
+  scopeNote="Therapists and rooms belong to one branch — that is why cross-branch conflicts cannot happen.">
+  <span bar style="font-size:18px">2:47 PM</span>
+
+  <div class="stack">
+    <div class="head">
+      <h1 class="t">Who is on, and what is free</h1>
+      <p class="s">Tap a status to change it. Changes take effect on the next booking attempt.</p>
+    </div>
+
+    <div class="grid3">
+      @for (s of staff(); track s.id) {
+        <div class="card" style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:14px;align-items:center">
+            <span class="avatar" style="width:60px;height:60px;font-size:21px">{{ s.initials }}</span>
+            <div><div style="font-size:22px;font-weight:600;color:var(--color-forest-900)">{{ s.name }}</div>
+              <div class="help">{{ s.role }} · {{ s.years }} years</div></div>
+          </div>
+          <div class="chips" role="group" [attr.aria-label]="'Status for ' + s.name">
+            @for (st of statuses; track st) {
+              <button type="button" class="chip" [class.on]="s.status === st"
+                      [attr.aria-pressed]="s.status === st" (click)="setStatus(s.id, st)">
+                {{ label(st) }}</button>
+            }
+          </div>
+          <div class="note" style="padding:12px 16px;font-size:17px"><span class="b"></span>
+            <span>{{ s.note }}</span></div>
+        </div>
+      }
+    </div>
+
+    <h2 class="t-s" style="margin-top:4px">Rooms</h2>
+    <div class="grid2" style="max-width:900px">
+      @for (r of rooms(); track r.id) {
+        <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap">
+          <div><div style="font-size:22px;font-weight:600;color:var(--color-forest-900)">{{ r.name }}</div>
+            <div class="help">{{ r.detail }}</div></div>
+          <div class="chips" role="group" [attr.aria-label]="'State for ' + r.name">
+            @for (st of roomStates; track st) {
+              <button type="button" class="chip" [class.on]="r.state === st"
+                      [attr.aria-pressed]="r.state === st" (click)="setRoom(r.id, st)">
+                {{ label(st) }}</button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="note"><span class="b"></span>
+      <span>A booking needs <b>both</b> a free therapist and a free room. Marking someone off duty here
+      removes them from every future slot search on this node.</span></div>
+  </div>
+</app-dash-shell>

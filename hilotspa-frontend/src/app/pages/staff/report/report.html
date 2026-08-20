@@ -1,0 +1,100 @@
+<app-dash-shell role="STAFF"
+  scopeNote="Pre-assessment · Ana Reyes · submitted 20 Aug, 2:38 PM">
+  <button bar type="button" class="btn btn-ghost btn-sm"
+          (click)="toast.show('Sending to the front-desk printer…')">Print</button>
+
+  <div class="cols">
+    <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:12px;align-items:center">
+        <span class="avatar" style="width:56px;height:56px">AR</span>
+        <div><div style="font-size:22px;font-weight:600;color:var(--color-forest-900)">Ana Reyes</div>
+          <div class="help">58 · Female · Married</div></div>
+      </div>
+      <div class="thumbs">
+        <app-body-map view="FRONT" [points]="points" [interactive]="false" />
+        <app-body-map view="BACK"  [points]="points" [interactive]="false" />
+      </div>
+      <hr class="hr">
+      <div><div class="help">CHIEF COMPLAINT</div>
+        <div style="font-size:21px;font-weight:600;color:var(--color-forest-900)">Lower Back Pain</div>
+        <div style="font-size:18px;color:var(--color-ink-600)">1 – 6 months</div></div>
+      <div><div class="help">OCCUPATION</div><div style="font-size:18px">Sari-sari store owner</div></div>
+      <div><div class="help">HISTORY</div>
+        <div style="font-size:17px;color:var(--color-ink-600)">Slipped disc 2019, PT 3 months. Hilot, March 2026.</div></div>
+      <div class="note bad" style="padding:12px 16px;font-size:17px"><span class="b"></span>
+        <span><b>High blood pressure</b> — Deep Tissue and Ventosa excluded</span></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+      <div class="card" style="padding:20px 22px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:12px">
+          <h2 class="t-s" style="font-size:22px">Findings</h2>
+          <span class="help">Regions from the intake form · tick what you observe</span>
+        </div>
+        <table class="tbl findings">
+          <tr><th style="width:150px">REGION</th><th style="width:42px">L</th><th style="width:42px">R</th>
+              <th style="width:58px">PAIN</th><th style="width:60px">STIFF</th>
+              <th style="width:60px">WEAK</th><th style="width:60px">NUMB</th>
+              <th style="width:76px">BEFORE</th><th style="width:80px">AFTER</th></tr>
+          @for (f of findings(); track f.region) {
+            <tr>
+              <td><b>{{ f.region }}</b></td>
+              <td>{{ f.left ? '✓' : '—' }}</td>
+              <td>{{ f.right ? '✓' : '—' }}</td>
+              @for (q of qualities; track q) {
+                <td>
+                  <button type="button" class="qcell" [class.on]="f.marks.includes(q)"
+                          [attr.aria-pressed]="f.marks.includes(q)"
+                          [attr.aria-label]="q + ' for ' + f.region"
+                          (click)="toggleMark(f.region, q)">{{ f.marks.includes(q) ? '✓' : '' }}</button>
+                </td>
+              }
+              <td class="tnum"><b>{{ f.before }}</b></td>
+              <td>
+                @if (f.after === null) { <span class="pill mute" style="padding:4px 10px">—</span> }
+                @else { <b class="tnum">{{ f.after }}</b> }
+              </td>
+            </tr>
+          }
+        </table>
+        <div class="note warm" style="margin-top:14px;padding:12px 16px;font-size:17px"><span class="b"></span>
+          <span><b>AFTER</b> is filled in at the end of the session. Before-and-after on the same
+          client is the only outcome measure the spa already collects.</span></div>
+      </div>
+
+      <div class="card" style="padding:20px 22px">
+        <h2 class="t-s" style="font-size:22px;margin-bottom:10px">Assistant's summary</h2>
+        <p style="font-size:19px;line-height:1.55">
+          Client presents with lower back pain of 1–6 months, worst at the right shoulder (8/10) and
+          lumbar region (7/10), described as sharp and stiff. Prior slipped disc, 2019.
+          <b>Hilot sa Likod</b> matches the marked regions and is permitted under the current protocol.
+        </p>
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+          <span class="pill ok">Hilot sa Likod — suggested</span>
+          <span class="pill mute">Full Body Massage — permitted</span>
+          <span class="pill bad">Deep Tissue — excluded</span>
+          <span class="pill bad">Ventosa — excluded</span>
+        </div>
+        <p class="help" style="margin-top:14px">Generated from this record only. Exclusions were applied
+          before the assistant was asked, using the protocol signed by Gary O. Trinidad.</p>
+      </div>
+    </div>
+
+    <aside style="display:flex;flex-direction:column;gap:14px">
+      <div class="card" style="display:flex;flex-direction:column;gap:10px">
+        <h2 class="t-s" style="font-size:22px">Today's session</h2>
+        <div style="font-size:19px"><b>Hilot sa Likod</b> · 60 min</div>
+        <div style="font-size:18px;color:var(--color-ink-600)">2:00 PM · Marites · Room 2</div>
+        <span class="pill ok" style="align-self:flex-start"><i class="dotx"></i>In session</span>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column;gap:12px;flex:1">
+        <h2 class="t-s" style="font-size:22px">Practitioner's notes</h2>
+        <textarea class="input" rows="5" [value]="notes()" (input)="notes.set(val($event))"
+          placeholder="Tightness along L4–L5, right side worse. Advised warm compress at home…"></textarea>
+        <button type="button" class="btn btn-primary btn-block" (click)="recordAfter()">
+          Record after-session pain</button>
+        <p class="help">Appended to the record. Nothing here is ever overwritten.</p>
+      </div>
+    </aside>
+  </div>
+</app-dash-shell>

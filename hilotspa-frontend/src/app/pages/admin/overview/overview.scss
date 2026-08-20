@@ -1,0 +1,6 @@
+:host { display: block; }
+.stack { display: flex; flex-direction: column; gap: 20px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 460px; gap: 20px; align-items: start; }
+.figN { font-size: 32px; font-weight: 600; color: var(--color-forest-900); line-height: 1.1; }
+.figN.stale { color: var(--color-ink-600); }
+@media (max-width: 1400px) { .cols, .grid2 { grid-template-columns: 1fr; } .tiles { grid-template-columns: repeat(2, 1fr); } }

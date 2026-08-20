@@ -1,0 +1,57 @@
+<app-dash-shell role="ADMIN" scopeNote="Administrator only">
+  <button bar type="button" class="btn btn-primary btn-sm"
+          (click)="toast.show('New account — role and branch are required')">Add staff account</button>
+
+  <div class="stack">
+    <div class="head">
+      <h1 class="t">Accounts</h1>
+      <p class="s">Staff and administrator accounts are created here. Nobody can register themselves
+        into a role — the public sign-up form has no role field at all.</p>
+    </div>
+
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <input class="input sm" style="max-width:420px" [value]="q()" (input)="q.set(val($event))"
+             placeholder="Search by name or email…" aria-label="Search accounts">
+      <div class="chips" role="group" aria-label="Filter by role">
+        @for (r of roles; track r) {
+          <button type="button" class="chip" [class.on]="role() === r"
+                  [attr.aria-pressed]="role() === r" (click)="role.set(r)">{{ r }}</button>
+        }
+      </div>
+    </div>
+
+    <div class="card" style="padding:8px 22px">
+      <table class="tbl">
+        <tr><th style="width:280px">NAME</th><th style="width:320px">EMAIL</th><th style="width:170px">ROLE</th>
+            <th style="width:210px">BRANCH</th><th style="width:140px">STATUS</th><th></th></tr>
+        @for (a of shown(); track a.email) {
+          <tr>
+            <td><b>{{ a.name }}</b></td>
+            <td>{{ a.email }}</td>
+            <td><span class="pill" [class.bad]="a.role === 'ADMIN'" [class.warn]="a.role === 'STAFF'"
+                      [class.mute]="a.role === 'CUSTOMER'">{{ a.role }}</span></td>
+            <td>{{ a.branch }}</td>
+            <td><span class="pill" [class.ok]="a.enabled" [class.mute]="!a.enabled">
+              {{ a.enabled ? 'Enabled' : 'Disabled' }}</span></td>
+            <td style="text-align:right">
+              <button type="button" class="link"
+                (click)="toast.show('Only an administrator can change a role. Changes are written to the audit log.', 3200)">
+                Edit</button></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="6" style="text-align:center;color:var(--color-ink-600)">
+            No account matches that.</td></tr>
+        }
+      </table>
+    </div>
+
+    <div class="cols">
+      <div class="note"><span class="b"></span>
+        <span>Disabling an account keeps its history. Records are never deleted — the audit log would
+        have nothing left to point at.</span></div>
+      <div class="note bad"><span class="b"></span>
+        <span>A <b>STAFF</b> account must have a branch. The server rejects one without it, because
+        branch scoping would then either show nothing or show everything.</span></div>
+    </div>
+  </div>
+</app-dash-shell>

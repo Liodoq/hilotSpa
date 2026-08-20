@@ -10,7 +10,7 @@ import { Logo } from '../logo/logo';
 })
 export class Shell {
   step = input.required<number>();
-  total = input(6);
+  total = input(5);
   backLabel = input('Back');
   nextLabel = input('Continue');
   hint = input('Nothing is saved until you submit on the last step.');

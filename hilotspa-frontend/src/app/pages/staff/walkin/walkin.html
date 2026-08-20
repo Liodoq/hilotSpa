@@ -1,0 +1,85 @@
+<app-dash-shell role="STAFF"
+  scopeNote="Branch is fixed from your account — you cannot book into another branch.">
+  <span bar style="font-size:18px">2:47 PM</span>
+
+  <div class="centre">
+    <div class="col">
+      <div class="head">
+        <h1 class="t">Record a walk-in</h1>
+        <p class="s">For clients who came in without booking. A pre-assessment is optional here.</p>
+      </div>
+
+      <div class="cols">
+        <div class="card" style="display:flex;flex-direction:column;gap:18px">
+          <div class="row">
+            <div class="field"><label class="lab" for="cl">Client</label>
+              <input id="cl" class="input" [value]="client()" (input)="client.set(val($event))">
+              <span class="help">Search an existing account, or create one from the name and number.</span></div>
+            <div class="field"><span class="lab">Pre-assessment</span>
+              <div class="input ro">None on file</div>
+              <span class="help">Optional. You can start one for them instead.</span></div>
+          </div>
+
+          <div class="row">
+            <div class="field"><label class="lab" for="sv">Service</label>
+              <select id="sv" class="input" [value]="service()" (change)="service.set(val($event))">
+                @for (s of services; track s.id) {
+                  <option [value]="s.name">{{ s.name }} — {{ s.minutes }} min — ₱{{ s.price }}</option>
+                }
+              </select></div>
+            <div class="field"><label class="lab" for="tm">Start time</label>
+              <input id="tm" class="input" [value]="startAt()" (input)="startAt.set(val($event))"></div>
+          </div>
+
+          <div class="row">
+            <div class="field"><label class="lab" for="th">Therapist</label>
+              <select id="th" class="input" [value]="therapist()" (change)="therapist.set(val($event))">
+                @for (t of freeStaff; track t.id) { <option [value]="t.name">{{ t.name }}</option> }
+              </select>
+              <span class="help">Only therapists free for the whole booking are listed.</span></div>
+            <div class="field"><label class="lab" for="rm">Room</label>
+              <select id="rm" class="input" [value]="room()" (change)="room.set(val($event))">
+                @for (r of freeRooms; track r.id) { <option [value]="r.name">{{ r.name }}</option> }
+              </select>
+              <span class="help">Only rooms free for the whole booking are listed.</span></div>
+          </div>
+
+          <div class="field"><label class="lab" for="nt">Notes for the therapist</label>
+            <textarea id="nt" class="input" rows="2" [value]="notes()"
+              (input)="notes.set(val($event))"
+              placeholder="Says his lower back has hurt since yesterday. No assessment done."></textarea></div>
+
+          <hr class="hr">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap">
+            <div><div class="help">PRICE AT BOOKING</div>
+              <div style="font-size:30px;font-weight:600;color:var(--color-forest-900)">₱ {{ price() }}.00</div>
+              <div class="help">Snapshot. A later price change will not alter this booking.</div></div>
+            <div style="display:flex;gap:12px">
+              <button type="button" class="btn btn-quiet" routerLink="/staff/dashboard">Cancel</button>
+              <button type="button" class="btn btn-primary" (click)="record()">Record booking</button>
+            </div>
+          </div>
+        </div>
+
+        <aside style="display:flex;flex-direction:column;gap:16px">
+          <div class="card" style="display:flex;flex-direction:column;gap:10px">
+            <h2 class="t-s" style="font-size:22px">Conflict check</h2>
+            <div style="display:flex;align-items:center;gap:10px;font-size:18px">
+              <span class="pill ok"><i class="dotx"></i>{{ therapist() }}</span> free for this slot</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:18px">
+              <span class="pill ok"><i class="dotx"></i>{{ room() }}</span> free for this slot</div>
+            <hr class="hr">
+            <p class="help">Checked against this branch's bookings only. A therapist works at one branch
+              and a room is in one building, so there is nothing to check anywhere else.</p>
+          </div>
+          <div class="note warm"><span class="b"></span>
+            <span>Recorded as <b>STAFF_MANUAL</b> with no linked assessment. It will still appear in
+            the client's history and in today's revenue.</span></div>
+          <div class="note"><span class="b"></span>
+            <span>Offline? This is saved on this node and syncs when the connection returns. The slot
+            is yours either way.</span></div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</app-dash-shell>

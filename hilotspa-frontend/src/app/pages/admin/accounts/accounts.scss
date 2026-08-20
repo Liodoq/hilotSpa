@@ -1,0 +1,4 @@
+:host { display: block; }
+.stack { display: flex; flex-direction: column; gap: 18px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 520px; gap: 20px; }
+@media (max-width: 1300px) { .cols { grid-template-columns: 1fr; } }

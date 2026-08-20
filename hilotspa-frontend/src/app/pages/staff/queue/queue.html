@@ -1,0 +1,76 @@
+<app-dash-shell role="STAFF" scopeNote="Walk-in queue">
+  <span bar style="font-size:18px">2:47 PM</span>
+
+  <div class="stack">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap">
+      <div class="head">
+        <h1 class="t">Who is waiting</h1>
+        <p class="s">{{ items().length }} {{ items().length === 1 ? 'person' : 'people' }} in the queue.
+          Average wait so far today is 18 minutes.</p>
+      </div>
+      <button type="button" class="btn btn-primary" routerLink="/staff/walkin">Add a walk-in</button>
+    </div>
+
+    <div class="cols">
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+        @for (q of items(); track q.id; let i = $index) {
+          <div class="card qitem" [class.first]="i === 0"
+               [style.border]="i === 0 ? '2.5px solid var(--color-forest-700)' : null">
+            <span class="qpos">{{ i + 1 }}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:23px;font-weight:600;color:var(--color-forest-900)">{{ q.name }}</div>
+              <div class="help">Arrived {{ q.arrived }} · waiting {{ q.waitedMin }} min · {{ q.service }}</div>
+              <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                @if (q.hasAssessment) { <span class="pill ok">Assessment done</span> }
+                @else { <span class="pill warn">No assessment yet</span> }
+                @if (q.flag) { <span class="pill warn">{{ q.flag }}</span> }
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end">
+              @if (q.hasAssessment) {
+                <button type="button" class="btn btn-ghost btn-sm" routerLink="/staff/report">View report</button>
+              } @else {
+                <button type="button" class="btn btn-primary btn-sm"
+                        (click)="toast.show('Handing the tablet to ' + q.name + '…')">Start assessment</button>
+              }
+              @if (i === 0) {
+                <button type="button" class="btn btn-primary" (click)="callNext()">Call next</button>
+              } @else {
+                <button type="button" class="btn btn-quiet btn-sm" (click)="moveUp(i)">Move up</button>
+              }
+            </div>
+          </div>
+        } @empty {
+          <div class="empty">Nobody is waiting. New walk-ins appear here as soon as the front desk records them.</div>
+        }
+        @if (items().length) {
+          <div class="empty">New walk-ins appear here as soon as the front desk records them.</div>
+        }
+      </div>
+
+      <aside style="display:flex;flex-direction:column;gap:16px">
+        <div class="card" style="display:flex;flex-direction:column;gap:12px">
+          <h2 class="t-s" style="font-size:22px">Free right now</h2>
+          @for (s of staff; track s.id) {
+            <div style="display:flex;align-items:center;gap:12px;font-size:19px">
+              <span class="pill" [class.ok]="s.status === 'AVAILABLE'"
+                    [class.bad]="s.status === 'ON_SESSION'"
+                    [class.mute]="s.status === 'OFF_DUTY' || s.status === 'BREAK'">
+                <i class="dotx"></i>{{ s.name.split(' ')[0] }}</span>
+              <span style="color:var(--color-ink-600);font-size:17px">{{ s.note }}</span>
+            </div>
+          }
+          <hr class="hr">
+          @for (r of rooms; track r.id) {
+            <div style="font-size:19px">{{ r.name }}
+              <span class="pill" [class.ok]="r.state === 'FREE'" [class.bad]="r.state !== 'FREE'">
+                {{ r.state.toLowerCase() }}</span></div>
+          }
+        </div>
+        <div class="note"><span class="b"></span>
+          <span>Calling someone from the queue creates an appointment with source
+          <b>STAFF_MANUAL</b>. No pre-assessment is required for that path.</span></div>
+      </aside>
+    </div>
+  </div>
+</app-dash-shell>

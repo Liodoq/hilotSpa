@@ -61,7 +61,7 @@ export class Register {
         email: this.email().trim(),
         password: this.password(),
       });
-      await this.router.navigateByUrl('/assessment/intent');
+      await this.router.navigateByUrl('/home');
     } catch (e: unknown) {
       console.error('[register] request failed', e);
       this.error.set(describeHttpError(e, 'We could not create your account.'));

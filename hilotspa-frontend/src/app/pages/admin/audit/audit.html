@@ -1,0 +1,53 @@
+<app-dash-shell role="ADMIN"
+  scopeNote="Append-only. Entries cannot be edited or deleted, by anyone.">
+  <button bar type="button" class="btn btn-ghost btn-sm"
+          (click)="toast.show('Exported. The log itself is never modified.')">Export CSV</button>
+
+  <div class="stack">
+    <div class="head">
+      <h1 class="t">What happened, and who did it</h1>
+      <p class="s">Aggregated from every node. Entries created while a branch was offline appear with
+        their original timestamp once that node syncs.</p>
+    </div>
+
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <input class="input sm" style="max-width:360px" [value]="q()" (input)="q.set(val($event))"
+             placeholder="Search actor, action, or record…" aria-label="Search the audit log">
+      <div class="chips" role="group" aria-label="Filter entries">
+        @for (f of filters; track f) {
+          <button type="button" class="chip" [class.on]="filter() === f"
+                  [attr.aria-pressed]="filter() === f" (click)="filter.set(f)">{{ f }}</button>
+        }
+      </div>
+    </div>
+
+    <div class="card" style="padding:8px 22px">
+      <table class="tbl">
+        <tr><th style="width:170px">WHEN</th><th style="width:230px">WHO</th><th style="width:250px">ACTION</th>
+            <th>RECORD</th><th style="width:180px">NODE</th></tr>
+        @for (e of shown(); track e.time + e.action) {
+          <tr [style.opacity]="e.queued ? .75 : 1">
+            <td class="tnum">{{ e.time }}</td>
+            <td>{{ e.who }} <span class="help">{{ e.whoRole }}</span></td>
+            <td><span class="pill" [class.ok]="ok(e.action)" [class.bad]="bad(e.action)"
+                      [class.warn]="warn(e.action)" [class.mute]="neutral(e.action)">{{ e.action }}</span></td>
+            <td class="mono">{{ e.record }}</td>
+            <td class="mono">{{ e.node }}
+              @if (e.queued) { <span class="pill warn" style="font-size:14px">queued</span> }</td>
+          </tr>
+        } @empty {
+          <tr><td colspan="5" style="text-align:center;color:var(--color-ink-600)">Nothing matches that.</td></tr>
+        }
+      </table>
+    </div>
+
+    <div class="cols">
+      <div class="note"><span class="b"></span>
+        <span>Spring Data's <span class="mono">&#64;CreatedBy</span> cannot audit a delete — by the time
+        the row is gone there is nothing left to listen to. A separate append-only table can.</span></div>
+      <div class="note warm"><span class="b"></span>
+        <span>The faded row was written while Sorsogon City was offline. It keeps its original 9:47 AM
+        timestamp, not the time it arrived.</span></div>
+    </div>
+  </div>
+</app-dash-shell>

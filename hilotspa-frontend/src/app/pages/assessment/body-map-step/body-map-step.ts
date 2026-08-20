@@ -64,7 +64,7 @@ export class BodyMapStep {
     return (ev.target as HTMLSelectElement).value as AnatomicalRegion;
   }
 
-  back(): void { this.router.navigateByUrl('/assessment/demographics'); }
+  back(): void { this.router.navigateByUrl('/assessment/intent'); }
   next(): void { this.router.navigateByUrl('/assessment/complaints'); }
   leave(): void { this.store.reset(); this.auth.logout(); }
 }

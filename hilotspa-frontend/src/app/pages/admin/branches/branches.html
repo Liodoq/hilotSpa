@@ -1,0 +1,58 @@
+<app-dash-shell role="ADMIN" scopeNote="Administrator context"
+  [banner]="'You are viewing ' + openBranch() + ' as an administrator. Anything you change here is written to that branch’s node.'"
+  bannerTone="ctx" bannerRight="Leave branch view">
+
+  <span bar style="font-size:18px">2:47 PM</span>
+
+  <div class="stack">
+    <div class="head">
+      <h1 class="t">Choose a branch to manage</h1>
+      <p class="s">Opening a branch loads that node's own dashboard. Your view is scoped exactly the
+        way a staff member's would be, plus the ability to change settings.</p>
+    </div>
+
+    <div class="grid2" style="max-width:1300px">
+      @for (n of nodes; track n.id) {
+        <div class="card click" style="display:flex;gap:20px;align-items:center"
+             [style.border]="n.branch === openBranch() ? '2.5px solid var(--color-forest-700)' : null"
+             (click)="select(n.branch)">
+          <span class="tag2">{{ initials(n.branch) }}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:24px;font-weight:600;color:var(--color-forest-900)">{{ n.branch }}</div>
+            <div class="help">{{ n.branch === 'Bulan' ? 'Zone 5, Bulan, Sorsogon · 3 therapists · 2 rooms'
+                                                       : 'Rizal St, Sorsogon City · 2 therapists · 2 rooms' }}</div>
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <span class="pill" [class.ok]="n.online" [class.warn]="!n.online">
+                <i class="dotx"></i>{{ n.online ? 'Online' : 'Offline' }}</span>
+              <span class="pill mute">{{ n.bookings }} bookings{{ n.online ? ' today' : ' (stale)' }}</span>
+            </div>
+          </div>
+          @if (n.branch === openBranch()) {
+            <span class="btn btn-primary btn-sm">Currently open</span>
+          } @else {
+            <span class="btn btn-ghost btn-sm">Open branch</span>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="card" style="max-width:1300px;display:flex;flex-direction:column;gap:14px">
+      <h2 class="t-s" style="font-size:22px">{{ openBranch() }} — quick view</h2>
+      <div class="tiles">
+        <div class="stat" style="padding:16px 18px"><div class="n" style="font-size:34px">{{ current().bookings }}</div><div class="k">Bookings today</div></div>
+        <div class="stat" style="padding:16px 18px"><div class="n" style="font-size:34px">{{ current().waiting }}</div><div class="k">Walk-ins waiting</div></div>
+        <div class="stat" style="padding:16px 18px"><div class="n" style="font-size:34px">2 / 3</div><div class="k">Therapists available</div></div>
+        <div class="stat" style="padding:16px 18px"><div class="n" style="font-size:34px">₱ {{ current().collected }}</div><div class="k">Collected today</div></div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <button type="button" class="btn btn-primary" routerLink="/staff/dashboard">Open full dashboard</button>
+        <button type="button" class="btn btn-ghost" routerLink="/staff/resources">Manage therapists and rooms</button>
+      </div>
+    </div>
+
+    <div class="note warm" style="max-width:1300px"><span class="b"></span>
+      <span>Opening an offline branch shows its last synced state, and any change you make is queued
+      on <b>your</b> node until that branch is reachable. Write authority still belongs to the branch.</span>
+    </div>
+  </div>
+</app-dash-shell>

@@ -1,4 +1,4 @@
-<app-shell [step]="6" [wide]="true" nextLabel="Submit my assessment"
+<app-shell [step]="5" [wide]="true" nextLabel="Submit my assessment"
            hint="This is the only step that writes to your record."
            [nextDisabled]="!draft().consented || busy()"
            (back)="back()" (next)="submit()" (exit)="leave()">
@@ -12,16 +12,18 @@
     <div class="cards">
       <section class="rev">
         <div class="rh"><b>About you</b>
-          <button type="button" class="link" (click)="go('demographics')">Edit</button></div>
+          <button type="button" class="link" (click)="editProfile()">Edit on my profile</button></div>
         <div class="kv">
           <div><span>Why you came in</span>
             {{ draft().intent === 'LEISURE' ? 'Here to relax' : 'A specific pain or complaint' }}</div>
-          @if (draft().birthDate) { <div><span>Born</span> {{ draft().birthDate }}</div> }
-          @if (draft().sex) { <div><span>Sex</span> {{ draft().sex }}</div> }
-          @if (draft().civilStatus) { <div><span>Status</span> {{ draft().civilStatus }}</div> }
-          @if (draft().occupation) { <div><span>Occupation</span> {{ draft().occupation }}</div> }
-          @if (draft().height) { <div><span>Height</span> {{ draft().height }} cm</div> }
-          @if (draft().weight) { <div><span>Weight</span> {{ draft().weight }} kg</div> }
+          @if (profile().birthDate) {
+            <div><span>Born</span> {{ profile().birthDate }}
+              @if (profileStore.age() !== null) { · {{ profileStore.age() }} yrs }</div> }
+          @if (profile().sex) { <div><span>Sex</span> {{ profile().sex }}</div> }
+          @if (profile().civilStatus) { <div><span>Status</span> {{ profile().civilStatus }}</div> }
+          @if (profile().occupation) { <div><span>Occupation</span> {{ profile().occupation }}</div> }
+          @if (profile().height) { <div><span>Height</span> {{ profile().height }} cm</div> }
+          @if (profile().weight) { <div><span>Weight</span> {{ profile().weight }} kg</div> }
         </div>
       </section>
 
@@ -33,8 +35,8 @@
           @if (draft().points.length) {
             <div class="wh">
               <div class="thumbs">
-                <app-body-map view="FRONT" [points]="draft().points" />
-                <app-body-map view="BACK" [points]="draft().points" />
+                <app-body-map view="FRONT" [points]="draft().points" [interactive]="false" />
+                <app-body-map view="BACK" [points]="draft().points" [interactive]="false" />
               </div>
               <ol class="plist">
                 @for (p of draft().points; track p.key) {

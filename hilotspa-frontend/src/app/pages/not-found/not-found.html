@@ -1,0 +1,15 @@
+<app-nav />
+<main class="wrap">
+  <div class="box">
+    <app-logo [size]="126" />
+    <h1 class="t" style="font-size:48px">We could not find that</h1>
+    <p class="s" style="font-size:22px">Either the page does not exist, or it belongs to someone
+      else's record. Your own assessments and bookings are always under <b>My bookings</b>.</p>
+    <div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;justify-content:center">
+      <button type="button" class="btn btn-primary" routerLink="/home">Go to my home page</button>
+      <button type="button" class="btn btn-ghost" routerLink="/booking">My bookings</button>
+    </div>
+    <p class="help" style="margin-top:10px">If you believe you should have access to this, please tell
+      the front desk.</p>
+  </div>
+</main>

@@ -1,0 +1,53 @@
+<app-nav />
+<main class="wrap">
+  <div class="col">
+    <div class="hero">
+      <span class="check" aria-hidden="true"><i></i></span>
+      <div class="head">
+        <h1 class="t">You are booked</h1>
+        <p class="s">We sent the details to your account. Nothing to pay online — you settle at the counter.</p>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="refbar">
+          <div><div style="font-size:15px;letter-spacing:2px;color:var(--color-sage-300)">REFERENCE</div>
+            <div class="mono" style="font-size:25px;font-weight:600;letter-spacing:2px">{{ b.ref }}</div></div>
+          <span class="pill ok"><i class="dotx"></i>Confirmed</span>
+        </div>
+        <div style="padding:6px 30px 20px">
+          <table class="tbl">
+            <tr><td class="k">Service</td><td><b style="font-size:21px">{{ b.service }}</b> · {{ b.minutes }} minutes</td></tr>
+            <tr><td class="k">When</td><td><b>{{ b.day }}, {{ b.date }}</b> · {{ b.time }}</td></tr>
+            <tr><td class="k">Therapist</td><td>{{ b.therapist }}</td></tr>
+            <tr><td class="k">Room</td><td>{{ b.room }}</td></tr>
+            <tr><td class="k">Branch</td><td>{{ b.branch }}</td></tr>
+            <tr><td class="k">Booked through</td><td>Booking assistant · 20 Aug, 2:42 PM</td></tr>
+            <tr><td class="k">Price</td><td><b style="font-size:23px">₱ {{ b.price }}.00</b>
+              <div class="help">Locked in at booking. A later price change will not affect this visit.</div></td></tr>
+            <tr><td class="k">Payment</td><td><span class="pill warn">Pay at counter</span></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card" style="display:flex;flex-direction:column;gap:12px">
+          <h2 class="t-s" style="font-size:22px">Before you come in</h2>
+          <ul style="display:flex;flex-direction:column;gap:8px;margin-left:20px;font-size:18px;color:var(--color-ink-600)">
+            <li>Arrive about 10 minutes early.</li>
+            <li>Wear loose clothing if you can.</li>
+            <li>Avoid a heavy meal an hour before.</li>
+            <li>Your bone setter has already seen your body map.</li>
+          </ul>
+        </div>
+        <button type="button" class="btn btn-ghost btn-block"
+                (click)="toast.show('Added to your calendar')">Add to my calendar</button>
+        <button type="button" class="btn btn-quiet btn-block" routerLink="/services">Book another visit</button>
+        <div class="note"><span class="b"></span>
+          <span>Need to change it? Reschedule from <b>My bookings</b>, or call the branch.</span></div>
+      </div>
+    </div>
+  </div>
+</main>
+<app-toast />

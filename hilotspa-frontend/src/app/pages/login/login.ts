@@ -24,6 +24,15 @@ export class Login {
 
   val(ev: Event): string { return (ev.target as HTMLInputElement).value; }
 
+  /** Each role starts where its work is. Figures 3.1-3.3 are three different jobs. */
+  private landing(): string {
+    switch (this.auth.role()) {
+      case 'ADMIN': return '/admin/overview';
+      case 'STAFF': return '/staff/dashboard';
+      default:      return '/home';
+    }
+  }
+
   async submit(): Promise<void> {
     if (!this.canSubmit() || this.busy()) return;
     this.busy.set(true);
@@ -31,7 +40,7 @@ export class Login {
     try {
       await this.auth.login({ email: this.email().trim(), password: this.password() });
       const next = this.route.snapshot.queryParamMap.get('next');
-      await this.router.navigateByUrl(next ?? '/assessment/intent');
+      await this.router.navigateByUrl(next ?? this.landing());
     } catch (e: unknown) {
       // The backend deliberately returns the same 401 for an unknown email and
       // a wrong password, so an attacker cannot enumerate accounts. Do not

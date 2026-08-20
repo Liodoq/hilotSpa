@@ -1,0 +1,6 @@
+:host { display: block; }
+.centre { display: flex; justify-content: center; }
+.col { width: 100%; max-width: 1400px; display: flex; flex-direction: column; gap: 18px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 20px; align-items: start; }
+@media (max-width: 1300px) { .cols { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .row { flex-direction: column; } }

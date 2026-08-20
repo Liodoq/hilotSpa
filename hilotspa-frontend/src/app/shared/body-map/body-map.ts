@@ -17,6 +17,8 @@ export class BodyMap {
   view = input.required<BodyView>();
   points = input<PainPoint[]>([]);
   selectedKey = input<string | null>(null);
+  /** false on the C7 review thumbnails: markers are shown, not edited. */
+  interactive = input(true);
 
   place = output<{ x: number; y: number }>();
   select = output<string>();
@@ -38,6 +40,7 @@ export class BodyMap {
   }
 
   onPlace(ev: MouseEvent): void {
+    if (!this.interactive()) return;
     const host = ev.currentTarget as HTMLElement;
     const r = host.getBoundingClientRect();
     const x = ((ev.clientX - r.left) / r.width) * 100;

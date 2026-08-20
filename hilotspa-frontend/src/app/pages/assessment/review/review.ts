@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Shell } from '../../../shared/shell/shell';
 import { BodyMap } from '../../../shared/body-map/body-map';
 import { AssessmentStore } from '../../../core/assessment.store';
+import { ProfileStore } from '../../../core/profile.store';
 import { AuthService } from '../../../core/auth.service';
 import { FormsApi } from '../../../core/forms.api';
 import { AnatomicalRegion, COMPLAINTS, REGIONS } from '../../../core/models';
@@ -24,7 +25,9 @@ export class Review {
   private auth = inject(AuthService);
   private api = inject(FormsApi);
   protected store = inject(AssessmentStore);
+  protected profileStore = inject(ProfileStore);
   protected draft = this.store.draft;
+  protected profile = this.profileStore.profile;
 
   busy = signal(false);
   error = signal('');
@@ -41,9 +44,12 @@ export class Review {
 
   go(step: string): void { this.router.navigateByUrl(`/assessment/${step}`); }
 
+  /** Demographics live on the profile, so "Edit" there leaves the wizard. */
+  editProfile(): void { this.router.navigateByUrl('/profile?next=/assessment/review'); }
+
   back(): void {
     this.router.navigateByUrl(
-      this.store.isLeisure() ? '/assessment/demographics' : '/assessment/history');
+      this.store.isLeisure() ? '/assessment/intent' : '/assessment/history');
   }
 
   async submit(): Promise<void> {

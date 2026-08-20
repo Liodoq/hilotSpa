@@ -7,7 +7,7 @@
 
 .wh { display: flex; gap: 22px; align-items: center; }
 .thumbs { display: flex; gap: 14px; }
-.thumbs ::ng-deep .figure { width: 78px; cursor: default; }
+.thumbs ::ng-deep .figure { width: 78px; }
 .thumbs ::ng-deep .figure svg { width: 78px; height: 166px; }
 .thumbs ::ng-deep .mk { width: 22px; height: 22px; font-size: 11px; border-width: 2px; }
 .thumbs ::ng-deep .halo { display: none; }
@@ -23,3 +23,10 @@
 .ctext { font-size: 19px; color: var(--color-ink-900); }
 
 @media (max-width: 1200px) { .layout { grid-template-columns: 1fr; } }
+
+/* Interaction — the consent control is a button, so it needs its own states. */
+.consent { transition: background-color .14s ease, box-shadow .14s ease; cursor: pointer; }
+.consent:hover { background: #DCE6D2; }
+.consent:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 3px; }
+.tile-box { transition: background-color .12s ease, border-color .12s ease; }
+.consent:hover .tile-box:not(.on) { border-color: var(--color-forest-500); }

@@ -1,0 +1,7 @@
+:host { display: block; }
+.stack { display: flex; flex-direction: column; gap: 20px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 20px; align-items: start; }
+.qitem { display: flex; gap: 20px; align-items: center; }
+.empty { border: 2px dashed var(--color-line); border-radius: var(--radius-sm); padding: 20px;
+  text-align: center; font-size: 18px; color: var(--color-ink-600); }
+@media (max-width: 1400px) { .cols { grid-template-columns: 1fr; } }

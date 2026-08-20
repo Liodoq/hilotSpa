@@ -20,3 +20,13 @@
 .cm { font-size: 19px; font-weight: 500; color: var(--color-forest-700); }
 
 @media (max-width: 900px) { .choices { grid-template-columns: 1fr; gap: 20px; } }
+
+/* Interaction. The global layer in interactions.scss handles .btn/.chip/.tile/.opt;
+   .choice is specific to this screen, so its states live here. */
+.choice { transition: border-color .14s ease, background-color .14s ease,
+          box-shadow .16s ease, transform .12s ease; }
+.choice:hover:not(.on) { border-color: var(--color-forest-500); background: #FCFBF8;
+          box-shadow: 0 10px 26px rgba(46, 66, 32, .12); transform: translateY(-2px); }
+.choice.on:hover { box-shadow: 0 10px 26px rgba(46, 66, 32, .16); }
+.choice:active { transform: translateY(0) scale(.995); }
+@media (prefers-reduced-motion: reduce) { .choice:hover, .choice:active { transform: none; } }

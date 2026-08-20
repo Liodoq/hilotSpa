@@ -1,0 +1,12 @@
+:host { display: block; min-height: 100dvh; background: var(--color-cream); }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) 500px;
+  height: calc(100dvh - 96px); min-height: 0; }
+.chatcol { display: flex; flex-direction: column; min-width: 0; padding: 24px 36px 22px; gap: 16px; }
+.thread { flex: 1; min-height: 0; overflow-y: auto; }
+.composer { display: flex; gap: 14px; align-items: center; }
+.context { background: #fff; border-left: 1.5px solid var(--color-line); padding: 24px 26px;
+  display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
+@media (max-width: 1200px) {
+  .split { grid-template-columns: 1fr; height: auto; }
+  .context { border-left: 0; border-top: 1.5px solid var(--color-line); }
+}

@@ -1,0 +1,38 @@
+<div class="frame">
+  @if (banner(); as b) {
+    <div class="banner" [class.off]="bannerTone() === 'off'" [class.ctx]="bannerTone() === 'ctx'">
+      <span class="dotw"></span>{{ b }}
+      @if (bannerRight()) { <span style="margin-left:auto;font-weight:400;font-size:17px">{{ bannerRight() }}</span> }
+    </div>
+  }
+
+  <div class="dash">
+    <aside class="sidebar">
+      <div class="sidebrand">
+        <app-logo [size]="50" />
+        <span><b>Knead Wellness</b><small>{{ roleLabel() }}</small></span>
+      </div>
+      @for (item of nav(); track item.path) {
+        <a class="navitem" [routerLink]="item.path" routerLinkActive="on"><i></i>{{ item.label }}</a>
+      }
+      <div class="sidefoot">Signed in as<b>{{ auth.fullName() }}</b></div>
+    </aside>
+
+    <div class="mainpane">
+      <div class="mainbar">
+        <div class="scope">
+          <span class="pill" [class.ok]="role() === 'STAFF'" [class.warn]="role() === 'ADMIN'">
+            <i class="dotx"></i>{{ scopeLabel() }}
+          </span>
+          <span style="color:var(--color-ink-600)">{{ scopeNote() }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <ng-content select="[bar]" />
+          <button type="button" class="avatar" aria-label="Sign out" (click)="auth.logout()">{{ initials() }}</button>
+        </div>
+      </div>
+      <main class="pane"><ng-content /></main>
+    </div>
+  </div>
+  <app-toast />
+</div>

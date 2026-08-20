@@ -1,0 +1,86 @@
+<app-nav />
+<main class="split">
+  <section class="chatcol">
+    <div class="thread" #thread>
+      @for (m of messages(); track $index) {
+        <div class="bub" [class.me]="m.mine" [class.them]="!m.mine">
+          <span [innerHTML]="m.text"></span>
+          <div class="meta">{{ m.mine ? 'You' : 'Assistant' }}
+            @if (m.spoken) { · spoken } · {{ m.at }}</div>
+        </div>
+      }
+
+      @if (offerOpen()) {
+        <div class="offer">
+          <div style="display:flex;gap:20px;align-items:center">
+            <div class="datechip" style="flex:0 0 104px;padding:10px">
+              <div class="m">{{ offer.month }}</div><div class="d" style="font-size:34px">{{ offer.dayNum }}</div>
+              <div class="w">{{ offer.day }}</div>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:23px;font-weight:600;color:var(--color-forest-900)">
+                {{ offer.service }} · {{ offer.minutes }} min</div>
+              <div style="font-size:18px;color:var(--color-ink-600);margin-top:4px">
+                {{ offer.time }} · {{ offer.therapist }} · {{ offer.room }}</div>
+              <div style="font-size:21px;font-weight:600;color:var(--color-forest-900);margin-top:8px">
+                ₱ {{ offer.price }} · pay at counter</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px">
+            <button type="button" class="btn btn-primary" style="flex:1;min-width:0" (click)="accept()">
+              Yes, book this</button>
+            <button type="button" class="btn btn-quiet" style="flex:1;min-width:0" (click)="another()">
+              Another time</button>
+          </div>
+          <p class="help">Held for you for 5 minutes while you decide.</p>
+        </div>
+      }
+    </div>
+
+    <div class="subtitle"><span class="tag">SUBTITLE</span><span>{{ subtitle() }}</span></div>
+
+    <div class="composer">
+      <button type="button" class="mic" [class.live]="listening()" [attr.aria-pressed]="listening()"
+              [attr.aria-label]="listening() ? 'Stop listening' : 'Speak your answer'"
+              (click)="toggleMic()"><i></i></button>
+      <input class="input" style="flex:1" [value]="draftText()"
+             (input)="draftText.set(val($event))" (keydown.enter)="send()"
+             placeholder="Type instead, or tap the microphone to speak…"
+             aria-label="Message the booking assistant">
+      <button type="button" class="btn btn-primary" style="flex:0 0 auto"
+              [disabled]="!draftText().trim()" (click)="send()">Send</button>
+    </div>
+  </section>
+
+  <aside class="context">
+    <div>
+      <h2 class="t-s" style="font-size:23px">What the assistant is working from</h2>
+      <p class="help" style="margin-top:6px">It never sees a free medical question — only this.</p>
+    </div>
+
+    <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:10px">
+      <div class="help">YOUR ASSESSMENT</div>
+      <div style="font-size:19px"><b>Lower Back Pain</b> · 1–6 months</div>
+      <div style="font-size:18px;color:var(--color-ink-600)">3 spots marked · worst severity 8</div>
+      <div><span class="pill warn">High blood pressure</span></div>
+    </div>
+
+    <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:10px">
+      <div class="help">SERVICES IT MAY OFFER</div>
+      <div style="font-size:18px">{{ allowed() }}</div>
+      <div style="font-size:17px;color:var(--color-danger-600)">
+        {{ excludedCount() }} excluded before the assistant was asked</div>
+    </div>
+
+    <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:10px">
+      <div class="help">AVAILABILITY IT CAN SEE</div>
+      <div style="font-size:18px">Bulan branch · 3 therapists · 2 rooms · next 14 days</div>
+    </div>
+
+    <div class="note" style="margin-top:auto"><span class="b"></span>
+      <span>Every suggestion is checked against the real service list before you see it. If it cannot
+      be matched, it is discarded and logged.</span>
+    </div>
+  </aside>
+</main>
+<app-toast />
