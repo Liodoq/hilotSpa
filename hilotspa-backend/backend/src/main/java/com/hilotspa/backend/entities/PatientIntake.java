@@ -25,8 +25,18 @@ public class PatientIntake{
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String anatomicalRegion;
+    private AnatomicalRegion anatomicalRegion;
+
+    /**
+     * The client's own left/right. Nullable: midline regions such as Lumbar and
+     * Cervical have no side, and forcing CENTRE on them would be a claim the
+     * paper form does not make.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column
+    private Side side;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "form_id", nullable = false)
@@ -34,8 +44,9 @@ public class PatientIntake{
     @EqualsAndHashCode.Exclude
     private Forms form;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String bodyView;
+    private BodyView bodyView;
 
     @Column(nullable = false)
     private Integer coordinateX;
@@ -43,8 +54,22 @@ public class PatientIntake{
     @Column(nullable = false)
     private Integer coordinateY;
 
+    /**
+     * Pain at the START of the session, 1-10, recorded by the client.
+     *
+     * The paper form's pain scale has BEFORE and AFTER columns. Storing one
+     * number threw away half of the only outcome measure the spa already
+     * collects — see paper-deltas §H3.
+     */
     @Column(nullable = false)
-    private Integer painScore;
+    private Integer painScoreBefore;
+
+    /**
+     * Pain at the END of the session. Written by staff on S4, never by the
+     * client, and null until the session is finished.
+     */
+    @Column
+    private Integer painScoreAfter;
 
     @Column
     @Enumerated(EnumType.STRING)

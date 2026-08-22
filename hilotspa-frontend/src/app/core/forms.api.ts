@@ -20,6 +20,20 @@ export class FormsApi {
     return firstValueFrom(this.http.get<Branch[]>(`${API_BASE}/branches`));
   }
 
+  /** The caller's OWN demographics. The server takes the user from the JWT,
+   *  so nothing here can write onto another client's row. */
+  saveMyDemographics(body: DemographicsModel): Promise<DemographicsModel> {
+    return firstValueFrom(
+      this.http.post<DemographicsModel>(`${API_BASE}/demographics/me`, body));
+  }
+
+  /** 204 (null) when the profile has not been filled in yet. */
+  myDemographics(): Promise<DemographicsModel | null> {
+    return firstValueFrom(
+      this.http.get<DemographicsModel | null>(`${API_BASE}/demographics/me`));
+  }
+
+  /** Front desk only: walk-in clients with no account. STAFF/ADMIN. */
   createDemographics(body: DemographicsModel): Promise<DemographicsModel> {
     return firstValueFrom(
       this.http.post<DemographicsModel>(`${API_BASE}/demographics/create`, body));

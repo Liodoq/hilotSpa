@@ -20,7 +20,10 @@ public class FormsTransformImpl implements FormsTransform {
         formsModel.setMainComplaint(formsEntity.getMainComplaint());
         formsModel.setMainComplaintOther(formsEntity.getMainComplaintOther());
         formsModel.setMainComplaintDuration(formsEntity.getMainComplaintDuration());
-        formsModel.setHasTherapy(formsEntity.isHasTherapy());
+        formsModel.setHasTherapy(formsEntity.getHasTherapy());
+        formsModel.setHadIllness(formsEntity.getHadIllness());
+        formsModel.setMedicalHistory(formsEntity.getMedicalHistory());
+        formsModel.setTherapyDetail(formsEntity.getTherapyDetail());
         formsModel.setStatus(formsEntity.getStatus());
         formsModel.setRemarks(formsEntity.getRemarks());
         formsModel.setIntent(formsEntity.getIntent());
@@ -48,7 +51,10 @@ public class FormsTransformImpl implements FormsTransform {
         formsEntity.setMainComplaint(formsModel.getMainComplaint());
         formsEntity.setMainComplaintOther(formsModel.getMainComplaintOther());
         formsEntity.setMainComplaintDuration(formsModel.getMainComplaintDuration());
-        formsEntity.setHasTherapy(formsModel.isHasTherapy());
+        formsEntity.setHasTherapy(formsModel.getHasTherapy());
+        formsEntity.setHadIllness(formsModel.getHadIllness());
+        formsEntity.setMedicalHistory(formsModel.getMedicalHistory());
+        formsEntity.setTherapyDetail(formsModel.getTherapyDetail());
         formsEntity.setStatus(formsModel.getStatus());
         formsEntity.setRemarks(formsModel.getRemarks());
         formsEntity.setIntent(formsModel.getIntent());

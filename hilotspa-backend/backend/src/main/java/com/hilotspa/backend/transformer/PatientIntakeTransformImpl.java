@@ -15,7 +15,9 @@ public class PatientIntakeTransformImpl implements PatientIntakeTransform {
         patientIntakeModel.setAnatomicalRegion(patientIntakeEntity.getAnatomicalRegion());
         patientIntakeModel.setCoordinateX(patientIntakeEntity.getCoordinateX());
         patientIntakeModel.setCoordinateY(patientIntakeEntity.getCoordinateY());
-        patientIntakeModel.setPainScore(patientIntakeEntity.getPainScore());
+        patientIntakeModel.setPainScoreBefore(patientIntakeEntity.getPainScoreBefore());
+        patientIntakeModel.setPainScoreAfter(patientIntakeEntity.getPainScoreAfter());
+        patientIntakeModel.setSide(patientIntakeEntity.getSide());
         patientIntakeModel.setBodyView(patientIntakeEntity.getBodyView());
         patientIntakeModel.setComplaintType(patientIntakeEntity.getComplaintType());
         return patientIntakeModel;
@@ -29,7 +31,9 @@ public class PatientIntakeTransformImpl implements PatientIntakeTransform {
         patientIntakeEntity.setAnatomicalRegion(patientIntakeModel.getAnatomicalRegion());
         patientIntakeEntity.setCoordinateX(patientIntakeModel.getCoordinateX());
         patientIntakeEntity.setCoordinateY(patientIntakeModel.getCoordinateY());
-        patientIntakeEntity.setPainScore(patientIntakeModel.getPainScore());
+        patientIntakeEntity.setPainScoreBefore(patientIntakeModel.getPainScoreBefore());
+        patientIntakeEntity.setPainScoreAfter(patientIntakeModel.getPainScoreAfter());
+        patientIntakeEntity.setSide(patientIntakeModel.getSide());
         patientIntakeEntity.setComplaintType(patientIntakeModel.getComplaintType());
         patientIntakeEntity.setBodyView(patientIntakeModel.getBodyView());
         return patientIntakeEntity;

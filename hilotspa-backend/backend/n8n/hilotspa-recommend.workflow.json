@@ -1,0 +1,152 @@
+{
+  "name": "HilotSpa — Recommend services",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hilotspa/recommend",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        0
+      ],
+      "webhookId": "b1000000-0000-4000-8000-000000000001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---------------------------------------------------------------------------\n// Build request\n//\n// Spring is the only source of truth. This node never invents a service, never\n// reaches a database, and never decides what is safe. It validates the shape of\n// what arrived and turns it into one prompt string.\n// ---------------------------------------------------------------------------\nconst req = $input.first().json.body ?? {};\n\nconst errors = [];\nif (!req.formId) errors.push('formId is required');\nif (!req.intent) errors.push('intent is required');\nif (!Array.isArray(req.allowedServices) || req.allowedServices.length === 0) {\n  errors.push('allowedServices must be a non-empty array');\n}\nif (errors.length > 0) {\n  return [{ json: { ok: false, errors, formId: req.formId ?? null } }];\n}\n\n// The catalogue is the ONLY thing the model may choose from. Spring has already\n// removed every service the spa-authored ServiceProtocol table marks\n// CONTRAINDICATED for this client. The model is not asked to judge safety --\n// it cannot, and being asked would make this a medical device.\nconst catalogue = req.allowedServices.map(function (s, i) {\n  return (i + 1) + '. id=' + s.serviceId +\n         ' | ' + s.name +\n         ' | ' + s.durationMinutes + ' min' +\n         ' | PHP ' + s.price +\n         (s.rationale ? ' | note: ' + s.rationale : '');\n}).join('\\n');\n\nconst painSummary = (req.painPoints ?? []).map(function (p) {\n  const side = (p.side && p.side !== 'CENTRE') ? ' (' + String(p.side).toLowerCase() + ')' : '';\n  return '- ' + p.anatomicalRegion + side + ', pain ' + p.painScoreBefore + '/10';\n}).join('\\n') || '- none marked';\n\nconst flags = req.flags && Object.keys(req.flags).length\n  ? Object.keys(req.flags).filter(function (k) { return req.flags[k]; }).join(', ') || 'none reported'\n  : 'none reported';\n\nconst prompt = [\n  'You are the booking assistant for HilotSpa, a traditional Filipino hilot and',\n  'wellness spa in Bulan, Sorsogon.',\n  '',\n  'YOUR ONLY JOB is to rank the services listed below for this client and explain',\n  'each choice in one plain sentence a non-medical person understands.',\n  '',\n  'HARD RULES:',\n  '- Choose ONLY from the numbered list. Never name a service that is not on it.',\n  '- Copy the id EXACTLY as written. Do not shorten, reformat, or invent ids.',\n  '- Do NOT diagnose. Do NOT name a condition the client did not name.',\n  '- Do NOT give medical advice, treatment plans, or prognosis.',\n  '- Do NOT promise a cure or an outcome.',\n  '- If the client should see a doctor, say only: \"please consider seeing a',\n  '  physician\" -- nothing more specific.',\n  '- Reply with STRICT JSON only. No prose, no markdown fences.',\n  '',\n  'CLIENT ASSESSMENT',\n  'Reason for visit: ' + (req.intent === 'PAIN' ? 'pain or discomfort' : 'relaxation / leisure'),\n  'Chief complaint: ' + (req.chiefComplaint ?? 'not stated'),\n  'How long: ' + (req.chiefComplaintDuration ?? 'not stated'),\n  'Marked areas:',\n  painSummary,\n  'Safety flags reported: ' + flags,\n  'Preferred pressure: ' + (req.pressurePreference ?? 'not stated'),\n  '',\n  'AVAILABLE SERVICES (the complete and only permitted set):',\n  catalogue,\n  '',\n  'Return exactly this JSON shape, at most 3 recommendations, best first:',\n  '{\"recommendations\":[{\"serviceId\":\"<id copied from the list>\",\"reason\":\"<one sentence>\"}]}'\n].join('\\n');\n\nreturn [{\n  json: {\n    ok: true,\n    formId: req.formId,\n    intent: req.intent,\n    chiefComplaint: req.chiefComplaint ?? null,\n    allowedServices: req.allowedServices,\n    prompt: prompt\n  }\n}];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "Build request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://asia-southeast1-aiplatform.googleapis.com/v1/projects/gen-lang-client-0276346734/locations/asia-southeast1/publishers/google/models/gemini-2.5-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [ { role: 'user', parts: [ { text: $json.prompt } ] } ], generationConfig: { temperature: 0.2, maxOutputTokens: 2048, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }) }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi"
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Vertex Gemini",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "disabled": false,
+      "notes": "Vertex AI, not AI Studio. Vertex runs under the Google Cloud terms: prompts are not used to train models and are not read by human reviewers, which the AI Studio free tier explicitly allows. This carries real patient assessments. Replace REPLACE_WITH_GCP_PROJECT_ID in the URL with your project id. Region asia-southeast1 (Singapore) is the nearest to Sorsogon; change it in BOTH places in the URL if you use another. thinkingBudget 0 disables gemini-2.5-flash's reasoning pass: thinking tokens are charged against maxOutputTokens, so a 512 budget can be spent reasoning and return truncated JSON that fails to parse - which looks like a model failure, not a config one. This call ranks a pre-filtered list; it does not need to think. Credential: Google Service Account with scope https://www.googleapis.com/auth/cloud-platform"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---------------------------------------------------------------------------\n// Validate and rank\n//\n// This is the safety boundary, and it is the reason the assistant can be\n// defended in the paper. Whatever the model said, only a serviceId that Spring\n// itself sent in allowedServices can survive this node. A hallucinated id, a\n// contraindicated service, a reworded name -- all are dropped, not corrected.\n//\n// It reads allowedServices from the \"Build request\" node rather than from its\n// own input, so it behaves identically whether the Gemini node is enabled or\n// disabled.\n// ---------------------------------------------------------------------------\nconst built = $('Build request').first().json;\nconst now = new Date().toISOString();\n\nif (built.ok === false) {\n  return [{ json: {\n    formId: built.formId,\n    status: 'ERROR',\n    errors: built.errors,\n    recommendations: [],\n    modelUsed: 'none',\n    generatedAt: now\n  } }];\n}\n\nconst allowed = new Map(built.allowedServices.map(function (s) {\n  return [String(s.serviceId), s];\n}));\n\n// --- read the model answer, if there is one -------------------------------\n// Three different things can arrive here and they must not be confused:\n//   1. the Vertex node is DEACTIVATED  -> n8n passes Build request through, so\n//      the input still carries .prompt\n//   2. the Vertex node RAN AND FAILED  -> Google's error body arrives, because\n//      the node is set neverError so a 401 does not stop the workflow\n//   3. the Vertex node SUCCEEDED       -> .candidates is present\n// Collapsing 1 and 2 into \"stub\" hides a broken credential behind a healthy\n// looking FALLBACK, which is exactly the bug that eats an afternoon.\nlet picks = [];\nlet modelUsed = 'stub';\nlet parseError = null;\n\nconst raw = $input.first().json;\n\nconst wasSkipped = raw && Object.prototype.hasOwnProperty.call(raw, 'prompt');\nconst googleError = raw && raw.error ? raw.error : null;\n\nif (googleError) {\n  modelUsed = 'error';\n  parseError = 'Vertex rejected the call: '\n             + (googleError.code ? googleError.code + ' ' : '')\n             + (googleError.status ? googleError.status + ' - ' : '')\n             + (googleError.message || 'no message');\n} else if (wasSkipped) {\n  modelUsed = 'stub';\n  parseError = null;\n} else {\n  const text = raw && raw.candidates && raw.candidates[0] &&\n               raw.candidates[0].content && raw.candidates[0].content.parts &&\n               raw.candidates[0].content.parts[0]\n               ? raw.candidates[0].content.parts[0].text\n               : null;\n\n  if (text) {\n    modelUsed = raw.modelVersion || 'vertex-gemini';\n    const finish = raw.candidates[0].finishReason || null;\n    const usage  = raw.usageMetadata || {};\n\n    // Be liberal about what the model wraps its JSON in, but never about what\n    // comes out the other side - the guard below is unchanged.\n    let cleaned = String(text).trim();\n    const fenced = cleaned.match(/```(?:json)?\\s*([\\s\\S]*?)```/i);\n    if (fenced) { cleaned = fenced[1].trim(); }\n    const open = cleaned.indexOf('{');\n    const close = cleaned.lastIndexOf('}');\n    if (open !== -1 && close > open) { cleaned = cleaned.slice(open, close + 1); }\n\n    try {\n      const parsed = JSON.parse(cleaned);\n      if (Array.isArray(parsed.recommendations)) {\n        picks = parsed.recommendations;\n      } else {\n        parseError = 'JSON parsed but had no recommendations array. Keys: '\n                   + Object.keys(parsed).join(', ');\n      }\n    } catch (e) {\n      // Say WHAT came back. \"not valid JSON\" with the evidence discarded is\n      // how the last hour was spent guessing.\n      parseError = 'Could not parse the model reply.'\n        + ' finishReason=' + finish\n        + ' thoughtTokens=' + (usage.thoughtsTokenCount ?? '?')\n        + ' answerTokens=' + (usage.candidatesTokenCount ?? '?')\n        + ' | raw starts: ' + String(text).slice(0, 200).replace(/\\s+/g, ' ');\n    }\n  } else {\n    modelUsed = 'error';\n    parseError = 'Vertex returned no candidates and no error object';\n  }\n}\n\n// --- the guard ------------------------------------------------------------\nconst seen = new Set();\nconst kept = [];\nlet rejected = 0;\n\nfor (const p of picks) {\n  const id = p && p.serviceId != null ? String(p.serviceId) : null;\n  if (!id || !allowed.has(id) || seen.has(id)) { rejected++; continue; }\n  seen.add(id);\n  kept.push({\n    serviceId: id,\n    rank: kept.length + 1,\n    reason: String(p.reason ?? '').slice(0, 300)\n  });\n  if (kept.length === 3) break;\n}\n\n// --- fallback: the protocol table answers when the model cannot ------------\nlet status = 'OK';\nlet recommendations = kept;\n\nif (recommendations.length === 0) {\n  status = 'FALLBACK';\n  const indicated = built.allowedServices.filter(function (s) { return s.rule === 'INDICATED'; });\n  const rest     = built.allowedServices.filter(function (s) { return s.rule !== 'INDICATED'; });\n  recommendations = indicated.concat(rest).slice(0, 3).map(function (s, i) {\n    return {\n      serviceId: String(s.serviceId),\n      rank: i + 1,\n      reason: s.rationale || 'Listed for this assessment in the spa’s own service protocol.'\n    };\n  });\n}\n\nreturn [{ json: {\n  formId: built.formId,\n  status: status,\n  recommendations: recommendations,\n  modelUsed: modelUsed,\n  rejectedCount: rejected,\n  parseError: parseError,\n  generatedAt: now\n} }];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "Validate and rank",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build request": {
+      "main": [
+        [
+          {
+            "node": "Vertex Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and rank": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vertex Gemini": {
+      "main": [
+        [
+          {
+            "node": "Validate and rank",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

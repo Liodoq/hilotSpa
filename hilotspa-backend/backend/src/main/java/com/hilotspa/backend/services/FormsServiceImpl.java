@@ -137,7 +137,10 @@ public class FormsServiceImpl implements FormsService {
         form.setMainComplaint(model.getMainComplaint());
         form.setMainComplaintOther(model.getMainComplaintOther());
         form.setMainComplaintDuration(model.getMainComplaintDuration());
-        form.setHasTherapy(model.isHasTherapy());
+        form.setHasTherapy(model.getHasTherapy());
+        form.setHadIllness(model.getHadIllness());
+        form.setMedicalHistory(model.getMedicalHistory());
+        form.setTherapyDetail(model.getTherapyDetail());
         form.setStatus(model.getStatus());
         form.setIntent(model.getIntent());
         form.setRemarks(model.getRemarks());
@@ -159,7 +162,10 @@ public class FormsServiceImpl implements FormsService {
             point.setAnatomicalRegion(pm.getAnatomicalRegion());
             point.setCoordinateX(pm.getCoordinateX());
             point.setCoordinateY(pm.getCoordinateY());
-            point.setPainScore(pm.getPainScore());
+            point.setPainScoreBefore(pm.getPainScoreBefore());
+            point.setSide(pm.getSide());
+            // painScoreAfter is deliberately NOT taken from the request. It is
+            // written by staff at the end of a session, never by the client.
             point.setComplaintType(pm.getComplaintType());
             form.getPainPoints().add(point);
         }

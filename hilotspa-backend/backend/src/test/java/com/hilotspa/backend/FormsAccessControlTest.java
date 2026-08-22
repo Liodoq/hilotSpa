@@ -85,14 +85,15 @@ class FormsAccessControlTest {
                 {
                   "userId": "%s",
                   "branchId": "%s",
+                  "intent": "PAIN",
                   "mainComplaint": "LOWER_BACK_PAIN",
                   "mainComplaintDuration": "3 months",
                   "hasTherapy": false,
                   "status": "PENDING",
                   "painPoints": [
-                    { "bodyView": "BACK", "anatomicalRegion": "Lumbar",
-                      "coordinateX": 148, "coordinateY": 302,
-                      "painScore": 8, "complaintType": "LOWER_BACK_PAIN" }
+                    { "bodyView": "BACK", "anatomicalRegion": "LUMBAR", "side": "CENTRE",
+                      "coordinateX": 500, "coordinateY": 380,
+                      "painScoreBefore": 8, "complaintType": "LOWER_BACK_PAIN" }
                   ]
                 }
                 """.formatted(ownerId, branchId);

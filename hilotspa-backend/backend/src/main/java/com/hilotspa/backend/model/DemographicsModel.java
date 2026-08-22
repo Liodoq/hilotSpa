@@ -12,6 +12,7 @@ public class DemographicsModel {
     private UUID usersid;
     private Integer age;
     private String sex;
+    private String occupation;
     private String status;
     private Integer height;
     private Integer weight;

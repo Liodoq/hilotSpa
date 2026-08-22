@@ -7,7 +7,6 @@ import { AuthService } from '../../core/auth.service';
 import { ToastService } from '../../core/toast.service';
 import { AssessmentStore, PainPoint } from '../../core/assessment.store';
 import { ProfileStore } from '../../core/profile.store';
-import { LAST_POINTS } from '../../core/demo';
 import { BookingStore } from '../../core/booking.store';
 
 /** C1 — Home / Wellness Profile. Process Rule #1: history belongs to the account. */
@@ -24,8 +23,15 @@ export class Home {
   protected profileStore = inject(ProfileStore);
   protected toast = inject(ToastService);
 
-  protected points: PainPoint[] = LAST_POINTS;
   protected booking = inject(BookingStore);
+
+  /** The client's OWN latest marks, not a demo figure. Declared AFTER booking:
+   *  class fields initialise top-down, so reading this.booking above would be
+   *  undefined at construction. */
+  protected points = this.booking.lastPoints;
+
+  /** The client's most recent assessment, or undefined for a new account. */
+  protected latest = computed(() => this.booking.history()[0]);
 
   /** Persisted, so a cancellation survives a refresh. */
   next = this.booking.upcoming;

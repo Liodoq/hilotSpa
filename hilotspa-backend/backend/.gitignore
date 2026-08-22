@@ -38,3 +38,12 @@ build/
 
 ### FUSE orphans (created when files are edited while open) ###
 .fuse_hidden*
+
+# --- n8n volume backups -----------------------------------------------------
+# Contains the ENCRYPTED Vertex service-account credential. Never commit.
+n8n_data.tgz
+*.tgz
+
+# Local compose backups
+compose.yaml.bak
+compose.yaml.pre-n8n

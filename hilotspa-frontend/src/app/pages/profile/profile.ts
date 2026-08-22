@@ -54,9 +54,22 @@ export class Profile {
     return Number.isFinite(n) ? n : null;
   }
 
-  save(): void {
-    this.store.save();
-    // TODO — POST to /api/v1/demographics once a CUSTOMER is allowed to (B43).
+  saving = signal(false);
+
+  async save(): Promise<void> {
+    if (this.saving()) return;
+    this.saving.set(true);
+    try {
+      await this.store.save();
+    } catch {
+      // Do NOT close the editor and do NOT mark it complete. Letting the client
+      // walk into the wizard on a profile the server never stored is the whole
+      // reason B43 mattered.
+      this.toast.show('Could not save your profile. Please try again.');
+      return;
+    } finally {
+      this.saving.set(false);
+    }
     const next = this.route.snapshot.queryParamMap.get('next');
     this.editing.set(false);
     this.wasComplete = true;

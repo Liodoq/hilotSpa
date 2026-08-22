@@ -12,6 +12,7 @@ public class DemographicsTransformImpl implements DemographicsTransform {
         demographicsModel.setId(demographicsEntity.getId());
         demographicsModel.setAge(demographicsEntity.getAge());
         demographicsModel.setSex(demographicsEntity.getSex());
+        demographicsModel.setOccupation(demographicsEntity.getOccupation());
         demographicsModel.setStatus(demographicsEntity.getStatus());
         demographicsModel.setHeight(demographicsEntity.getHeight());
         demographicsModel.setWeight(demographicsEntity.getWeight());
@@ -27,6 +28,7 @@ public class DemographicsTransformImpl implements DemographicsTransform {
         demographicsEntity.setId(demographicsModel.getId());
         demographicsEntity.setAge(demographicsModel.getAge());
         demographicsEntity.setSex(demographicsModel.getSex());
+        demographicsEntity.setOccupation(demographicsModel.getOccupation());
         demographicsEntity.setStatus(demographicsModel.getStatus());
         demographicsEntity.setHeight(demographicsModel.getHeight());
         demographicsEntity.setWeight(demographicsModel.getWeight());

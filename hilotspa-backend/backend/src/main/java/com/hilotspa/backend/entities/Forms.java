@@ -53,7 +53,23 @@ public class Forms {
 
     private String mainComplaintDuration;
 
-    private boolean hasTherapy;
+    /**
+     * "Have you had any serious or chronic illness, operations, traumatic
+     * accidents, injury? When?" — Appendix A, verbatim.
+     *
+     * Boolean, not boolean: a primitive cannot hold "not answered". It defaults
+     * to false, which is a claim the client never made.
+     */
+    private Boolean hadIllness;
+
+    @Column(columnDefinition = "TEXT")
+    private String medicalHistory;
+
+    /** "Have you had any therapy before? When?" — Appendix A, verbatim. */
+    private Boolean hasTherapy;
+
+    @Column(columnDefinition = "TEXT")
+    private String therapyDetail;
 
     private String status;
 

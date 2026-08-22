@@ -1,6 +1,6 @@
-import { AnatomicalRegion, BodyView } from './models';
+import { AnatomicalRegion, BodyView, Side } from './models';
 
-export type Side = 'LEFT' | 'RIGHT' | 'CENTRE';
+export type { Side };
 
 export interface Hotspot {
   id: string;

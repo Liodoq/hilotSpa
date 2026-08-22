@@ -31,13 +31,24 @@ public class Demographics{
     @Column(nullable = false)
     private String sex;
 
+    /**
+     * On the paper form between ADDRESS and AGE. A sari-sari store owner
+     * lifting sacks and a call-centre agent sitting eight hours present
+     * differently for the same complaint, and it is context the assistant
+     * can use.
+     */
+    private String occupation;
+
     @Column(nullable = false)
     private String status;
 
-    @Column(nullable = false)
+    // Optional on the paper form, and optional here. A client who would rather
+    // not give a weight must still be able to book (NFR#4). Making these NOT
+    // NULL would have thrown a constraint violation on the first blank field.
+    @Column
     private Integer height;
 
-    @Column(nullable = false)
+    @Column
     private Integer weight;
 
     @Column(nullable = false)

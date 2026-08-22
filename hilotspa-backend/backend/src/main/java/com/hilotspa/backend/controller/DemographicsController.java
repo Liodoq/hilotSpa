@@ -32,6 +32,21 @@ public class DemographicsController {
         return new ResponseEntity<>(demographicsService.createDemographics(model), HttpStatus.CREATED);
     }
 
+    // --- Self-service: the caller's own profile, identified by the JWT ------
+
+    @PostMapping("/me")
+    public ResponseEntity<DemographicsModel> saveMine(@RequestBody DemographicsModel model) {
+        return ResponseEntity.ok(demographicsService.saveMine(model));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<DemographicsModel> getMine() {
+        DemographicsModel mine = demographicsService.getMine();
+        return mine == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(mine);
+    }
+
+    // --- Front desk only: walk-in clients who have no account ---------------
+
     @GetMapping("/{id}")
     public ResponseEntity<DemographicsModel> getDemographicsById(@PathVariable UUID id) {
         return ResponseEntity.ok(demographicsService.getDemographicsById(id));

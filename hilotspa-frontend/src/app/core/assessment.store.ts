@@ -3,7 +3,7 @@ import {
   AnatomicalRegion, AssessmentIntent, BodyView, ComplaintType,
   FormsModel, PatientIntakeModel,
 } from './models';
-import { Profile, ProfileStore } from './profile.store';
+import { ProfileStore } from './profile.store';
 import { Side } from './body-hotspots';
 
 /** One marker on the body map, before it becomes a PatientIntakeModel. */
@@ -121,13 +121,13 @@ export class AssessmentStore {
     const d = this.draft();
     const points: PatientIntakeModel[] = d.points.map(p => ({
       anatomicalRegion: p.region,
+      side: p.side,
       bodyView: p.view,
       coordinateX: Math.round(p.x * 10),   // 0-1000, resolution-independent
       coordinateY: Math.round(p.y * 10),
-      painScore: p.score,
+      painScoreBefore: p.score,
       complaintType: d.mainComplaint,
-      // NOTE: p.side is NOT sent. PatientIntake has no column for it, but the
-      // findings table on the paper form has L and R columns. Logged as §H8.
+      // painScoreAfter is never sent from here — staff write it on S4.
     }));
 
     return {
@@ -138,25 +138,32 @@ export class AssessmentStore {
       mainComplaint: d.intent === 'LEISURE' ? null : d.mainComplaint,
       mainComplaintOther: d.mainComplaint === 'OTHER' ? d.mainComplaintOther : null,
       mainComplaintDuration: d.duration,
-      hasTherapy: d.hasTherapy === true,
+      hadIllness: d.hadIllness,
+      medicalHistory: d.hadIllness ? (d.illnessDetail || null) : null,
+      hasTherapy: d.hasTherapy,
+      therapyDetail: d.hasTherapy
+        ? [d.therapyKind, d.therapyWhen].filter(Boolean).join(', ') || null
+        : null,
       status: 'SUBMITTED',
-      remarks: buildRemarks(d, this.profileStore.profile()),
+      remarks: buildRemarks(d),
       painPoints: points,
     };
   }
 }
 
 /**
- * TEMPORARY. Until H1/H2 land (occupation, medicalHistory, therapyDetail),
- * these answers have nowhere structured to go, so they are packed into
- * `remarks` rather than silently dropped. Delete this the moment those
- * columns exist — a text blob is not queryable and cannot be shown back.
+ * What is LEFT of the stopgap.
+ *
+ * Occupation now lives on Demographics (§H1) and the two history answers have
+ * real columns (§H2), so they are gone from here.
+ *
+ * The safety checklist and the pressure preference still have nowhere
+ * structured to go. They are the input to the contraindication filter, so they
+ * deserve real columns — logged as §H9. Until then they are packed here rather
+ * than silently dropped.
  */
-function buildRemarks(d: AssessmentDraft, p: Profile): string {
+function buildRemarks(d: AssessmentDraft): string {
   const bits: string[] = [];
-  if (p.occupation) bits.push(`Occupation: ${p.occupation}`);
-  if (d.hadIllness) bits.push(`Illness/injury: ${d.illnessDetail || 'yes, no detail given'}`);
-  if (d.hasTherapy) bits.push(`Therapy before: ${d.therapyKind || 'unspecified'}, ${d.therapyWhen || 'date unknown'}`);
   if (d.flags.length) bits.push(`Flagged: ${d.flags.join(', ')}`);
   if (d.pressure) bits.push(`Preferred pressure: ${d.pressure}`);
   return bits.join(' | ');

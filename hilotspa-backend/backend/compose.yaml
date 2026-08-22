@@ -42,10 +42,50 @@ services:
       DB_NAME: ${POSTGRES_DB}
       DB_USERNAME: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # .env says http://localhost:5678, which is right for run.ps1 on Windows
+      # but resolves to the backend container itself when running in compose.
+      N8N_WEBHOOK_URL: http://n8n:5678
 
     depends_on:
       db:
         condition: service_healthy
 
+  # ---------------------------------------------------------------------------
+  # n8n — the orchestration layer for the Data-Driven Virtual Assistant.
+  #
+  # It lives in the same compose project on purpose. Two consequences:
+  #   1. The backend reaches it at http://n8n:5678 (service name), NOT at
+  #      localhost:5678 — inside a container, localhost is the container itself.
+  #      That is why N8N_WEBHOOK_URL is overridden for the backend below.
+  #   2. You reach the editor from Windows at http://localhost:5678 because the
+  #      port is published.
+  #
+  # n8n never connects to Postgres. Spring sends it everything it is allowed to
+  # know and n8n sends back a ranked list. See n8n/README.md.
+  # ---------------------------------------------------------------------------
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: hilotspa_n8n
+    restart: unless-stopped
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/
+      GENERIC_TIMEZONE: Asia/Manila
+      TZ: Asia/Manila
+      # No telemetry leaves the machine. Clinical data must not be phoned home.
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      # Pinned so saved credentials survive a volume rebuild.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-}
+      N8N_RUNNERS_ENABLED: "true"
+    volumes:
+      - n8n_data:/home/node/.n8n
+
 volumes:
   postgres_data:
+  n8n_data:

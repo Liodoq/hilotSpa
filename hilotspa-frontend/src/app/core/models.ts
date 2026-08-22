@@ -4,6 +4,7 @@
 export type Role = 'CUSTOMER' | 'STAFF' | 'ADMIN';
 export type AssessmentIntent = 'PAIN' | 'LEISURE';
 export type BodyView = 'FRONT' | 'BACK';
+export type Side = 'LEFT' | 'RIGHT' | 'CENTRE';
 
 export interface AuthResponse {
   token: string;
@@ -89,11 +90,15 @@ export const REGIONS: ReadonlyArray<{ value: AnatomicalRegion; label: string }> 
 /** What the backend receives for one pain marker. */
 export interface PatientIntakeModel {
   id?: string;
-  anatomicalRegion: string;
-  bodyView: string;
+  anatomicalRegion: AnatomicalRegion;
+  side: Side | null;
+  bodyView: BodyView;
   coordinateX: number;
   coordinateY: number;
-  painScore: number;
+  /** recorded by the client at the start */
+  painScoreBefore: number;
+  /** written by staff at the end of the session — never sent from here */
+  painScoreAfter?: number | null;
   complaintType: ComplaintType | null;
 }
 
@@ -107,7 +112,10 @@ export interface FormsModel {
   mainComplaint: ComplaintType | null;
   mainComplaintOther?: string | null;
   mainComplaintDuration?: string | null;
-  hasTherapy: boolean;
+  hadIllness: boolean | null;
+  medicalHistory?: string | null;
+  hasTherapy: boolean | null;
+  therapyDetail?: string | null;
   status?: string | null;
   remarks?: string | null;
   createdAt?: string;
@@ -119,6 +127,7 @@ export interface DemographicsModel {
   usersid?: string | null;
   age: number | null;
   sex: string | null;
+  occupation: string | null;
   status: string | null;
   height: number | null;
   weight: number | null;

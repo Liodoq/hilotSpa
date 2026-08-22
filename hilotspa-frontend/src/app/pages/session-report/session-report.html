@@ -69,8 +69,8 @@
             <h2 class="t-s" style="font-size:23px">Where it hurt</h2>
             @if (s.before !== null) {
               <div class="thumbs">
-                <app-body-map view="FRONT" [points]="points" [interactive]="false" />
-                <app-body-map view="BACK"  [points]="points" [interactive]="false" />
+                <app-body-map view="FRONT" [points]="points()" [interactive]="false" />
+                <app-body-map view="BACK"  [points]="points()" [interactive]="false" />
               </div>
               <p class="help">From the pre-assessment you completed before this session.</p>
             } @else {

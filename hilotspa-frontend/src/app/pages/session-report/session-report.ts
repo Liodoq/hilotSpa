@@ -4,7 +4,6 @@ import { AppNav } from '../../shared/app-nav/app-nav';
 import { BodyMap } from '../../shared/body-map/body-map';
 import { Toast } from '../../shared/toast/toast';
 import { BookingStore } from '../../core/booking.store';
-import { LAST_POINTS } from '../../core/demo';
 import { PainPoint } from '../../core/assessment.store';
 import { severityClass } from '../../core/region.util';
 
@@ -30,7 +29,9 @@ export class SessionReport {
   id = input<string>('');
 
   session = computed(() => this.store.find(this.id()));
-  protected points: PainPoint[] = LAST_POINTS;
+  /** This session's OWN marks. It used to render LAST_POINTS, so every report
+   *  showed the same demo body map regardless of which session was opened. */
+  protected points = computed<PainPoint[]>(() => this.session()?.points ?? []);
   protected sev = severityClass;
 
   back(): void { this.router.navigateByUrl('/home'); }

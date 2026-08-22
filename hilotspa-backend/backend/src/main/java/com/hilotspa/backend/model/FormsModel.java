@@ -19,7 +19,10 @@ public class FormsModel {
     private ComplaintType mainComplaint;
     private String mainComplaintOther;
     private String mainComplaintDuration;
-    private boolean hasTherapy;
+    private Boolean hadIllness;
+    private String medicalHistory;
+    private Boolean hasTherapy;
+    private String therapyDetail;
     private String status;
     private String remarks;
     private AssessmentIntent intent;

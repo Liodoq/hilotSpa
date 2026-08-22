@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE } from './api.config';
+import { PROFILE_CACHE_KEY, ProfileStore } from './profile.store';
+import { BOOKING_CACHE_KEY, BookingStore } from './booking.store';
 import { AuthResponse, LoginRequest, RegisterRequest } from './models';
 
 const STORAGE_KEY = 'hilotspa.auth';
@@ -11,6 +13,8 @@ const STORAGE_KEY = 'hilotspa.auth';
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private profile = inject(ProfileStore);
+  private booking = inject(BookingStore);
 
   /** The whole auth response, or null. Read it, never write it from outside. */
   readonly session = signal<AuthResponse | null>(restore());
@@ -38,12 +42,38 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem(STORAGE_KEY);
     this.session.set(null);
+    this.wipeClientData();
     this.router.navigateByUrl('/login');
   }
 
   private accept(res: AuthResponse): void {
+    const previous = this.session()?.userId ?? null;
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(res));
     this.session.set(res);
+
+    // A different person is now signed in on this browser. Clearing on logout
+    // alone was not enough: registering or logging in over an existing session
+    // left the previous client's profile and history in memory AND in
+    // localStorage, so a brand new account opened onto someone else's
+    // demographics. The spa's front desk is a shared machine.
+    if (previous !== res.userId) {
+      this.wipeClientData();
+    }
+
+    // Repopulate from the server for whoever just signed in.
+    void this.profile.load();
+    void this.booking.load();
+  }
+
+  /** Everything cached about a client. Never leave this behind on a switch. */
+  private wipeClientData(): void {
+    try {
+      localStorage.removeItem(PROFILE_CACHE_KEY);
+      localStorage.removeItem(BOOKING_CACHE_KEY);
+    } catch { /* private mode */ }
+    this.profile.clear();
+    this.booking.clear();
   }
 }
 

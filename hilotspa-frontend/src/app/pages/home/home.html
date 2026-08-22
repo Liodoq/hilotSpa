@@ -77,20 +77,32 @@
     <aside class="right">
       <div class="card">
         <h2 class="t-s" style="margin-bottom:6px">Your wellness profile</h2>
-        <p class="help">From your last assessment, 2 August.</p>
-        <div style="display:flex;gap:24px;align-items:center;margin-top:18px">
-          <div class="thumbs">
-            <app-body-map view="FRONT" [points]="points" [interactive]="false" />
-            <app-body-map view="BACK"  [points]="points" [interactive]="false" />
+
+        @if (latest(); as a) {
+          <p class="help">From your last assessment, {{ a.date }}.</p>
+          <div style="display:flex;gap:24px;align-items:center;margin-top:18px">
+            <div class="thumbs">
+              <app-body-map view="FRONT" [points]="points()" [interactive]="false" />
+              <app-body-map view="BACK"  [points]="points()" [interactive]="false" />
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+              <div><div class="help">CHIEF COMPLAINT</div>
+                <div style="font-size:21px;font-weight:600;color:var(--color-forest-900)">{{ a.complaint }}</div></div>
+              @if (a.duration) {
+                <div><div class="help">FOR</div><div style="font-size:19px">{{ a.duration }}</div></div>
+              }
+              @if (a.notes) {
+                <div><div class="help">NOTED ON YOUR RECORD</div>
+                  <div style="margin-top:4px"><span class="pill warn">{{ a.notes }}</span></div></div>
+              }
+            </div>
           </div>
-          <div style="flex:1;display:flex;flex-direction:column;gap:12px">
-            <div><div class="help">CHIEF COMPLAINT</div>
-              <div style="font-size:21px;font-weight:600;color:var(--color-forest-900)">Lower Back Pain</div></div>
-            <div><div class="help">FOR</div><div style="font-size:19px">1 – 6 months</div></div>
-            <div><div class="help">NOTED ON YOUR RECORD</div>
-              <div style="margin-top:4px"><span class="pill warn">High blood pressure</span></div></div>
-          </div>
-        </div>
+        } @else {
+          <p class="help">Nothing here yet.</p>
+          <p style="margin-top:14px">Once you complete a pre-assessment, the areas you marked and your
+            main complaint will show here, so your bone setter can see how things change between visits.</p>
+        }
+
         <hr class="hr" style="margin:20px 0">
         <!-- "Start pre-assessment" and "Update my assessment" did the same thing
              from two places. One action, named for what it actually does. -->

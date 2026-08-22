@@ -65,6 +65,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT,    "/api/v1/massages/**").hasRole("ADMIN")
 
                 .requestMatchers("/api/v1/patient-intake/**").hasAnyRole("STAFF", "ADMIN")
+                // B43: a CUSTOMER must be able to save their OWN profile, or
+                // profileGuard bounces them out of the wizard before step 1.
+                // This MUST stay ABOVE the STAFF/ADMIN line - Spring takes the
+                // FIRST matching rule, so below it this never runs.
+                .requestMatchers("/api/v1/demographics/me").authenticated()
                 .requestMatchers("/api/v1/demographics/**").hasAnyRole("STAFF", "ADMIN")
 
                 .requestMatchers(HttpMethod.GET, "/api/v1/branches/**").authenticated()
