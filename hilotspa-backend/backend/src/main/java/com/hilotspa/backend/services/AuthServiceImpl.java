@@ -128,6 +128,7 @@ public class AuthServiceImpl implements AuthService {
         response.setFullName(fullName);
         response.setRole(user.getRole());
         response.setBranchId(user.getBranch() == null ? null : user.getBranch().getId());
+        response.setBranchName(user.getBranch() == null ? null : user.getBranch().getName());
         return response;
     }
 }

@@ -1,0 +1,99 @@
+<app-nav />
+<main class="acct">
+  <h1 class="t-l">My account</h1>
+  <p class="s">Your login and contact details. Health information lives separately.</p>
+
+  @if (loading()) {
+    <p class="help" style="margin-top:24px">Loading…</p>
+  } @else if (me(); as m) {
+
+    <section class="card pad">
+      <h2 class="t-s">Details</h2>
+
+      <div class="grid3">
+        <div>
+          <label class="lab" for="fn">First name</label>
+          <input id="fn" class="input" [value]="m.firstName ?? ''"
+                 (input)="patch({ firstName: val($event) })">
+        </div>
+        <div>
+          <label class="lab" for="mn">Middle name</label>
+          <input id="mn" class="input" [value]="m.middleName ?? ''"
+                 (input)="patch({ middleName: val($event) })">
+        </div>
+        <div>
+          <label class="lab" for="ln">Surname</label>
+          <input id="ln" class="input" [value]="m.lastName ?? ''"
+                 (input)="patch({ lastName: val($event) })">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label class="lab" for="ct">Contact number</label>
+          <input id="ct" class="input" inputmode="tel" [value]="m.contact ?? ''"
+                 (input)="patch({ contact: val($event) })">
+        </div>
+        <div>
+          <label class="lab" for="em">Email address</label>
+          <input id="em" class="input" type="email" autocomplete="email"
+                 [value]="m.email ?? ''" (input)="patch({ email: val($event) })">
+        </div>
+      </div>
+
+      <div>
+        <label class="lab" for="ad">Address</label>
+        <input id="ad" class="input" [value]="m.address ?? ''"
+               (input)="patch({ address: val($event) })">
+      </div>
+
+      @if (error()) { <p class="err">{{ error() }}</p> }
+
+      <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
+        {{ saving() ? 'Saving…' : 'Save details' }}</button>
+    </section>
+
+    <section class="card pad">
+      <h2 class="t-s">Password</h2>
+      <p class="help">You need your current password to set a new one.</p>
+
+      <div class="grid3">
+        <div>
+          <label class="lab" for="cp">Current password</label>
+          <input id="cp" class="input" type="password" autocomplete="current-password"
+                 [value]="current()" (input)="current.set(val($event))">
+        </div>
+        <div>
+          <label class="lab" for="np">New password</label>
+          <input id="np" class="input" type="password" autocomplete="new-password"
+                 [value]="next()" (input)="next.set(val($event))">
+        </div>
+        <div>
+          <label class="lab" for="cf">Confirm new password</label>
+          <input id="cf" class="input" type="password" autocomplete="new-password"
+                 [value]="confirm()" (input)="confirm.set(val($event))">
+          @if (confirm() && next() !== confirm()) {
+            <div class="err sm">The two new passwords do not match.</div>
+          }
+        </div>
+      </div>
+
+      @if (pwError()) { <p class="err">{{ pwError() }}</p> }
+
+      <button type="button" class="btn btn-quiet" [disabled]="pwSaving()"
+              (click)="changePassword()">
+        {{ pwSaving() ? 'Changing…' : 'Change password' }}</button>
+    </section>
+
+    <section class="card pad">
+      <h2 class="t-s">Health details</h2>
+      <p class="help">Your age, sex, civil status, occupation, height and weight are kept
+        with your assessments, not with your login.</p>
+      <button type="button" class="btn btn-quiet" (click)="demographics()">
+        Open my health details</button>
+    </section>
+
+    <button type="button" class="link danger" (click)="signOut()">Sign out</button>
+  }
+</main>
+<app-toast />

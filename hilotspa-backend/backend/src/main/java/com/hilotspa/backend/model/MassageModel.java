@@ -11,4 +11,7 @@ public class MassageModel {
     private Integer durationMinute;
     private BigDecimal price;
 
+    /** Null is treated as true by the server; it always answers with a value. */
+    private Boolean active;
+
 }

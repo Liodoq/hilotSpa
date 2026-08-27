@@ -1,7 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { DemoAppointment } from './demo';
 import { FormsApi } from './forms.api';
-import { FormsModel } from './models';
+import { BookingModel, FormsModel } from './models';
 import { PainPoint } from './assessment.store';
 
 /**
@@ -15,9 +14,24 @@ import { PainPoint } from './assessment.store';
  * all, STAFF sees their branch, a CUSTOMER sees only their own. An account with
  * no assessments correctly shows nothing.
  */
+/**
+ * The client's next visit, as the home screen draws it.
+ *
+ * Kept here rather than in a shared placeholder file: this is now the only
+ * shape the store hands out, and the placeholder module it used to live in
+ * has been retired.
+ */
+export interface UpcomingVisit {
+  ref: string; service: string; minutes: number; date: string; day: string; month: string;
+  dayNum: string; time: string; therapist: string; room: string; branch: string;
+  price: number; status: 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+}
+
 export interface SessionLog {
   id: string;
   date: string;
+  /** Raw ISO timestamp. `date` is for display; this is for arithmetic. */
+  createdAt: string;
   service: string;
   minutes: number;
   complaint: string;
@@ -40,9 +54,13 @@ export const BOOKING_CACHE_KEY = KEY;
 export class BookingStore {
   private api = inject(FormsApi);
 
-  /** No appointments endpoint exists yet, so there is genuinely nothing to show.
-   *  TODO Sprint 2 — GET /api/v1/appointments?mine (task 2.18/2.19). */
-  readonly upcoming = signal<DemoAppointment | null>(null);
+  /** The client's real next visit, from GET /appointments/mine. */
+  readonly upcoming = signal<UpcomingVisit | null>(null);
+
+  /** All of them, soonest first. The home screen shows the next; My Bookings
+   *  shows every one — a page that silently drops the second booking is the
+   *  screen disagreeing with the database. */
+  readonly upcomingAll = signal<UpcomingVisit[]>([]);
 
   readonly history = signal<SessionLog[]>([]);
   readonly loaded = signal(false);
@@ -62,14 +80,38 @@ export class BookingStore {
     } catch {
       // Not logged in, or offline. Show nothing rather than someone else's data.
       this.history.set([]);
-    } finally {
-      this.loaded.set(true);
     }
+
+    // Appointments are a separate call and must not be lost if it fails — the
+    // assessment history is still worth showing on its own.
+    try {
+      const now = Date.now();
+      const visits = (await this.api.myBookings() ?? [])
+        .filter(b => new Date(b.start).getTime() >= now && b.status !== 'CANCELLED')
+        .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+        .map(toVisit);
+      this.upcomingAll.set(visits);
+      this.upcoming.set(visits[0] ?? null);
+    } catch {
+      this.upcomingAll.set([]);
+      this.upcoming.set(null);
+    }
+
+    this.loaded.set(true);
   }
 
-  cancel(): DemoAppointment | null {
+  /**
+   * Local dismissal only — there is no DELETE /appointments yet.
+   *
+   * It hides the card and says so; it does NOT tell the client the visit is
+   * cancelled, because the row is still CONFIRMED in the database and the
+   * therapist is still blocked. Claiming otherwise would be the worst kind of
+   * bug: one the client only discovers by turning up.
+   */
+  cancel(): UpcomingVisit | null {
     const v = this.upcoming();
     this.upcoming.set(null);
+    this.upcomingAll.update(list => list.slice(1));
     try { localStorage.setItem(KEY, 'CANCELLED'); } catch { /* private mode */ }
     return v;
   }
@@ -81,12 +123,34 @@ export class BookingStore {
   clear(): void {
     this.history.set([]);
     this.upcoming.set(null);
+    this.upcomingAll.set([]);
     this.loaded.set(false);
     try { localStorage.removeItem(KEY); } catch { /* private mode */ }
   }
 }
 
 // --- mapping -------------------------------------------------------------
+
+/** BookingModel (the API shape) -> UpcomingVisit (what the home card draws). */
+function toVisit(b: BookingModel): UpcomingVisit {
+  const d = new Date(b.start);
+  return {
+    ref: b.id.slice(0, 8).toUpperCase(),
+    service: b.serviceName,
+    minutes: b.durationMinutes,
+    date: b.label,
+    day: d.toLocaleDateString('en-GB', { weekday: 'long' }),
+    month: d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(),
+    dayNum: String(d.getDate()),
+    time: b.label,
+    therapist: b.therapist,
+    room: b.room,
+    branch: b.branch,
+    price: b.price,
+    status: (b.status === 'CANCELLED' ? 'CANCELLED'
+      : b.status === 'COMPLETED' ? 'COMPLETED' : 'CONFIRMED'),
+  };
+}
 
 function toLog(f: FormsModel): SessionLog {
   const points = (f.painPoints ?? []).map((p, i) => ({
@@ -107,6 +171,7 @@ function toLog(f: FormsModel): SessionLog {
   return {
     id: f.id ?? '',
     date: formatDate(f.createdAt),
+    createdAt: f.createdAt ?? '',
     // Until appointments exist there is no service, therapist or room to name.
     // Writing "—" is honest; inventing one is how the demo data problem started.
     service: 'Pre-assessment',

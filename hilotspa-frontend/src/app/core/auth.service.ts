@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { API_BASE } from './api.config';
 import { PROFILE_CACHE_KEY, ProfileStore } from './profile.store';
 import { BOOKING_CACHE_KEY, BookingStore } from './booking.store';
+import { BranchContext } from './branch-context';
 import { AuthResponse, LoginRequest, RegisterRequest } from './models';
 
 const STORAGE_KEY = 'hilotspa.auth';
@@ -15,6 +16,7 @@ export class AuthService {
   private router = inject(Router);
   private profile = inject(ProfileStore);
   private booking = inject(BookingStore);
+  private branchCtx = inject(BranchContext);
 
   /** The whole auth response, or null. Read it, never write it from outside. */
   readonly session = signal<AuthResponse | null>(restore());
@@ -24,6 +26,7 @@ export class AuthService {
   readonly role       = computed(() => this.session()?.role ?? null);
   readonly userId     = computed(() => this.session()?.userId ?? null);
   readonly branchId   = computed(() => this.session()?.branchId ?? null);
+  readonly branchName = computed(() => this.session()?.branchName ?? null);
 
   token(): string | null { return this.session()?.token ?? null; }
 
@@ -74,6 +77,10 @@ export class AuthService {
     } catch { /* private mode */ }
     this.profile.clear();
     this.booking.clear();
+    // An administrator who switched into a branch must not leave the next
+    // person signed in on this machine silently scoped to it. Same family as
+    // B70: the front desk is a shared machine.
+    this.branchCtx.leave();
   }
 }
 

@@ -25,7 +25,10 @@ export function describeHttpError(e: unknown, fallback = 'Something went wrong.'
 
   switch (e.status) {
     case 400: return serverSaid || 'The server rejected that request as invalid.';
-    case 401: return 'Invalid email or password.';
+    // Not always a login. Registering, or a request made with an expired
+    // token, also returns 401 - and 'Invalid email or password' on the sign-up
+    // form sends people hunting for a typo that is not there.
+    case 401: return serverSaid || 'Invalid email or password.';
     case 403: return 'You are signed in, but not allowed to do that.';
     case 404: return 'Not found.';
     case 409: return serverSaid || 'That already exists.';

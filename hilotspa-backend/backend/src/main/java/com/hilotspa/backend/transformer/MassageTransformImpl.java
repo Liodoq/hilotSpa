@@ -16,6 +16,7 @@ public class MassageTransformImpl implements MassageTransform {
         massageModel.setName(massageEntity.getName());
         massageModel.setDurationMinute(massageEntity.getDurationMinute());
         massageModel.setPrice(massageEntity.getPrice());
+        massageModel.setActive(massageEntity.isOnSale());
         return massageModel;
     }
 
@@ -27,6 +28,7 @@ public class MassageTransformImpl implements MassageTransform {
         massageEntity.setName(massageModel.getName());
         massageEntity.setDurationMinute(massageModel.getDurationMinute());
         massageEntity.setPrice(massageModel.getPrice());
+        massageEntity.setActive(massageModel.getActive());
         return massageEntity;
     }
 }

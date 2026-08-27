@@ -1,6 +1,5 @@
 <app-dash-shell role="ADMIN" scopeNote="Administrator only">
-  <button bar type="button" class="btn btn-primary btn-sm"
-          (click)="toast.show('New account — role and branch are required')">Add staff account</button>
+  <button bar type="button" class="btn btn-primary btn-sm" (click)="add()">Add an account</button>
 
   <div class="stack">
     <div class="head">
@@ -9,7 +8,21 @@
         into a role — the public sign-up form has no role field at all.</p>
     </div>
 
+    @if (error(); as e) {
+      <div class="note bad"><span class="b"></span>
+        <span>{{ e }} <button type="button" class="link" (click)="load()">Try again</button></span></div>
+    }
+
+    @if (orphanStaff()) {
+      <div class="note bad"><span class="b"></span>
+        <span><b>{{ orphanStaff() }} staff {{ orphanStaff() === 1 ? 'account has' : 'accounts have' }}
+          no branch.</b> Branch scoping reads the branch out of the token, so such an account can
+          load no therapists, no rooms and no schedule at all.</span></div>
+    }
+
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <span class="help">{{ counts().total }} accounts · {{ counts().staff }} staff ·
+        {{ counts().admin }} admin{{ counts().disabled ? ' · ' + counts().disabled + ' disabled' : '' }}</span>
       <input class="input sm" style="max-width:420px" [value]="q()" (input)="q.set(val($event))"
              placeholder="Search by name or email…" aria-label="Search accounts">
       <div class="chips" role="group" aria-label="Filter by role">
@@ -24,23 +37,23 @@
       <table class="tbl">
         <tr><th style="width:280px">NAME</th><th style="width:320px">EMAIL</th><th style="width:170px">ROLE</th>
             <th style="width:210px">BRANCH</th><th style="width:140px">STATUS</th><th></th></tr>
-        @for (a of shown(); track a.email) {
-          <tr>
-            <td><b>{{ a.name }}</b></td>
+        @for (a of shown(); track a.id) {
+          <tr [style.opacity]="a.enabled ? 1 : 0.6">
+            <td><b>{{ name(a) }}</b></td>
             <td>{{ a.email }}</td>
             <td><span class="pill" [class.bad]="a.role === 'ADMIN'" [class.warn]="a.role === 'STAFF'"
                       [class.mute]="a.role === 'CUSTOMER'">{{ a.role }}</span></td>
-            <td>{{ a.branch }}</td>
+            <td>{{ branchName(a.branchId) }}</td>
             <td><span class="pill" [class.ok]="a.enabled" [class.mute]="!a.enabled">
               {{ a.enabled ? 'Enabled' : 'Disabled' }}</span></td>
             <td style="text-align:right">
-              <button type="button" class="link"
-                (click)="toast.show('Only an administrator can change a role. Changes are written to the audit log.', 3200)">
-                Edit</button></td>
+              <button type="button" class="link" (click)="edit(a)">Edit</button>
+              <button type="button" class="link" style="margin-left:14px" [disabled]="saving() === a.id"
+                (click)="toggleEnabled(a)">{{ a.enabled ? 'Disable' : 'Enable' }}</button></td>
           </tr>
         } @empty {
           <tr><td colspan="6" style="text-align:center;color:var(--color-ink-600)">
-            No account matches that.</td></tr>
+            {{ loading() ? 'Loading…' : 'No account matches that.' }}</td></tr>
         }
       </table>
     </div>
@@ -55,3 +68,82 @@
     </div>
   </div>
 </app-dash-shell>
+
+@if (drawer(); as d) {
+  <button type="button" class="scrim2" aria-label="Close" (click)="close()"></button>
+  <div class="drawer" role="dialog" aria-modal="true" aria-label="Account details">
+    <header>
+      <h2 class="t-s" style="font-size:24px">{{ d.id ? 'Edit account' : 'Add an account' }}</h2>
+      <button type="button" class="x" (click)="close()" aria-label="Close">&times;</button>
+    </header>
+
+    <div class="dbody">
+      <div>
+        <label class="lab2" for="af">FIRST NAME <span class="req">*</span></label>
+        <input id="af" class="input" [value]="d.firstName" (input)="patch({ firstName: val($event) })">
+      </div>
+      <div>
+        <label class="lab2" for="al">LAST NAME</label>
+        <input id="al" class="input" [value]="d.lastName" (input)="patch({ lastName: val($event) })">
+      </div>
+      <div>
+        <label class="lab2" for="ae">EMAIL <span class="req">*</span></label>
+        <input id="ae" class="input" type="email" autocomplete="off"
+               [value]="d.email" (input)="patch({ email: val($event) })">
+      </div>
+
+      <div>
+        <span class="lab2">ROLE <span class="req">*</span></span>
+        <div class="chips">
+          @for (r of assignable; track r) {
+            <button type="button" class="chip" [class.on]="d.role === r"
+                    [attr.aria-pressed]="d.role === r" (click)="patch({ role: r })">{{ r }}</button>
+          }
+        </div>
+        <!-- The public sign-up form has no role field at all, so this is the only
+             door. That is why it is an administrator screen and not a setting. -->
+        <p class="help" style="margin-top:8px">This is the only place a role is assigned. Nobody can
+          register themselves into one — the sign-up form has no role field, and the API would ignore
+          it if it did.</p>
+      </div>
+
+      @if (d.role === 'STAFF') {
+        <div>
+          <label class="lab2" for="ab">BRANCH <span class="req">*</span></label>
+          <select id="ab" class="input" (change)="patch({ branchId: val($event) || null })">
+            <option value="" [selected]="!d.branchId">Choose a branch…</option>
+            @for (b of branches(); track b.id) {
+              <option [value]="b.id" [selected]="d.branchId === b.id">{{ b.name ?? b.branchName }}</option>
+            }
+          </select>
+          @if (!d.branchId) {
+            <p class="err">A staff account without a branch can load no therapists, no rooms and no
+              schedule at all. The server rejects it.</p>
+          }
+        </div>
+      }
+
+      @if (!d.id) {
+        <div>
+          <label class="lab2" for="ap">TEMPORARY PASSWORD <span class="req">*</span></label>
+          <input id="ap" class="input" type="text" autocomplete="new-password"
+                 [value]="d.password" (input)="patch({ password: val($event) })">
+          <p class="help" style="margin-top:8px">At least 8 characters. They change it at first sign-in
+            from their own account page. It is stored as a BCrypt hash and never travels back to any
+            client.</p>
+        </div>
+      }
+
+      <div class="note"><span class="b"></span>
+        <span>Creating an account or changing a role is written to the audit log with your name
+          against it.</span></div>
+    </div>
+
+    <footer>
+      <button type="button" class="btn btn-primary" style="flex:1"
+              [disabled]="!canSave() || saving()" (click)="save()">
+        {{ saving() ? 'Saving…' : (d.id ? 'Save changes' : 'Create account') }}</button>
+      <button type="button" class="btn btn-quiet" (click)="close()">Cancel</button>
+    </footer>
+  </div>
+}

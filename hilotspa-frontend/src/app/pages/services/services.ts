@@ -1,15 +1,18 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AppNav } from '../../shared/app-nav/app-nav';
 import { Toast } from '../../shared/toast/toast';
 import { ToastService } from '../../core/toast.service';
-import { DemoService, SERVICES } from '../../core/demo';
+import { CatalogueStore, priceLabel } from '../../core/catalogue.store';
+import { CatalogueEntry } from '../../core/ops.api';
 
 /**
  * C8 — the service menu, and the screen where §D3 becomes visible.
  *
- * Excluded services are shown greyed out with the reason, rather than silently
- * removed. The client can see that a decision was made, who made it, and why —
+ * Every row comes from GET /assistant/catalogue, which reads the Massage table
+ * and judges it against this client's own assessment using ServiceProtocol.
+ * Excluded services are shown greyed WITH the reason rather than silently
+ * removed: the client can see that a decision was made and what rule made it,
  * which is the difference between enforcing the spa's protocol and quietly
  * giving medical advice.
  */
@@ -19,35 +22,54 @@ import { DemoService, SERVICES } from '../../core/demo';
   templateUrl: './services.html',
   styleUrl: './services.scss',
 })
-export class Services {
+export class Services implements OnInit {
   private router = inject(Router);
   protected toast = inject(ToastService);
+  protected cat = inject(CatalogueStore);
 
-  protected filters = ['Recommended for you', 'All services', 'Under ₱600', '30 minutes'];
+  protected priceLabel = priceLabel;
+
+  protected filters = ['Recommended for you', 'All services', '45 minutes or less'];
   filter = signal(this.filters[0]);
 
-  private all = SERVICES;
-  hidden = computed(() => this.all.filter(s => !s.suitable));
+  hidden = computed(() => this.cat.excluded());
   hiddenNames = computed(() => this.hidden().map(s => s.name).join(' and '));
 
-  shown = computed<DemoService[]>(() => {
+  shown = computed<CatalogueEntry[]>(() => {
+    const all = this.cat.entries();
     const f = this.filter();
-    if (f === 'All services') return this.all;
-    if (f === 'Under ₱600') return this.all.filter(s => s.suitable && s.price < 600);
-    if (f === '30 minutes') return this.all.filter(s => s.suitable && s.minutes <= 45);
-    return this.all;   // "Recommended for you" — suitable first, exclusions still visible
+    if (f === 'All services') return all;
+    if (f === '45 minutes or less') return all.filter(s => (s.durationMinutes ?? 0) <= 45);
+    // "Recommended for you" — INDICATED first, then neutral, exclusions last but
+    // still present. Ordering is a hint; hiding would be a decision.
+    return all.slice().sort((a, b) => rank(a) - rank(b));
   });
 
-  /** Each service gets its own page, with a photo and what it is actually for. */
-  open(s: DemoService): void {
+  ngOnInit(): void { void this.cat.load(); }
+
+  /** Best match = the rule engine marked it INDICATED for this assessment. */
+  best(s: CatalogueEntry): boolean { return s.rule === 'INDICATED'; }
+
+  open(s: CatalogueEntry): void {
     if (!s.suitable) {
-      this.toast.show(`${s.name} is not advised with ${s.reason}`, 3000);
+      this.toast.show(`${s.name} is not advised — ${s.reason || 'see your assessment'}`, 3200);
       return;
     }
-    this.router.navigateByUrl(`/services/${s.id}`);
+    this.router.navigateByUrl(`/services/${s.serviceId}`);
   }
 
+  /** Quotes the actual stored rule, not a sentence written in the template. */
   explain(): void {
-    this.toast.show('Rule: Ventosa × high blood pressure — CONTRAINDICATED, signed 12 Aug 2026', 3400);
+    const s = this.hidden()[0];
+    this.toast.show(s
+      ? `Rule: ${s.name} — ${s.rule}. ${s.reason || ''}`.trim()
+      : 'No exclusions apply to your assessment.', 3600);
   }
+
+  retry(): void { void this.cat.load(true); }
+}
+
+function rank(s: CatalogueEntry): number {
+  if (!s.suitable) return 2;
+  return s.rule === 'INDICATED' ? 0 : 1;
 }

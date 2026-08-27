@@ -1,8 +1,12 @@
-<app-shell [step]="1" backLabel="Back to home" [nextDisabled]="!draft().intent || busy()"
-           [nextLabel]="draft().intent === 'LEISURE' ? (busy() ? 'Saving…' : 'Continue to booking') : 'Continue'"
-           [hint]="draft().intent === 'LEISURE'
-             ? 'We save your visit and take you straight to the booking assistant.'
-             : 'Nothing is saved until you submit on the last step.'"
+<app-shell [step]="1" backLabel="Back to home" [nextDisabled]="!chosen || busy()"
+           [nextLabel]="reuse()
+             ? (busy() ? 'Saving…' : 'Continue to booking')
+             : (draft().intent === 'LEISURE' ? (busy() ? 'Saving…' : 'Continue to booking') : 'Continue')"
+           [hint]="reuse()
+             ? 'We copy your last assessment into today\'s record and take you to the assistant.'
+             : (draft().intent === 'LEISURE'
+               ? 'We save your visit and take you straight to the booking assistant.'
+               : 'Nothing is saved until you submit on the last step.')"
            (back)="back()" (next)="next()" (exit)="back()">
 
   <div class="head">
@@ -11,6 +15,21 @@
   </div>
 
   <div class="choices">
+    @if (previous(); as p) {
+      <button type="button" class="choice" [class.on]="reuse()"
+              [attr.aria-pressed]="reuse()" (click)="chooseReuse()">
+        <span class="icon"><i></i></span>
+        <span class="badge">FASTEST &mdash; YOU ASSESSED ON {{ p.date }}</span>
+        <span class="ct">Nothing has changed since my last visit</span>
+        <span class="cb">We copy your {{ p.date }} assessment &mdash;
+          {{ p.complaint }}{{ p.points.length ? ', ' + p.points.length + ' marked ' +
+            (p.points.length === 1 ? 'area' : 'areas') : '' }} &mdash; into a
+          record dated today. Your therapist still reads a current sheet, and it
+          is marked as a reuse so nobody mistakes it for a fresh answer.</span>
+        <span class="cm">About 10 seconds</span>
+      </button>
+    }
+
     <button type="button" class="choice" [class.on]="draft().intent === 'PAIN'"
             [attr.aria-pressed]="draft().intent === 'PAIN'" (click)="choose('PAIN')">
       <span class="icon"><i></i></span>
@@ -30,6 +49,13 @@
       <span class="cm">About 30 seconds</span>
     </button>
   </div>
+
+  @if (reuse()) {
+    <div class="note warm"><span class="b"></span>
+      Only choose this if nothing has changed &mdash; no new pain, no new
+      medication, no surgery or injury since then. If anything has, take the
+      three minutes. The assistant can only be as safe as what it is told.</div>
+  }
 
   <div class="note">
     <span class="b"></span>

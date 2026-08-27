@@ -70,6 +70,10 @@
                    autocomplete="new-password"
                    [value]="confirm()" (input)="confirm.set(val($event))">
           </div>
+        @if (confirm() && password() !== confirm()) {
+          <div class="help" style="color:var(--color-danger-600);margin-top:6px">
+            The two passwords do not match.</div>
+        }
         </div>
       </div>
 

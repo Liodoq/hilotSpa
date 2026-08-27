@@ -80,12 +80,14 @@ export class Review {
       }
       if (!branchId) throw new Error('no-branch');
 
-      await this.api.createForm(this.store.toFormsModel(branchId));
+      // Keep the saved id: the assistant needs a real Forms row to read the
+      // pain points and the ServiceProtocol rules from.
+      const saved = await this.api.createForm(this.store.toFormsModel(branchId));
       this.store.reset();
       // Submitting used to return to the start of the wizard, which read as
       // "nothing happened". The assessment is what unlocks the assistant, so
       // that is where a completed assessment goes.
-      await this.router.navigateByUrl('/book');
+      await this.router.navigateByUrl(saved?.id ? `/book?formId=${saved.id}` : '/book');
     } catch (e: unknown) {
       console.error('[review] submit failed', e);
       this.error.set(describeHttpError(e, 'We could not save your assessment.'));

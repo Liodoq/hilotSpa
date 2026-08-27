@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,6 +32,22 @@ public class PatientIntakeController {
     @GetMapping
     public ResponseEntity<List<PatientIntakeModel>> getAllPatientIntakes() {
         return ResponseEntity.ok(patientIntakeService.getAllPatientIntakes());
+    }
+
+    /**
+     * S4/§H3 — the AFTER-session pain score for one marked point.
+     *
+     * Staff only. The whole route sits behind hasAnyRole("STAFF","ADMIN"), which
+     * is why there is no client-facing way to write an outcome onto one's own
+     * record: a self-reported improvement is not the measure the paper claims.
+     */
+    @PutMapping("/{id}/after")
+    public ResponseEntity<PatientIntakeModel> recordAfter(
+            @PathVariable UUID id, @RequestBody AfterScore body) {
+        return ResponseEntity.ok(patientIntakeService.recordAfter(id, body.painScoreAfter()));
+    }
+
+    public record AfterScore(Integer painScoreAfter) {
     }
 
 }

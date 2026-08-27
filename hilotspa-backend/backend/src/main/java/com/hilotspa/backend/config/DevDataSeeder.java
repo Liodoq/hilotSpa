@@ -89,8 +89,11 @@ public class DevDataSeeder implements CommandLineRunner {
         log.info("Empty database detected. Seeding development data...");
 
         // --- Branches -------------------------------------------------------
-        Branch bulan = branch("Hilotin Spa - Bulan", "Zone 5, Bulan, Sorsogon");
-        Branch sorsogon = branch("Hilotin Spa - Sorsogon City", "Rizal St., Sorsogon City");
+        // SS A3: the establishment trades as "Knead Wellness Spa". The UI header
+        // already said so while these rows said "Hilotin Spa", so a booking
+        // confirmation named a business the client had not visited.
+        Branch bulan = branch("Knead Wellness Spa - Bulan", "Zone 5, Bulan, Sorsogon");
+        Branch sorsogon = branch("Knead Wellness Spa - Sorsogon City", "Rizal St., Sorsogon City");
 
         // --- Accounts -------------------------------------------------------
         // Administrator: no branch. Sees every branch, writes to none directly.
@@ -114,35 +117,73 @@ public class DevDataSeeder implements CommandLineRunner {
         room("Treatment Room 1", sorsogon);
 
         // --- Service menu ----------------------------------------------------
-        Massage hilot = service("Traditional Hilot", 60, "500.00");
-        Massage deepTissue = service("Deep Tissue Massage", 60, "650.00");
-        Massage swedish = service("Swedish Relaxation", 60, "550.00");
-        Massage boneSetting = service("Bone Setting Session", 45, "800.00");
-        Massage footMassage = service("Foot Reflexology", 30, "350.00");
+        // The spa's ACTUAL services, taken from 137 archived treatment records
+        // (HilotSpa_TreatmentHistory_Review.xlsx). Durations are observed in those
+        // records. PRICES ARE NOT - the records do not carry them, so every price
+        // here is 0.00 until the spa's rate card is transcribed.
+        //
+        // This matters more than it looks: the assistant QUOTES the price to a
+        // client. A guessed price is a false statement made to a real customer,
+        // not a placeholder, so it is left visibly wrong instead of plausibly wrong.
+        Massage sig60    = service("Signature Massage",   60, "0.00");   // 84 records
+        Massage sig90    = service("Signature Massage",   90, "0.00");   //  2 records
+        Massage bone60   = service("Bone Setting",        60, "0.00");   // 46 records
+        Massage thera60  = service("Therapeutic Massage", 60, "0.00");   // 24 records
+        Massage ventosa  = service("Ventosa",             30, "0.00");   // 22 records
+        Massage hotstone = service("Hotstone",            30, "0.00");   // 18 records
+        Massage suob     = service("Suob",                30, "0.00");   //  8 records
+        Massage headspa  = service("Head Spa",            60, "0.00");   //  6 records
+        Massage basic60  = service("Basic Massage",       60, "0.00");   //  5 records
+        Massage basic90  = service("Basic Massage",       90, "0.00");   //  3 records
 
         // --- Service protocols ----------------------------------------------
-        // PLACEHOLDER DATA. These rows must be replaced by the table the spa's own
-        // bone setter reviews and signs (HilotSpa_TreatmentHistory_Review.xlsx,
-        // "Protocol Draft" tab). Nothing here is a clinical recommendation.
-        protocol(hilot, ComplaintType.LOWER_BACK_PAIN, ProtocolRule.INDICATED,
-                "Commonly availed for lumbar complaints.");
-        protocol(hilot, ComplaintType.STIFF_NECK, ProtocolRule.INDICATED,
-                "Commonly availed for cervical stiffness.");
-        protocol(boneSetting, ComplaintType.HIP_JOINT_PAIN, ProtocolRule.INDICATED,
-                "Bone setter's primary indication.");
-        protocol(deepTissue, ComplaintType.UPPER_BACK_PAIN, ProtocolRule.INDICATED,
-                "Commonly availed for thoracic tension.");
-        protocol(swedish, ComplaintType.OTHER, ProtocolRule.INDICATED,
-                "Default relaxation service for clients with no pain complaint.");
-        protocol(footMassage, ComplaintType.PLANTAR_FASCIITIS, ProtocolRule.INDICATED,
-                "Localised to the affected region.");
+        // INDICATED rules DERIVED from what was historically availed. Each carries
+        // its own evidence, so the rationale a client eventually sees is traceable
+        // to a count rather than to an opinion.
+        protocol(sig60,   ComplaintType.LOWER_BACK_PAIN,  ProtocolRule.INDICATED,
+                "Availed in 26 of 28 archived records for this complaint.");
+        protocol(thera60, ComplaintType.OTHER,            ProtocolRule.INDICATED,
+                "Availed in 22 of 28 archived records for this complaint.");
+        protocol(sig60,   ComplaintType.UPPER_BACK_PAIN,  ProtocolRule.INDICATED,
+                "Availed in 10 of 13 archived records for this complaint.");
+        protocol(sig60,   ComplaintType.SHOULDER_PAIN,    ProtocolRule.INDICATED,
+                "Availed in 7 of 12 archived records for this complaint.");
+        protocol(sig60,   ComplaintType.ELBOW_PAIN,       ProtocolRule.INDICATED,
+                "Availed in 5 of 8 archived records for this complaint.");
+        protocol(bone60,  ComplaintType.SCIATICA,         ProtocolRule.INDICATED,
+                "Availed in 6 of 7 archived records for this complaint.");
+        protocol(bone60,  ComplaintType.HIP_JOINT_PAIN,   ProtocolRule.INDICATED,
+                "Availed in 4 of 6 archived records for this complaint.");
+        protocol(bone60,  ComplaintType.SCOLIOSIS,        ProtocolRule.INDICATED,
+                "Availed in 5 of 5 archived records for this complaint.");
+        protocol(bone60,  ComplaintType.FROZEN_SHOULDER,  ProtocolRule.INDICATED,
+                "Availed in 5 of 5 archived records for this complaint.");
+        protocol(sig60,   ComplaintType.STIFF_NECK,       ProtocolRule.INDICATED,
+                "Availed in 3 of 4 archived records for this complaint.");
+        protocol(bone60,  ComplaintType.NECK_PAIN,        ProtocolRule.INDICATED,
+                "Availed in 3 of 4 archived records for this complaint.");
+        protocol(sig60,   ComplaintType.TMJ_DISORDER,     ProtocolRule.INDICATED,
+                "Availed in 3 of 3 archived records for this complaint.");
 
-        protocol(deepTissue, ComplaintType.SCOLIOSIS, ProtocolRule.CONTRAINDICATED,
-                "PLACEHOLDER - awaiting practitioner sign-off.");
-        protocol(deepTissue, ComplaintType.SLIP_DISC, ProtocolRule.CONTRAINDICATED,
-                "PLACEHOLDER - awaiting practitioner sign-off.");
-        protocol(boneSetting, ComplaintType.OSTEOARTHRITIS, ProtocolRule.CONTRAINDICATED,
-                "PLACEHOLDER - awaiting practitioner sign-off.");
+        // Too few records to derive a rule - the practitioner must author these:
+        //   Ankle Pain, Knee Pain, Osteoarthritis, Slip Disc, Spondylosis, Wrist Pain
+
+        // --- CONTRAINDICATIONS: deliberately EMPTY --------------------------
+        // The three placeholder rows that used to sit here have been removed.
+        //
+        // Archived records show what WAS given. They never show what was WITHHELD,
+        // so no contraindication can be derived from them. Seeding invented ones
+        // meant the safety filter was demonstrably working - on rules nobody wrote.
+        //
+        // Until the practitioner authors real ones, allowedServices excludes
+        // nothing, and that is the honest state of the system.
+
+        // Services referenced only by the menu, not yet by any protocol rule.
+        // Named here so the compiler does not warn and so the omission is visible.
+        log.debug("Menu-only services: {} {} {} {} {} {}",
+                sig90.getName(), ventosa.getName(), hotstone.getName(),
+                suob.getName(), headspa.getName(), basic60.getName());
+        log.debug("Also unpriced: {}", basic90.getName());
 
         log.info("=================================================================");
         log.info(" Seeded {} branches, {} users, {} therapists, {} rooms,",
@@ -157,6 +198,16 @@ public class DevDataSeeder implements CommandLineRunner {
         log.info("   ana@customer.test             CUSTOMER");
         log.info("   ben@customer.test             CUSTOMER");
         log.info(" No patient records seeded - clinical data must be real.");
+        long unpriced = massageRepository.findAll().stream()
+                .filter(m -> m.getPrice() == null || m.getPrice().signum() == 0)
+                .count();
+        if (unpriced > 0) {
+            log.warn(" {} of {} services have NO PRICE. The assistant will quote PHP 0.00 "
+                    + "to clients until the spa's rate card is entered.",
+                    unpriced, massageRepository.count());
+        }
+        log.warn(" No CONTRAINDICATED rules are seeded. The safety filter is active but has "
+                + "nothing to enforce until the practitioner authors them.");
         log.info("=================================================================");
     }
 
@@ -218,7 +269,7 @@ public class DevDataSeeder implements CommandLineRunner {
         p.setCondition(condition);
         p.setRule(rule);
         p.setRationale(rationale);
-        p.setAuthoredBy("SEED - not yet reviewed by a practitioner");
+        p.setAuthoredBy("DERIVED FROM 137 ARCHIVED RECORDS - awaiting practitioner sign-off");
         return serviceProtocolRepository.save(p);
     }
 }

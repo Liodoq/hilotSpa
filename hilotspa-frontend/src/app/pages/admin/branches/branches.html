@@ -1,58 +1,137 @@
 <app-dash-shell role="ADMIN" scopeNote="Administrator context"
-  [banner]="'You are viewing ' + openBranch() + ' as an administrator. Anything you change here is written to that branch’s node.'"
-  bannerTone="ctx" bannerRight="Leave branch view">
+  [banner]="ctx.active()
+    ? 'You are viewing ' + ctx.name() + ' as an administrator. Anything you change is written to that branch’s node.'
+    : null"
+  bannerTone="ctx" bannerRight="Write authority stays with the branch">
 
-  <span bar style="font-size:18px">2:47 PM</span>
+  <span bar style="font-size:18px">{{ nodes().length }}
+    {{ nodes().length === 1 ? 'branch' : 'branches' }}</span>
 
   <div class="stack">
     <div class="head">
       <h1 class="t">Choose a branch to manage</h1>
-      <p class="s">Opening a branch loads that node's own dashboard. Your view is scoped exactly the
-        way a staff member's would be, plus the ability to change settings.</p>
+      <p class="s">Opening a branch loads that node's own data, scoped exactly the way a staff member's
+        would be — plus the ability to change settings.</p>
+    </div>
+
+    @if (error(); as e) {
+      <div class="note bad"><span class="b"></span>
+        <span>{{ e }} <button type="button" class="link" (click)="load()">Try again</button></span></div>
+    }
+    @if (loading()) { <p class="s">Loading…</p> }
+
+    <div style="display:flex;justify-content:flex-end">
+      <button type="button" class="btn btn-primary btn-sm" (click)="addBranch()">Add a branch</button>
     </div>
 
     <div class="grid2" style="max-width:1300px">
-      @for (n of nodes; track n.id) {
-        <div class="card click" style="display:flex;gap:20px;align-items:center"
-             [style.border]="n.branch === openBranch() ? '2.5px solid var(--color-forest-700)' : null"
-             (click)="select(n.branch)">
-          <span class="tag2">{{ initials(n.branch) }}</span>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:24px;font-weight:600;color:var(--color-forest-900)">{{ n.branch }}</div>
-            <div class="help">{{ n.branch === 'Bulan' ? 'Zone 5, Bulan, Sorsogon · 3 therapists · 2 rooms'
-                                                       : 'Rizal St, Sorsogon City · 2 therapists · 2 rooms' }}</div>
-            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-              <span class="pill" [class.ok]="n.online" [class.warn]="!n.online">
-                <i class="dotx"></i>{{ n.online ? 'Online' : 'Offline' }}</span>
-              <span class="pill mute">{{ n.bookings }} bookings{{ n.online ? ' today' : ' (stale)' }}</span>
-            </div>
-          </div>
-          @if (n.branch === openBranch()) {
-            <span class="btn btn-primary btn-sm">Currently open</span>
-          } @else {
-            <span class="btn btn-ghost btn-sm">Open branch</span>
-          }
-        </div>
+      @for (n of nodes(); track n.branchId) {
+        <button type="button" class="branchcard" [class.on]="ctx.branchId() === n.branchId"
+                (click)="select(n)">
+          <span class="tag2">{{ initials(n.branchName) }}</span>
+          <span style="flex:1;min-width:0">
+            <span class="t-s" style="font-size:22px;display:block">{{ short(n.branchName) }}</span>
+            <span class="help" style="display:block">{{ n.therapists }}
+              {{ n.therapists === 1 ? 'therapist' : 'therapists' }} · {{ n.rooms }}
+              {{ n.rooms === 1 ? 'room' : 'rooms' }} · {{ n.bookingsToday }} booked today</span>
+            <span class="chips" style="margin-top:8px">
+              <span class="pill ok"><i class="dotx"></i>{{ n.nodeId }}</span>
+            </span>
+          </span>
+          <span class="btn btn-sm"
+                [class.btn-primary]="ctx.branchId() === n.branchId"
+                [class.btn-ghost]="ctx.branchId() !== n.branchId">
+            {{ ctx.branchId() === n.branchId ? 'Currently open' : 'Open branch' }}</span>
+        </button>
+      } @empty {
+        @if (!loading()) {
+          <div class="note"><span class="b"></span><span>No branches exist yet.</span></div>
+        }
       }
     </div>
 
-    <div class="card" style="max-width:1300px;display:flex;flex-direction:column;gap:14px">
-      <h2 class="t-s" style="font-size:22px">{{ openBranch() }} — quick view</h2>
-      <div class="tiles">
-        <div class="stat" style="padding:16px 18px"><div class="n" style="font-size:34px">{{ current().bookings }}</div><div class="k">Bookings today</div></div>
-        <div class="stat" style="padding:16px 18px"><div class="n" style="font-size:34px">{{ current().waiting }}</div><div class="k">Walk-ins waiting</div></div>
-        <div class="stat" style="padding:16px 18px"><div class="n" style="font-size:34px">2 / 3</div><div class="k">Therapists available</div></div>
-        <div class="stat" style="padding:16px 18px"><div class="n" style="font-size:34px">₱ {{ current().collected }}</div><div class="k">Collected today</div></div>
+    @if (current(); as c) {
+      <div class="card" style="max-width:1300px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap">
+          <h2 class="t-s" style="font-size:22px">{{ short(c.branchName) }} — what you can do from here</h2>
+          <button type="button" class="link" (click)="editBranch(c)">Edit this branch</button>
+        </div>
+
+        <!-- Fetched WITH branchId applied, not filtered in the browser. Filtering
+             here would look identical on screen and prove nothing. -->
+        <p class="s" style="font-size:19px">You are scoped to this branch. The list below was requested
+          with <span class="mono">branchId={{ c.branchId.slice(0, 8) }}…</span> — the same value a staff
+          account gets from its own token, which is why an administrator sees exactly what that branch
+          sees and nothing more.</p>
+
+        <div class="tablewrap">
+          <table class="tbl">
+            <tr><th>THERAPIST</th><th style="width:190px">STATUS</th><th style="width:220px">BRANCH</th></tr>
+            @for (t of scoped(); track t.id) {
+              <tr>
+                <td><b>{{ t.firstName }} {{ t.lastName }}</b></td>
+                <td><span class="pill" [class.ok]="t.status === 'AVAILABLE'"
+                          [class.warn]="t.status !== 'AVAILABLE'">{{ label(t.status) }}</span></td>
+                <td>{{ short(t.branchName) }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="3" style="text-align:center;color:var(--color-ink-600)">
+                No therapists at this branch — it can take no bookings until one exists.</td></tr>
+            }
+          </table>
+        </div>
+
+        <div class="tiles">
+          <div class="stat"><div class="n">{{ c.bookingsToday }}</div><div class="k">Bookings today</div></div>
+          <div class="stat"><div class="n">{{ c.assessmentsThisWeek }}</div><div class="k">Assessments this week</div></div>
+          <div class="stat"><div class="n">{{ c.therapistsAvailable }} / {{ c.therapists }}</div><div class="k">Therapists available</div></div>
+          <div class="stat"><div class="n">{{ c.rooms }}</div><div class="k">Rooms</div></div>
+        </div>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button type="button" class="btn btn-primary" (click)="open('/staff/dashboard')">Open full dashboard</button>
+          <button type="button" class="btn btn-ghost" (click)="open('/staff/resources')">Therapists &amp; rooms</button>
+          <button type="button" class="btn btn-quiet" (click)="leave()">Leave branch view</button>
+        </div>
       </div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <button type="button" class="btn btn-primary" routerLink="/staff/dashboard">Open full dashboard</button>
-        <button type="button" class="btn btn-ghost" routerLink="/staff/resources">Manage therapists and rooms</button>
-      </div>
-    </div>
+    } @else if (!loading()) {
+      <div class="note"><span class="b"></span>
+        <span>No branch is open. Pick one above to switch context into it.</span></div>
+    }
 
     <div class="note warm" style="max-width:1300px"><span class="b"></span>
-      <span>Opening an offline branch shows its last synced state, and any change you make is queued
-      on <b>your</b> node until that branch is reachable. Write authority still belongs to the branch.</span>
+      <span>Cross-node behaviour — queued writes, last-synced state, gossip — is Sprint 3 and is not built.
+      What <b>is</b> true today is the rule that makes it safe: a therapist and a room belong to exactly one
+      branch, so only that branch can book them, and two nodes can never award the same slot.</span>
     </div>
   </div>
 </app-dash-shell>
+
+@if (drawer(); as d) {
+  <button type="button" class="scrim2" aria-label="Close" (click)="close()"></button>
+  <div class="drawer" role="dialog" aria-modal="true" aria-label="Branch details">
+    <header>
+      <h2 class="t-s" style="font-size:24px">{{ d.id ? 'Edit branch' : 'Add a branch' }}</h2>
+      <button type="button" class="x" (click)="close()" aria-label="Close">&times;</button>
+    </header>
+    <div class="dbody">
+      <div>
+        <label class="lab2" for="bn">NAME <span class="req">*</span></label>
+        <input id="bn" class="input" [value]="d.name" (input)="patch({ name: val($event) })">
+      </div>
+      <div>
+        <label class="lab2" for="ba">ADDRESS <span class="req">*</span></label>
+        <input id="ba" class="input" [value]="d.address" (input)="patch({ address: val($event) })">
+      </div>
+      <div class="note warm"><span class="b"></span>
+        <span>A new branch starts with no therapists and no rooms, so it can take no bookings until both
+          exist. Add them from that branch's own resources screen.</span></div>
+    </div>
+    <footer>
+      <button type="button" class="btn btn-primary" style="flex:1"
+              [disabled]="!canSave() || saving()" (click)="save()">
+        {{ saving() ? 'Saving…' : (d.id ? 'Save changes' : 'Add branch') }}</button>
+      <button type="button" class="btn btn-quiet" (click)="close()">Cancel</button>
+    </footer>
+  </div>
+}

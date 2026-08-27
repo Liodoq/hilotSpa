@@ -1,85 +1,110 @@
-<app-dash-shell role="STAFF"
-  scopeNote="Branch is fixed from your account — you cannot book into another branch.">
-  <span bar style="font-size:18px">2:47 PM</span>
+<app-dash-shell role="STAFF" scopeNote="Front desk · recorded against this branch, from your account.">
+  <span bar style="font-size:18px">{{ freeStaff().length }} free · {{ freeRooms().length }} rooms open</span>
 
-  <div class="centre">
-    <div class="col">
-      <div class="head">
-        <h1 class="t">Record a walk-in</h1>
-        <p class="s">For clients who came in without booking. A pre-assessment is optional here.</p>
-      </div>
+  <div class="stack">
+    <div class="head">
+      <h1 class="t">Record a walk-in</h1>
+      <p class="s">A client who arrived at the counter, with no account and no online booking.</p>
+    </div>
 
-      <div class="cols">
-        <div class="card" style="display:flex;flex-direction:column;gap:18px">
-          <div class="row">
-            <div class="field"><label class="lab" for="cl">Client</label>
-              <input id="cl" class="input" [value]="client()" (input)="client.set(val($event))">
-              <span class="help">Search an existing account, or create one from the name and number.</span></div>
-            <div class="field"><span class="lab">Pre-assessment</span>
-              <div class="input ro">None on file</div>
-              <span class="help">Optional. You can start one for them instead.</span></div>
-          </div>
+    @if (error(); as e) {
+      <div class="note bad"><span class="b"></span>
+        <span>{{ e }} <button type="button" class="link" (click)="load()">Reload</button></span></div>
+    }
 
-          <div class="row">
-            <div class="field"><label class="lab" for="sv">Service</label>
-              <select id="sv" class="input" [value]="service()" (change)="service.set(val($event))">
-                @for (s of services; track s.id) {
-                  <option [value]="s.name" [selected]="s.name === service()">{{ s.name }} — {{ s.minutes }} min — ₱{{ s.price }}</option>
-                }
-              </select></div>
-            <div class="field"><label class="lab" for="tm">Start time</label>
-              <input id="tm" class="input" [value]="startAt()" (input)="startAt.set(val($event))"></div>
-          </div>
+    @if (blocked() && !loading()) {
+      <div class="note warm"><span class="b"></span>
+        <span>@if (!freeStaff().length) { <b>No therapist is marked available.</b> }
+          @if (!freeRooms().length) { <b>No room is open.</b> }
+          A booking needs both, so this will be refused until one is free.
+          <a class="link" routerLink="/staff/resources">Change statuses</a></span></div>
+    }
 
-          <div class="row">
-            <div class="field"><label class="lab" for="th">Therapist</label>
-              <select id="th" class="input" [value]="therapist()" (change)="therapist.set(val($event))">
-                @for (t of freeStaff; track t.id) { <option [value]="t.name" [selected]="t.name === therapist()">{{ t.name }}</option> }
-              </select>
-              <span class="help">Only therapists free for the whole booking are listed.</span></div>
-            <div class="field"><label class="lab" for="rm">Room</label>
-              <select id="rm" class="input" [value]="room()" (change)="room.set(val($event))">
-                @for (r of freeRooms; track r.id) { <option [value]="r.name" [selected]="r.name === room()">{{ r.name }}</option> }
-              </select>
-              <span class="help">Only rooms free for the whole booking are listed.</span></div>
-          </div>
-
-          <div class="field"><label class="lab" for="nt">Notes for the therapist</label>
-            <textarea id="nt" class="input" rows="2" [value]="notes()"
-              (input)="notes.set(val($event))"
-              placeholder="Says his lower back has hurt since yesterday. No assessment done."></textarea></div>
-
-          <hr class="hr">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap">
-            <div><div class="help">PRICE AT BOOKING</div>
-              <div style="font-size:30px;font-weight:600;color:var(--color-forest-900)">₱ {{ price() }}.00</div>
-              <div class="help">Snapshot. A later price change will not alter this booking.</div></div>
-            <div style="display:flex;gap:12px">
-              <button type="button" class="btn btn-quiet" routerLink="/staff/dashboard">Cancel</button>
-              <button type="button" class="btn btn-primary" (click)="record()">Record booking</button>
-            </div>
-          </div>
+    <div class="cols">
+      <div class="card" style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <div>
+          <label class="help" for="wname">CLIENT NAME <span style="color:var(--color-danger-600)">*</span></label>
+          <input id="wname" class="input" [value]="name()" (input)="name.set(val($event))"
+                 placeholder="e.g. Pedro Santos" autocomplete="off">
+          <p class="help">Required — with no account, this is the only thing identifying the visit.
+            The database will not accept a booking without it.</p>
         </div>
 
-        <aside style="display:flex;flex-direction:column;gap:16px">
-          <div class="card" style="display:flex;flex-direction:column;gap:10px">
-            <h2 class="t-s" style="font-size:22px">Conflict check</h2>
-            <div style="display:flex;align-items:center;gap:10px;font-size:18px">
-              <span class="pill ok"><i class="dotx"></i>{{ therapist() }}</span> free for this slot</div>
-            <div style="display:flex;align-items:center;gap:10px;font-size:18px">
-              <span class="pill ok"><i class="dotx"></i>{{ room() }}</span> free for this slot</div>
-            <hr class="hr">
-            <p class="help">Checked against this branch's bookings only. A therapist works at one branch
-              and a room is in one building, so there is nothing to check anywhere else.</p>
+        <div>
+          <label class="help" for="wcontact">CONTACT NUMBER</label>
+          <input id="wcontact" class="input" [value]="contact()" (input)="contact.set(val($event))"
+                 placeholder="Optional — a number to call if the session has to move">
+        </div>
+
+        <div>
+          <label class="help" for="wsvc">TREATMENT <span style="color:var(--color-danger-600)">*</span></label>
+          <select id="wsvc" class="input" (change)="serviceId.set(val($event))">
+            @for (s of services(); track s.serviceId) {
+              <option [value]="s.serviceId" [selected]="serviceId() === s.serviceId">
+                {{ s.name }} — {{ s.durationMinutes }} min</option>
+            }
+          </select>
+          @if (chosen(); as c) {
+            <p class="help">{{ c.durationMinutes }} minutes · {{ priceLabel(c.price) }}</p>
+          }
+        </div>
+
+        <div style="display:flex;gap:14px;flex-wrap:wrap">
+          <div style="flex:1;min-width:180px">
+            <label class="help" for="wdate">DATE <span style="color:var(--color-danger-600)">*</span></label>
+            <input id="wdate" class="input" type="date" [value]="date()" (input)="date.set(val($event))">
           </div>
-          <div class="note warm"><span class="b"></span>
-            <span>Recorded as <b>STAFF_MANUAL</b> with no linked assessment. It will still appear in
-            the client's history and in today's revenue.</span></div>
-          <div class="note"><span class="b"></span>
-            <span>Offline? This is saved on this node and syncs when the connection returns. The slot
-            is yours either way.</span></div>
-        </aside>
+          <div style="flex:1;min-width:150px">
+            <label class="help" for="wtime">START <span style="color:var(--color-danger-600)">*</span></label>
+            <input id="wtime" class="input" type="time" step="900" [value]="time()"
+                   (input)="time.set(val($event))">
+          </div>
+        </div>
+        <p class="help">A time already past is allowed here — a walk-in is often typed in after the
+          session has started. The online path forbids it, because a client cannot book yesterday.</p>
+
+        <div>
+          <label class="help" for="wnotes">NOTES</label>
+          <textarea id="wnotes" class="input" rows="3" [value]="notes()"
+                    (input)="notes.set(val($event))"
+                    placeholder="Anything the therapist should know before they start…"></textarea>
+        </div>
+
+        <button type="button" class="btn btn-primary btn-block"
+                [disabled]="!canSave() || saving()" (click)="record()">
+          {{ saving() ? 'Recording…' : 'Record walk-in' }}</button>
       </div>
+
+      <aside style="display:flex;flex-direction:column;gap:16px">
+        <div class="card" style="display:flex;flex-direction:column;gap:10px">
+          <h2 class="t-s" style="font-size:22px">Free right now</h2>
+          <div class="chips">
+            @for (t of freeStaff(); track t.id) {
+              <span class="chip on">{{ t.firstName }} {{ t.lastName }}</span>
+            } @empty { <span class="help">Nobody is marked available.</span> }
+          </div>
+          <hr class="hr">
+          <div class="chips">
+            @for (r of freeRooms(); track r.id) { <span class="chip on">{{ r.name }}</span> }
+            @empty { <span class="help">No room is open.</span> }
+          </div>
+          <a class="btn btn-ghost btn-sm btn-block" routerLink="/staff/resources">Manage therapists and rooms</a>
+        </div>
+
+        <div class="note"><span class="b"></span>
+          <span>The therapist and room are assigned by the <b>server</b>, in the same transaction the
+            assistant uses. That is why the counter and the chatbot cannot give the same therapist to
+            two people — whichever saves second re-reads the rows and finds them taken.</span></div>
+
+        <div class="note warm"><span class="b"></span>
+          <span>No account is created for a walk-in, so no history follows them to their next visit.
+            That is what happens on paper today, stated rather than papered over. A client who wants a
+            record registers and completes a pre-assessment.</span></div>
+
+        <div class="note"><span class="b"></span>
+          <span>Written as <span class="mono">source = STAFF_MANUAL</span> with no form attached, and
+            logged with your account against it.</span></div>
+      </aside>
     </div>
   </div>
 </app-dash-shell>

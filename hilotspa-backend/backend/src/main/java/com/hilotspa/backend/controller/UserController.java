@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.hilotspa.backend.model.AccountDtos.ChangePassword;
+import com.hilotspa.backend.model.AccountDtos.Me;
+import com.hilotspa.backend.model.AccountDtos.UpdateMe;
 import com.hilotspa.backend.model.UserModel;
 import com.hilotspa.backend.services.UserService;
 
@@ -27,6 +30,29 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    // --- Self-service: the caller's own account, identified by the JWT -----
+    // These sit under /users/me and are allowed for ANY signed-in role. The
+    // rest of /users/** stays ADMIN, so a customer can edit themselves and
+    // nobody else.
+
+    @GetMapping("/me")
+    public ResponseEntity<Me> me() {
+        return ResponseEntity.ok(userService.me());
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<Me> updateMe(@RequestBody UpdateMe body) {
+        return ResponseEntity.ok(userService.updateMe(body));
+    }
+
+    @PutMapping("/me/password")
+    public ResponseEntity<Void> changeMyPassword(@RequestBody ChangePassword body) {
+        userService.changeMyPassword(body);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- Administration ----------------------------------------------------
 
     @PostMapping("/create")
     public ResponseEntity<UserModel> createUser(@RequestBody UserModel userModel) {

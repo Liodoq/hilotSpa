@@ -42,6 +42,16 @@ public class FormsController {
         return ResponseEntity.ok(formsService.getAllForms());
     }
 
+    /**
+     * "Nothing has changed since my last visit" — copies that assessment into a
+     * new record dated today. See FormsService.reuse for why it copies rather
+     * than reusing the row.
+     */
+    @PostMapping("/{id}/reuse")
+    public ResponseEntity<FormsModel> reuse(@PathVariable UUID id) {
+        return new ResponseEntity<>(formsService.reuse(id), HttpStatus.CREATED);
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<FormsModel> updateForm(@PathVariable UUID id, @RequestBody FormsModel model) {
         return ResponseEntity.ok(formsService.updateForm(id, model));

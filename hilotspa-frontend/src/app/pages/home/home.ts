@@ -51,10 +51,20 @@ export class Home {
 
   editProfile(): void { this.router.navigateByUrl('/profile'); }
 
-  /** TODO Sprint 2 — DELETE /api/v1/appointments/{id}. */
+  /**
+   * There is no DELETE /appointments yet, so this hides the card and says so.
+   *
+   * It deliberately does not claim the visit is cancelled: the row is still
+   * CONFIRMED in the database and the therapist is still blocked. Telling a
+   * client otherwise produces the one bug they discover by turning up.
+   */
   cancelVisit(): void {
     const v = this.booking.cancel();
-    if (v) this.toast.show(`Cancelled — ${v.day} ${v.dayNum} ${v.month} is free again`, 3000);
+    if (v) {
+      this.toast.show(
+        `Hidden here only — ${v.service} on ${v.date} is still booked. `
+        + `Call the branch to cancel it.`, 4200);
+    }
   }
 
   /** TODO Sprint 2 — reschedule reuses the assistant, which already knows how

@@ -16,6 +16,8 @@ export const routes: Routes = [
   { path: 'services/:id', canActivate: [authGuard], loadComponent: () => import('./pages/service-detail/service-detail').then(m => m.ServiceDetail) },
   { path: 'book',     canActivate: [authGuard], loadComponent: () => import('./pages/book/book').then(m => m.Book) },
   { path: 'booking',  canActivate: [authGuard], loadComponent: () => import('./pages/booking/booking').then(m => m.Booking) },
+  { path: 'about',    canActivate: [authGuard], loadComponent: () => import('./pages/about/about').then(m => m.About) },
+  { path: 'account',  canActivate: [authGuard], loadComponent: () => import('./pages/account/account').then(m => m.Account) },
   { path: 'profile',  canActivate: [authGuard], loadComponent: () => import('./pages/profile/profile').then(m => m.Profile) },
   { path: 'report/:id', canActivate: [authGuard], loadComponent: () => import('./pages/session-report/session-report').then(m => m.SessionReport) },
 

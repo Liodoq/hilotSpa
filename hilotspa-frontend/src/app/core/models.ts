@@ -14,6 +14,8 @@ export interface AuthResponse {
   fullName: string;
   role: Role;
   branchId: string | null;
+  /** Set for branch staff. The back-office sidebar labels itself from this. */
+  branchName: string | null;
 }
 
 export interface RegisterRequest {
@@ -120,6 +122,92 @@ export interface FormsModel {
   remarks?: string | null;
   createdAt?: string;
   painPoints: PatientIntakeModel[];
+}
+
+/** What POST /api/v1/assistant/recommend/{formId} returns. */
+export interface AssistantRecommendation {
+  serviceId: string;
+  name: string;
+  rank: number;
+  reason: string;
+  /** The spa sells the same treatment at two lengths — the name alone is
+   *  ambiguous, so these come back from the database row with it. */
+  durationMinutes: number;
+  price: number;
+}
+
+/** One bookable time the assistant was allowed to name. Tapping one books it. */
+export interface AssistantSlot {
+  slotId: string;
+  serviceId: string;
+  serviceName: string;
+  label: string;
+  durationMinutes: number;
+  price: number;
+  start: string;
+  /** "Today" / "Tomorrow" / "Thu 27 Aug" — rendered by the server, in the
+   *  spa's timezone, so a wrong device clock cannot rename a day. */
+  dayLabel: string;
+  timeLabel: string;
+}
+
+export interface AssistantResponse {
+  formId: string;
+  /** OK = the model answered | FALLBACK = protocol table | REFER = see the practitioner */
+  status: 'OK' | 'FALLBACK' | 'REFER';
+  recommendations: AssistantRecommendation[];
+  modelUsed: string;
+  /** services the model named that Java had not approved, and that were dropped */
+  rejectedCount: number;
+  /** survived the ServiceProtocol filter */
+  allowedCount: number;
+  /** removed as CONTRAINDICATED before the model was asked */
+  excludedCount: number;
+  latencyMs: number;
+  note: string | null;
+}
+
+export interface BookingModel {
+  id: string;
+  serviceId: string;
+  serviceName: string;
+  start: string;
+  end: string;
+  label: string;
+  durationMinutes: number;
+  price: number;
+  therapist: string;
+  room: string;
+  branch: string;
+  status: string;
+  paymentStatus: string;
+  source: string;
+  /** when the booking was made, not when the visit is */
+  bookedAt: string;
+}
+
+export interface AssistantChatResponse {
+  reply: string;
+  /** OK | BOOKED | CONFLICT | REJECTED | FALLBACK | REFER */
+  status: string;
+  /** present only when status is BOOKED */
+  booking: BookingModel | null;
+  /** dev profile only — why a fallback happened, so you need not read logs */
+  debug?: string | null;
+  /** Every time the assistant could have named, so the client can tap one
+   *  instead of having to word a confirmation the model will parse. */
+  slots?: AssistantSlot[] | null;
+}
+
+export interface AccountMe {
+  id: string;
+  firstName: string | null;
+  middleName: string | null;
+  lastName: string | null;
+  contact: string | null;
+  address: string | null;
+  email: string | null;
+  role: string | null;
 }
 
 export interface DemographicsModel {

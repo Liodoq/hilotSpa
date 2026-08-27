@@ -10,31 +10,90 @@
         </div>
       }
 
-      @if (offerOpen()) {
+      @if (loading()) {
+        <div class="offer"><p class="help">Checking which services suit your assessment…</p></div>
+      }
+
+      @if (stage() === 'suggest' && picks().length) {
         <div class="offer">
-          <div style="display:flex;gap:20px;align-items:center">
-            <div class="datechip" style="flex:0 0 104px;padding:10px">
-              <div class="m">{{ offer.month }}</div><div class="d" style="font-size:34px">{{ offer.dayNum }}</div>
-              <div class="w">{{ offer.day }}</div>
+          <div class="help">SUGGESTED FOR YOU</div>
+          @for (r of picks(); track r.serviceId) {
+            <div style="display:flex;gap:14px;align-items:flex-start;padding:10px 0">
+              <div class="datechip" style="flex:0 0 44px;padding:8px">
+                <div class="d" style="font-size:22px">{{ r.rank }}</div>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:21px;font-weight:600;color:var(--color-forest-900)">
+                  {{ r.name }}</div>
+                <!-- The spa sells the same treatment at two lengths. Without the
+                     minutes the list reads as the same row twice. -->
+                <div style="font-size:17px;color:var(--color-ink-600)">
+                  {{ r.durationMinutes }} minutes@if (r.price > 0) { · ₱{{ r.price }} }</div>
+                <div style="font-size:17px;color:var(--color-ink-600);margin-top:2px">{{ r.reason }}</div>
+              </div>
+              <button type="button" class="btn btn-quiet" style="flex:0 0 auto"
+                      (click)="choose(r.serviceId)">See times</button>
             </div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:23px;font-weight:600;color:var(--color-forest-900)">
-                {{ offer.service }} · {{ offer.minutes }} min</div>
-              <div style="font-size:18px;color:var(--color-ink-600);margin-top:4px">
-                {{ offer.time }} · {{ offer.therapist }} · {{ offer.room }}</div>
-              <div style="font-size:21px;font-weight:600;color:var(--color-forest-900);margin-top:8px">
-                ₱ {{ offer.price }} · pay at counter</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:12px">
-            <button type="button" class="btn btn-primary" style="flex:1;min-width:0" (click)="accept()">
-              Yes, book this</button>
-            <button type="button" class="btn btn-quiet" style="flex:1;min-width:0" (click)="another()">
-              Another time</button>
-          </div>
-          <p class="help">Held for you for 5 minutes while you decide.</p>
+          }
+          @if (degraded()) {
+            <p class="help">Chosen from the spa’s own service protocol — the assistant was
+              unavailable, so you are seeing the practitioner’s list rather than nothing.</p>
+          }
+          <p class="help">Tap one, or just tell me which you would like and when.</p>
         </div>
       }
+
+      @if (stage() === 'times') {
+        <div class="offer">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+            <div class="help">OPEN TIMES · {{ focusName() }} · {{ focusMinutes() }} MIN</div>
+            <button type="button" class="link" (click)="clearFocus()">Choose a different treatment</button>
+          </div>
+          @for (d of days(); track d.day) {
+            <div style="margin-top:10px">
+              <div style="font-size:18px;font-weight:600;color:var(--color-forest-900)">{{ d.day }}</div>
+              <div class="chips" style="margin-top:6px">
+                @for (s of d.slots; track s.slotId) {
+                  <button type="button" class="chip" [disabled]="confirming() || thinking()"
+                          [class.on]="confirming() === s.slotId"
+                          [attr.aria-label]="'Book ' + focusName() + ' on ' + d.day + ' at ' + s.timeLabel"
+                          (click)="confirmSlot(s)">
+                    {{ confirming() === s.slotId ? 'Booking…' : s.timeLabel }}</button>
+                }
+              </div>
+            </div>
+          }
+          <!-- Tapping books by id. It never depends on the assistant parsing a
+               particular wording, which is why a client can always finish. -->
+          <p class="help">Tap a time to book it. Nothing is charged online — you settle at the counter.</p>
+        </div>
+      }
+
+      @if (booked(); as b) {
+        <div class="offer">
+          <div class="help">BOOKED</div>
+          <div style="font-size:23px;font-weight:600;color:var(--color-forest-900)">
+            {{ b.serviceName }} · {{ b.durationMinutes }} min</div>
+          <div style="font-size:19px;color:var(--color-ink-600);margin-top:4px">
+            {{ b.label }} · {{ b.therapist }} · {{ b.room }}</div>
+          <div style="font-size:21px;font-weight:600;color:var(--color-forest-900);margin-top:8px">
+            ₱ {{ b.price }} · pay at counter</div>
+          <p class="help">To move or cancel this visit, please ask the front desk.</p>
+          <button type="button" class="btn btn-quiet" style="margin-top:8px"
+                  (click)="bookAnother()">Book another treatment</button>
+        </div>
+      }
+
+      @if (referred()) {
+        <div class="offer">
+          <div style="font-size:19px">{{ result()?.note }}</div>
+        </div>
+      }
+
+      @if (error()) {
+        <div class="offer"><div style="color:var(--color-danger-600)">{{ error() }}</div></div>
+      }
+
     </div>
 
     <div class="subtitle"><span class="tag">SUBTITLE</span><span>{{ subtitle() }}</span></div>
@@ -48,7 +107,8 @@
              placeholder="Type instead, or tap the microphone to speak…"
              aria-label="Message the booking assistant">
       <button type="button" class="btn btn-primary" style="flex:0 0 auto"
-              [disabled]="!draftText().trim()" (click)="send()">Send</button>
+              [disabled]="!draftText().trim() || thinking()" (click)="send()">
+        {{ thinking() ? '…' : 'Send' }}</button>
     </div>
   </section>
 
@@ -60,21 +120,40 @@
 
     <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:10px">
       <div class="help">YOUR ASSESSMENT</div>
-      <div style="font-size:19px"><b>Lower Back Pain</b> · 1–6 months</div>
-      <div style="font-size:18px;color:var(--color-ink-600)">3 spots marked · worst severity 8</div>
-      <div><span class="pill warn">High blood pressure</span></div>
+      @if (assessment(); as a) {
+        <div style="font-size:19px"><b>{{ a.complaint }}</b>@if (a.duration) { · {{ a.duration }} }</div>
+        <div style="font-size:18px;color:var(--color-ink-600)">
+          {{ a.points.length }} spot{{ a.points.length === 1 ? '' : 's' }} marked
+          @if (a.before !== null) { · worst severity {{ a.before }} }
+        </div>
+        @if (a.notes) { <div><span class="pill warn">{{ a.notes }}</span></div> }
+      } @else {
+        <div style="font-size:18px;color:var(--color-ink-600)">No assessment loaded.</div>
+      }
     </div>
 
     <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:10px">
       <div class="help">SERVICES IT MAY OFFER</div>
-      <div style="font-size:18px">{{ allowed() }}</div>
-      <div style="font-size:17px;color:var(--color-danger-600)">
-        {{ excludedCount() }} excluded before the assistant was asked</div>
+      <div style="font-size:18px">{{ allowedCount() }} of {{ allowedCount() + excludedCount() }}</div>
+      @if (excludedCount() > 0) {
+        <div style="font-size:17px;color:var(--color-danger-600)">
+          {{ excludedCount() }} excluded before the assistant was asked</div>
+      }
+      @if (rejectedCount() > 0) {
+        <div style="font-size:17px;color:var(--color-danger-600)">
+          {{ rejectedCount() }} of its answers discarded — not on the approved list</div>
+      }
+      @if (result(); as r) {
+        <div class="help">{{ r.modelUsed }} · {{ r.latencyMs }} ms</div>
+      }
     </div>
 
     <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:10px">
       <div class="help">AVAILABILITY IT CAN SEE</div>
-      <div style="font-size:18px">Bulan branch · 3 therapists · 2 rooms · next 14 days</div>
+      <div style="font-size:18px">Only times when a therapist and a room are both free,
+        in the next 7 days.</div>
+      <div style="font-size:17px;color:var(--color-ink-600)">
+        It cannot offer a time that is not on that list.</div>
     </div>
 
     <div class="note" style="margin-top:auto"><span class="b"></span>

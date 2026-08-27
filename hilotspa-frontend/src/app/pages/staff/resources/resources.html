@@ -1,50 +1,70 @@
 <app-dash-shell role="STAFF"
   scopeNote="Therapists and rooms belong to one branch — that is why cross-branch conflicts cannot happen.">
-  <span bar style="font-size:18px">2:47 PM</span>
+  <span bar style="font-size:18px">{{ available() }} of {{ staff().length }} available</span>
 
   <div class="stack">
     <div class="head">
       <h1 class="t">Who is on, and what is free</h1>
-      <p class="s">Tap a status to change it. Changes take effect on the next booking attempt.</p>
+      <p class="s">Tap a status to change it. This writes to the database — the next slot search
+        reads the same rows, so a therapist set off duty disappears from availability at once.</p>
     </div>
+
+    @if (error(); as e) {
+      <div class="note bad"><span class="b"></span>
+        <span>{{ e }} <button type="button" class="link" (click)="load()">Try again</button></span></div>
+    }
+    @if (loading()) { <p class="s">Loading…</p> }
+
+    @if (!loading() && !staff().length && !error()) {
+      <div class="note warm"><span class="b"></span>
+        <span>No therapists are on file for this branch yet. Until at least one exists, no slot
+          can be offered — a booking needs both a therapist and a room.</span></div>
+    }
 
     <div class="grid3">
       @for (s of staff(); track s.id) {
-        <div class="card" style="display:flex;flex-direction:column;gap:14px">
+        <div class="card" style="display:flex;flex-direction:column;gap:14px"
+             [style.opacity]="s.active ? 1 : 0.55">
           <div style="display:flex;gap:14px;align-items:center">
-            <span class="avatar" style="width:60px;height:60px;font-size:21px">{{ s.initials }}</span>
-            <div><div style="font-size:22px;font-weight:600;color:var(--color-forest-900)">{{ s.name }}</div>
-              <div class="help">{{ s.role }} · {{ s.years }} years</div></div>
+            <span class="avatar" style="width:60px;height:60px;font-size:21px">{{ initials(s) }}</span>
+            <div><div style="font-size:22px;font-weight:600;color:var(--color-forest-900)">{{ name(s) }}</div>
+              <div class="help">{{ s.branchName }}</div></div>
           </div>
-          <div class="chips" role="group" [attr.aria-label]="'Status for ' + s.name">
+          <div class="chips" role="group" [attr.aria-label]="'Status for ' + name(s)">
             @for (st of statuses; track st) {
               <button type="button" class="chip" [class.on]="s.status === st"
-                      [attr.aria-pressed]="s.status === st" (click)="setStatus(s.id, st)">
+                      [disabled]="saving() === s.id"
+                      [attr.aria-pressed]="s.status === st" (click)="setStatus(s, st)">
                 {{ label(st) }}</button>
             }
           </div>
-          <div class="note" style="padding:12px 16px;font-size:17px"><span class="b"></span>
-            <span>{{ s.note }}</span></div>
+          @if (!s.active) {
+            <div class="note bad" style="padding:12px 16px;font-size:17px"><span class="b"></span>
+              <span>No longer employed here — excluded from every slot search.</span></div>
+          }
         </div>
       }
     </div>
 
-    <h2 class="t-s" style="margin-top:4px">Rooms</h2>
-    <div class="grid2" style="max-width:900px">
-      @for (r of rooms(); track r.id) {
-        <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap">
-          <div><div style="font-size:22px;font-weight:600;color:var(--color-forest-900)">{{ r.name }}</div>
-            <div class="help">{{ r.detail }}</div></div>
-          <div class="chips" role="group" [attr.aria-label]="'State for ' + r.name">
-            @for (st of roomStates; track st) {
-              <button type="button" class="chip" [class.on]="r.state === st"
-                      [attr.aria-pressed]="r.state === st" (click)="setRoom(r.id, st)">
-                {{ label(st) }}</button>
-            }
+    @if (rooms().length) {
+      <h2 class="t-s" style="margin-top:4px">Rooms</h2>
+      <div class="grid2" style="max-width:900px">
+        @for (r of rooms(); track r.id) {
+          <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap">
+            <div><div style="font-size:22px;font-weight:600;color:var(--color-forest-900)">{{ r.name }}</div>
+              <div class="help">{{ r.branchName }} · {{ label(roomState(r)) }}</div></div>
+            <div class="chips" role="group" [attr.aria-label]="'State for ' + r.name">
+              <button type="button" class="chip" [class.on]="r.active" [disabled]="saving() === r.id"
+                      [attr.aria-pressed]="r.active" (click)="setRoomOpen(r, true)">Open</button>
+              <button type="button" class="chip" [class.on]="!r.active" [disabled]="saving() === r.id"
+                      [attr.aria-pressed]="!r.active" (click)="setRoomOpen(r, false)">Closed</button>
+            </div>
           </div>
-        </div>
-      }
-    </div>
+        }
+      </div>
+      <p class="help">Occupied is worked out from today's bookings, not stored as a flag —
+        so it cannot go stale when somebody forgets to clear it.</p>
+    }
 
     <div class="note"><span class="b"></span>
       <span>A booking needs <b>both</b> a free therapist and a free room. Marking someone off duty here

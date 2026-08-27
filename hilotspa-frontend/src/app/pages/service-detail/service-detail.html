@@ -4,13 +4,13 @@
     <div class="col">
       <button type="button" class="link" (click)="back()">&larr; All services</button>
 
-      <div class="hero" [style.background-image]="'url(/services/' + s.id + '.jpg)'">
+      <div class="hero" [style.background-image]="'url(/services/' + s.serviceId + '.jpg)'">
         <div class="scrim"></div>
         <div class="heroText">
-          @if (s.best) { <span class="pill ok"><i class="dotx"></i>BEST MATCH FOR YOUR ASSESSMENT</span> }
+          @if (best()) { <span class="pill ok"><i class="dotx"></i>RECOMMENDED FOR YOUR ASSESSMENT</span> }
           <h1 class="t" style="color:#fff">{{ s.name }}</h1>
-          <p style="font-size:21px;color:var(--color-sage-100)">{{ s.minutes }} minutes · ₱{{ s.price }} ·
-            pay at counter</p>
+          <p style="font-size:21px;color:var(--color-sage-100)">{{ s.durationMinutes }} minutes ·
+            {{ priceLabel(s.price) }} · pay at counter</p>
         </div>
       </div>
 
@@ -18,43 +18,45 @@
         <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
           <div class="card">
             <h2 class="t-s" style="font-size:24px;margin-bottom:10px">About this treatment</h2>
-            <p style="font-size:20px;line-height:1.6;color:var(--color-ink-600)">{{ s.about ?? s.blurb }}</p>
+            <p style="font-size:20px;line-height:1.6;color:var(--color-ink-600)">
+              {{ s.name }} runs {{ s.durationMinutes }} minutes. Ask the booking assistant what it
+              would do for the areas you marked on your body map — it answers from this spa's own
+              treatment records, not from the internet.</p>
           </div>
 
-          @if (s.helps?.length) {
-            <div class="card">
-              <h2 class="t-s" style="font-size:24px;margin-bottom:12px">Often booked for</h2>
-              <div class="chips">
-                @for (h of s.helps; track h) { <span class="chip">{{ h }}</span> }
-              </div>
-            </div>
-          }
-
-          @if (s.avoid?.length) {
-            <div class="card">
-              <h2 class="t-s" style="font-size:24px;margin-bottom:12px">Not advised if</h2>
-              <div class="chips">
-                @for (a of s.avoid; track a) { <span class="chip" style="border-color:var(--color-danger-600)">{{ a }}</span> }
-              </div>
-              <p class="help" style="margin-top:12px">These rules were written and signed by our bone
-                setter, Gary O. Trinidad. Your pre-assessment is checked against them before anything
-                is offered to you.</p>
-            </div>
-          }
+          <div class="card">
+            <h2 class="t-s" style="font-size:24px;margin-bottom:12px">How this was judged for you</h2>
+            @if (cat.unjudged()) {
+              <p class="s">You have no pre-assessment on record yet, so nothing has been checked
+                against your history. Complete one and this page will say why this treatment is or
+                is not advised for you.</p>
+            } @else if (!s.suitable) {
+              <div class="note bad"><span class="b"></span>
+                <span><b>{{ s.rule }}</b> — {{ s.reason }}</span></div>
+              <p class="help" style="margin-top:12px">This rule was written and signed by the spa's
+                bone setter. Your pre-assessment is checked against it before anything is offered
+                to you. The app applies the rule; it does not make one.</p>
+            } @else {
+              <div class="note ok"><span class="b"></span>
+                <span><b>{{ s.rule }}</b>{{ s.reason ? ' — ' + s.reason : '' }}</span></div>
+              <p class="help" style="margin-top:12px">Checked against your most recent
+                pre-assessment. Nothing on your record rules this treatment out.</p>
+            }
+          </div>
         </div>
 
         <aside style="display:flex;flex-direction:column;gap:16px">
           <div class="card" style="display:flex;flex-direction:column;gap:14px">
             <div>
               <div class="help">PRICE</div>
-              <div style="font-size:34px;font-weight:600;color:var(--color-forest-900)">₱ {{ s.price }}</div>
-              <div class="help">{{ s.minutes }} minutes · {{ s.therapists }}</div>
+              <div style="font-size:34px;font-weight:600;color:var(--color-forest-900)">{{ priceLabel(s.price) }}</div>
+              <div class="help">{{ s.durationMinutes }} minutes</div>
             </div>
             <hr class="hr">
 
             @if (!s.suitable) {
               <div class="note bad"><span class="b"></span>
-                <span>Not advised for you — {{ s.reason }} is on your record.</span></div>
+                <span>Not advised for you — {{ s.reason }}</span></div>
               <button type="button" class="btn btn-quiet btn-block" (click)="back()">See other services</button>
             } @else {
               <button type="button" class="btn btn-primary btn-block" (click)="book(s)">Book this</button>
@@ -72,6 +74,8 @@
       </div>
     </div>
   </main>
+} @else if (cat.loading()) {
+  <main class="wrap"><div class="col"><p class="s">Loading…</p></div></main>
 } @else {
   <main class="wrap">
     <div class="col" style="text-align:center;padding-top:60px">

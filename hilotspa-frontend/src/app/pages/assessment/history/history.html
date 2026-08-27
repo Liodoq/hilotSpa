@@ -76,7 +76,7 @@
         </div>
 
         <div class="grid2">
-          @for (f of flags; track f) {
+          @for (f of flags(); track f) {
             <button type="button" class="tile" [class.on]="draft().flags.includes(f)"
                     [attr.aria-pressed]="draft().flags.includes(f)"
                     (click)="store.toggleFlag(f)">

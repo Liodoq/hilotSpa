@@ -15,6 +15,17 @@
       @for (item of nav(); track item.path) {
         <a class="navitem" [routerLink]="item.path" routerLinkActive="on"><i></i>{{ item.label }}</a>
       }
+
+      <!-- Figure 3.3 "context switching". An administrator who opened a branch
+           used to lose every admin link on arrival, with no way back but the
+           browser button. A switch you cannot switch back from is a dead end. -->
+      @if (returnNav().length) {
+        <div class="navsplit">ADMINISTRATION</div>
+        @for (item of returnNav(); track item.path) {
+          <a class="navitem" [routerLink]="item.path" routerLinkActive="on"><i></i>{{ item.label }}</a>
+        }
+      }
+
       <div class="sidefoot">Signed in as<b>{{ auth.fullName() }}</b></div>
     </aside>
 
@@ -28,7 +39,24 @@
         </div>
         <div style="display:flex;align-items:center;gap:14px">
           <ng-content select="[bar]" />
-          <button type="button" class="avatar" aria-label="Sign out" (click)="auth.logout()">{{ initials() }}</button>
+          <!-- Clicking the avatar used to sign you out immediately. One stray
+               click mid-demonstration and you are back at the login screen.
+               B48 was fixed in the customer nav and left standing here. -->
+          <div class="acct">
+            <button type="button" class="avatar" [attr.aria-expanded]="open()" aria-haspopup="menu"
+                    [attr.aria-label]="'Account menu for ' + auth.fullName()"
+                    (click)="open.set(!open())">{{ initials() }}</button>
+            @if (open()) {
+              <div class="menu" role="menu">
+                @if (visiting()) {
+                  <button type="button" role="menuitem" (click)="leaveBranch()">
+                    Back to administration</button>
+                }
+                <button type="button" role="menuitem" class="danger" (click)="signOut()">Sign out</button>
+              </div>
+              <button type="button" class="scrim" aria-label="Close menu" (click)="open.set(false)"></button>
+            }
+          </div>
         </div>
       </div>
       <main class="pane"><ng-content /></main>

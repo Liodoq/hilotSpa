@@ -1,15 +1,21 @@
 <app-dash-shell role="ADMIN" scopeNote="Global settings — every node receives these">
-  <span bar class="pill warn"><i class="dotx"></i>1 node will receive this when it reconnects</span>
+  <span bar class="pill" [class.bad]="unsigned().length" [class.ok]="!unsigned().length">
+    <i class="dotx"></i>{{ unsigned().length }} unsigned {{ unsigned().length === 1 ? 'rule' : 'rules' }}</span>
 
   <div class="stack">
     <div class="chips" role="tablist" aria-label="Configuration section">
-      @for (t of tabs; track t) {
-        <button type="button" class="chip" role="tab" [class.on]="tab() === t"
-                [attr.aria-selected]="tab() === t" (click)="tab.set(t)">{{ t }}</button>
+      @for (t of tabs; track t.key) {
+        <button type="button" class="chip" role="tab" [class.on]="tab() === t.key"
+                [attr.aria-selected]="tab() === t.key" (click)="tab.set(t.key)">{{ t.label }}@if (t.key === 'protocol' && unsigned().length) { · {{ unsigned().length }} unsigned }</button>
       }
     </div>
 
-    @if (tab() === 'Service protocol') {
+    @if (tab() === 'protocol') {
+      @if (error(); as e) {
+        <div class="note bad"><span class="b"></span>
+          <span>{{ e }} <button type="button" class="link" (click)="load()">Try again</button></span></div>
+      }
+
       <div class="cols">
         <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
           <div class="head">
@@ -18,70 +24,258 @@
               <b>Contraindicated</b> removes it before the assistant is ever asked.</p>
           </div>
 
-          <div class="card" style="padding:8px 22px">
+          <div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <label for="sig" style="font-size:18px">Authorising this change:</label>
+            <input id="sig" class="input sm" style="max-width:340px" [value]="signature()"
+                   (input)="signature.set(val($event))"
+                   placeholder="e.g. Gary O. Trinidad, bone setter">
+            <span class="help">A rule cannot change without a name against it — the server refuses it.</span>
+          </div>
+
+          <div class="card" style="padding:8px 22px;overflow-x:auto">
             <table class="tbl">
-              <tr><th style="width:270px">SERVICE</th><th style="width:290px">CONDITION</th>
-                  <th style="width:230px">RULE</th><th>REASON</th></tr>
-              @for (r of rules(); track r.service + r.condition) {
+              <tr><th style="width:240px">SERVICE</th><th style="width:250px">CONDITION</th>
+                  <th style="width:220px">RULE</th><th>AUTHORED BY</th></tr>
+              @for (r of rules(); track r.id) {
                 <tr>
-                  <td><b>{{ r.service }}</b></td>
-                  <td>{{ r.condition }}</td>
+                  <td><b>{{ r.serviceName }}</b></td>
+                  <td>{{ r.conditionLabel }}</td>
                   <td>
-                    <button type="button" class="pill" [class.ok]="r.indicated" [class.bad]="!r.indicated"
+                    <button type="button" class="pill" [class.ok]="r.rule === 'INDICATED'"
+                            [class.bad]="r.rule === 'CONTRAINDICATED'"
                             style="border:0;cursor:pointer;font-family:inherit"
-                            [attr.aria-label]="'Toggle rule for ' + r.service + ' and ' + r.condition"
-                            (click)="toggle(r.service, r.condition)">
-                      {{ r.indicated ? 'INDICATED' : 'CONTRAINDICATED' }}</button>
+                            [disabled]="saving() === r.id || !signature().trim()"
+                            [attr.aria-label]="'Toggle rule for ' + r.serviceName + ' and ' + r.conditionLabel"
+                            (click)="toggle(r)">{{ r.rule }}</button>
                   </td>
-                  <td class="help">{{ r.reason }}</td>
+                  <td>
+                    @if (r.signed) {
+                      <span style="font-size:17px">{{ r.authoredBy }}</span>
+                    } @else {
+                      <span class="pill bad" style="font-size:14px">UNSIGNED</span>
+                      <div class="help mono">{{ r.authoredBy }}</div>
+                    }
+                    @if (r.rationale) { <div class="help">{{ r.rationale }}</div> }
+                  </td>
                 </tr>
+              } @empty {
+                <tr><td colspan="4" style="text-align:center;color:var(--color-ink-600)">
+                  {{ loading() ? 'Loading…' : 'The protocol table is empty.' }}</td></tr>
               }
             </table>
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap">
-            <button type="button" class="btn btn-primary"
-              (click)="toast.show('New rule — it stays unsigned until the practitioner reviews it', 3000)">Add a rule</button>
-            <button type="button" class="btn btn-ghost"
-              (click)="toast.show('Exported. Print it for Gary O. Trinidad to sign.', 3000)">Export for signature</button>
+            <button type="button" class="btn btn-ghost" (click)="exportForSignature()">
+              Export for signature</button>
+            <button type="button" class="btn btn-quiet" (click)="load()">Reload</button>
           </div>
         </div>
 
         <aside style="display:flex;flex-direction:column;gap:16px">
           <div class="card" style="display:flex;flex-direction:column;gap:12px;border:2.5px solid var(--color-forest-700)">
             <h2 class="t-s" style="font-size:22px">Who authored these rules</h2>
-            <div style="font-size:20px"><b>Gary O. Trinidad</b>
-              <div class="help">Bone setter, Knead Wellness Spa</div></div>
-            <div><span class="pill ok"><i class="dotx"></i>Signed 12 Aug 2026</span></div>
+            @if (signers().length) {
+              @for (s of signers(); track s) {
+                <div style="font-size:20px"><b>{{ s }}</b></div>
+              }
+              <div><span class="pill ok"><i class="dotx"></i>Signed</span></div>
+            } @else {
+              <div class="note bad" style="padding:12px 16px;font-size:17px"><span class="b"></span>
+                <span><b>Nobody yet.</b> Every row still carries the seeded placeholder.</span></div>
+            }
             <hr class="hr">
             <p class="help">The system does not generate medical judgments. It enforces this
               establishment's own protocol, authored and signed by its practitioner. The signed sheet
-              is Appendix C.</p>
-            <button type="button" class="btn btn-ghost btn-sm btn-block"
-              (click)="toast.show('Opening Appendix C — signed 12 Aug 2026')">View signed copy</button>
+              becomes Appendix C.</p>
           </div>
 
           <div class="card" style="display:flex;flex-direction:column;gap:10px">
             <h2 class="t-s" style="font-size:22px">Unsigned rules</h2>
-            <div class="note bad" style="padding:12px 16px;font-size:17px"><span class="b"></span>
-              <span><b>9 seeded rows</b> are still marked
-              <span class="mono">SEED — not yet reviewed by a practitioner</span>. They are excluded
-              from live recommendations.</span></div>
-            <button type="button" class="btn btn-quiet btn-sm btn-block"
-              (click)="toast.show('9 seeded rules — excluded from live recommendations until signed', 3200)">
-              Review the 9</button>
+            @if (unsigned().length) {
+              <div class="note bad" style="padding:12px 16px;font-size:17px"><span class="b"></span>
+                <span><b>{{ unsigned().length }} of {{ rules().length }} rows</b> have no
+                  practitioner's name against them. They were derived from 137 archived treatment
+                  records, not authored by anyone.</span></div>
+            } @else {
+              <div class="note ok" style="padding:12px 16px;font-size:17px"><span class="b"></span>
+                <span>Every rule carries a signature.</span></div>
+            }
           </div>
 
-          <div class="note warm"><span class="b"></span>
-            <span>Saving broadcasts to every node. Sorsogon City is offline and will receive this on
-            reconnect — until then it applies the last protocol it received.</span></div>
+          <div class="note" [class.bad]="!contraindicated().length"><span class="b"></span>
+            <span>
+              @if (contraindicated().length) {
+                <b>{{ contraindicated().length }} contraindication{{ contraindicated().length === 1 ? '' : 's' }}</b>
+                are enforced before the assistant is asked anything.
+              } @else {
+                <b>No contraindications are on file.</b> Until the practitioner authors them, the
+                §D3 safety filter has nothing to exclude — the guard works, but it is guarding an
+                empty list. This is the highest-priority item outstanding.
+              }
+            </span></div>
         </aside>
       </div>
+    } @else if (tab() === 'menu') {
+
+      <!-- =============================================================
+           A6 — Figure 9.3 "manage services". Folded in here rather than
+           as a seventh route, so the paper's screen count still holds.
+           ============================================================= -->
+      <div class="head">
+        <h1 class="t" style="font-size:34px">Service menu</h1>
+        <p class="s">The treatments the spa sells, their length and their price. This is the list the
+          assistant may offer from — nothing outside it can ever be recommended.</p>
+      </div>
+
+      @if (unpriced().length) {
+        <div class="note bad"><span class="b"></span>
+          <span><b>{{ unpriced().length }} of {{ onSale().length }}
+            {{ unpriced().length === 1 ? 'treatment has' : 'treatments have' }} no price on file.</b>
+            The assistant quotes price to clients, so until these are filled in it has to say the price
+            is not on file. The archived records the menu came from do not contain prices, and a guessed
+            price is a false statement made to a client.</span></div>
+      } @else if (onSale().length) {
+        <div class="note"><span class="b"></span><span>Every treatment on sale is priced.</span></div>
+      }
+
+      <div style="display:flex;justify-content:flex-end">
+        <button type="button" class="btn btn-primary btn-sm" (click)="addService()">Add a treatment</button>
+      </div>
+
+      <div class="card" style="padding:8px 22px">
+        <div class="tablewrap">
+          <table class="tbl">
+            <tr><th style="width:260px">TREATMENT</th><th style="width:120px">LENGTH</th>
+                <th style="width:190px">PRICE</th><th style="width:130px">STATUS</th><th></th></tr>
+            @for (m of services(); track m.id) {
+              <tr [style.opacity]="m.active ? 1 : 0.58">
+                <td><b>{{ m.name }}</b></td>
+                <td class="tnum">{{ m.durationMinute }} min</td>
+                <td class="tnum">
+                  @if (m.price > 0) { <b>{{ priceLabel(m.price) }}</b> }
+                  @else { <span class="pill bad">Not on file</span> }
+                </td>
+                <td><span class="pill" [class.ok]="m.active" [class.mute]="!m.active">
+                  {{ m.active ? 'On sale' : 'Withdrawn' }}</span></td>
+                <td style="text-align:right;white-space:nowrap">
+                  <button type="button" class="link" (click)="editService(m)">Edit</button>
+                  <button type="button" class="link" style="margin-left:14px"
+                          [disabled]="saving() === m.id" (click)="toggleService(m)">
+                    {{ m.active ? 'Withdraw' : 'Restore' }}</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" style="text-align:center;color:var(--color-ink-600)">
+                {{ loading() ? 'Loading…' : 'The menu is empty. The assistant has nothing it may offer.' }}</td></tr>
+            }
+          </table>
+        </div>
+      </div>
+
+      <div class="cols">
+        <div class="note warm"><span class="b"></span>
+          <span><b>The same treatment can appear twice</b> at two lengths — that is how the spa sells
+            them. The length is always shown with the name, because the name alone is ambiguous to a
+            client.</span></div>
+        <div class="note"><span class="b"></span>
+          <span>Withdrawing hides a treatment from the assistant and from new bookings. It is never
+            deleted: appointments already made point at it, and the audit log would have nothing left
+            to name.</span></div>
+      </div>
+
+    } @else if (tab() === 'branches') {
+
+      <div class="head">
+        <h1 class="t" style="font-size:34px">Branches</h1>
+        <p class="s">Each branch is a node. Its therapists and rooms belong to it alone, which is what
+          makes two nodes unable to award the same slot.</p>
+      </div>
+
+      <div class="card" style="padding:8px 22px">
+        <div class="tablewrap">
+          <table class="tbl">
+            <tr><th style="width:320px">BRANCH</th><th>ADDRESS</th></tr>
+            @for (b of branches(); track b.id) {
+              <tr><td><b>{{ b.name ?? b.branchName }}</b></td><td>{{ b.address }}</td></tr>
+            } @empty {
+              <tr><td colspan="2" style="text-align:center;color:var(--color-ink-600)">No branches yet.</td></tr>
+            }
+          </table>
+        </div>
+      </div>
+
+      <div class="note"><span class="b"></span>
+        <span>Adding and editing a branch lives on the <b>Branches</b> screen, next to the context
+          switch — Figure 3.3's “Manage Branch” covers selecting and maintaining, so both belong in one
+          place rather than two.</span></div>
+
     } @else {
-      <div class="card" style="padding:40px;text-align:center">
-        <h2 class="t-s">{{ tab() }}</h2>
-        <p class="s" style="margin-top:8px">Not built yet. The protocol table was first because it is
-          what makes the “we do not give medical advice” argument true.</p>
+
+      <div class="head">
+        <h1 class="t" style="font-size:34px">Node settings</h1>
+        <p class="s">Where global configuration would be broadcast to peer nodes.</p>
+      </div>
+
+      <div class="card" style="display:flex;flex-direction:column;gap:14px;max-width:900px">
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+          <span class="pill mute">THIS NODE</span>
+          <span class="mono" style="font-size:18px">local-dev</span>
+        </div>
+        <hr class="hr">
+        <div class="note bad"><span class="b"></span>
+          <span><b>Not built, and deliberately not mocked.</b> Figure 3.3 and Figure 9.3 both call for
+            global configuration to be broadcast to every branch node. There is one node, so there is
+            nothing to broadcast to. The sync log, node registry and gossip protocol are Sprint 3.</span></div>
+        <p class="s" style="font-size:19px">What is defensible today is the property underneath it: a
+          therapist and a room belong to exactly one branch, therefore only that branch can write to
+          them, therefore two nodes can never award the same slot — no consensus algorithm is required.
+          That is enforced in the schema and covered by <span class="mono">DoubleBookingTest</span>.</p>
+        <p class="help">A screen showing a fake broadcast to a node that does not exist invites exactly
+          the question there is no good answer to.</p>
       </div>
     }
   </div>
 </app-dash-shell>
+
+@if (menuDrawer(); as d) {
+  <button type="button" class="scrim2" aria-label="Close" (click)="closeMenu()"></button>
+  <div class="drawer" role="dialog" aria-modal="true" aria-label="Treatment details">
+    <header>
+      <h2 class="t-s" style="font-size:24px">{{ d.id ? 'Edit treatment' : 'Add a treatment' }}</h2>
+      <button type="button" class="x" (click)="closeMenu()" aria-label="Close">&times;</button>
+    </header>
+    <div class="dbody">
+      <div>
+        <label class="lab2" for="mn">NAME <span class="req">*</span></label>
+        <input id="mn" class="input" [value]="d.name" (input)="patchMenu({ name: val($event) })">
+      </div>
+      <div>
+        <label class="lab2" for="mm">LENGTH IN MINUTES <span class="req">*</span></label>
+        <input id="mm" class="input" type="number" min="5" max="480" step="15"
+               [value]="d.minutes" (input)="patchMenu({ minutes: val($event) })">
+        <p class="help" style="margin-top:8px">The same treatment at two lengths is two rows. That is how
+          the spa sells them, and it is what lets availability block the right amount of time.</p>
+      </div>
+      <div>
+        <label class="lab2" for="mp">PRICE IN PESOS</label>
+        <input id="mp" class="input" type="number" min="0" step="10"
+               [value]="d.price" (input)="patchMenu({ price: val($event) })">
+        @if (+d.price > 0) {
+          <p class="help" style="margin-top:8px">The assistant will quote {{ priceLabel(+d.price) }}.</p>
+        } @else {
+          <p class="err">Left at zero, the assistant tells clients the price is not on file. That is
+            deliberate — a guessed price is a false statement made to a client.</p>
+        }
+      </div>
+      <div class="note"><span class="b"></span>
+        <span>A price change never affects a booking already made. The price is copied onto the
+          appointment at the moment it is booked.</span></div>
+    </div>
+    <footer>
+      <button type="button" class="btn btn-primary" style="flex:1"
+              [disabled]="!menuValid() || saving()" (click)="saveService()">
+        {{ saving() ? 'Saving…' : (d.id ? 'Save changes' : 'Add treatment') }}</button>
+      <button type="button" class="btn btn-quiet" (click)="closeMenu()">Cancel</button>
+    </footer>
+  </div>
+}

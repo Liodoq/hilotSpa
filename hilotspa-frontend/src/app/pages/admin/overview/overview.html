@@ -1,71 +1,117 @@
-<app-dash-shell role="ADMIN" scopeNote="Read-only aggregate built from each node's replica.">
-  <span bar style="font-size:18px">Thursday, 20 August · 2:47 PM</span>
+<app-dash-shell role="ADMIN" scopeNote="Read-only aggregate, counted from the database on load.">
+  <span bar style="font-size:18px">{{ heading() }}</span>
 
   <div class="stack">
-    <div class="tiles">
-      <div class="stat"><div class="n">{{ totalBookings() }}</div><div class="k">Bookings today, all branches</div></div>
-      <div class="stat"><div class="n">₱ {{ totalCollected() }}</div><div class="k">Collected today</div></div>
-      <div class="stat"><div class="n">38</div><div class="k">Assessments this week</div></div>
-      <div class="stat"><div class="n">{{ online() }} / {{ nodes.length }}</div><div class="k">Nodes online</div></div>
-    </div>
+    @if (error(); as e) {
+      <div class="note bad"><span class="b"></span>
+        <span>{{ e }} <button type="button" class="link" (click)="load()">Try again</button></span></div>
+    }
+    @if (loading()) { <p class="s">Counting…</p> }
 
-    <h2 class="t-s">Branch nodes</h2>
-    <div class="grid2">
-      @for (n of nodes; track n.id) {
-        <div class="card click" [style.border]="'2.5px solid ' + (n.online ? 'var(--color-forest-700)' : 'var(--color-gold-700)')"
-             style="display:flex;flex-direction:column;gap:12px" (click)="open(n.branch)">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-            <div style="font-size:24px;font-weight:600;color:var(--color-forest-900)">{{ n.branch }}</div>
-            <span class="pill" [class.ok]="n.online" [class.warn]="!n.online">
-              <i class="dotx"></i>{{ n.online ? 'ONLINE' : 'OFFLINE' }}</span>
-          </div>
-          <div class="help mono">node {{ n.id }} · {{ n.online ? 'synced' : 'last seen' }} {{ n.synced }}</div>
-          <div style="display:flex;gap:30px;margin-top:2px;flex-wrap:wrap">
-            <div><div class="figN" [class.stale]="!n.online">{{ n.bookings }}</div>
-              <div class="help">bookings{{ n.online ? '' : ' (stale)' }}</div></div>
-            <div><div class="figN" [class.stale]="!n.online">₱{{ n.collected }}</div>
-              <div class="help">collected{{ n.online ? '' : ' (stale)' }}</div></div>
-            @if (n.online) {
-              <div><div class="figN">{{ n.waiting }}</div><div class="help">waiting</div></div>
-            } @else {
-              <div><div class="figN" style="color:var(--color-gold-700)">{{ n.queued }}</div>
-                <div class="help">queued writes</div></div>
-            }
-          </div>
-          @if (!n.online) {
-            <div class="note warm" style="padding:12px 16px;font-size:17px"><span class="b"></span>
-              <span>Still taking bookings locally. Figures here are from the last successful sync.</span></div>
-          }
-        </div>
+    @if (data(); as d) {
+      <div class="tiles">
+        <div class="stat"><div class="n">{{ d.bookingsToday }}</div><div class="k">Bookings today, all branches</div></div>
+        <div class="stat"><div class="n">{{ d.bookingsThisWeek }}</div><div class="k">Bookings this week</div></div>
+        <div class="stat"><div class="n">{{ d.assessmentsThisWeek }}</div><div class="k">Assessments this week</div></div>
+        <div class="stat"><div class="n">{{ d.nodesOnline }} / {{ d.nodesTotal }}</div><div class="k">Nodes online</div></div>
+      </div>
+
+      @if (readiness(); as r) {
+        @if (blocked()) {
+          <div class="note bad"><span class="b"></span>
+            <span>
+              <b>{{ r.unsignedRules && r.servicesWithoutPrice ? 'Two things are' : 'One thing is' }}
+                blocking a real evaluation.</b>
+              @if (r.unsignedRules) {
+                <span style="display:block;margin-top:6px">{{ r.unsignedRules }} of {{ r.protocolRules }}
+                  protocol rules have no practitioner's name against
+                  them@if (r.contraindications) { , and only {{ r.contraindications }}
+                  {{ r.contraindications === 1 ? 'contraindication is' : 'contraindications are' }} on
+                  file }@else { , and no contraindication is on file — so the safety filter currently
+                  excludes nothing }.
+                  <button type="button" class="link" (click)="goConfig('protocol')">Open the protocol
+                    table</button></span>
+              }
+              @if (r.servicesWithoutPrice) {
+                <span style="display:block;margin-top:6px">{{ r.servicesWithoutPrice }} of
+                  {{ r.servicesOnSale }} treatments have no price, and the assistant quotes price to
+                  clients.
+                  <button type="button" class="link" (click)="goConfig('menu')">Open the service
+                    menu</button></span>
+              }
+            </span></div>
+        } @else {
+          <div class="note"><span class="b"></span>
+            <span>Protocol rules are signed and every treatment on sale is priced.</span></div>
+        }
       }
-    </div>
 
-    <div class="cols">
-      <div class="card" style="display:flex;flex-direction:column;gap:10px;min-width:0">
-        <h2 class="t-s" style="font-size:22px">Most common complaints, last 30 days</h2>
-        @for (c of complaints; track c.label) {
-          <div style="display:flex;align-items:center;gap:14px">
-            <span style="width:200px;font-size:18px">{{ c.label }}</span>
-            <span class="bar-track"><i [style.width.%]="c.pct"></i></span>
-            <b class="tnum">{{ c.n }}</b>
+      <h2 class="t-s">Branch nodes</h2>
+      <div class="grid2">
+        @for (n of nodes(); track n.branchId) {
+          <div class="card" style="display:flex;flex-direction:column;gap:12px"
+               [style.border]="'2.5px solid var(--color-forest-700)'">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div style="font-size:24px;font-weight:600;color:var(--color-forest-900)">{{ n.branchName }}</div>
+              <span class="pill ok"><i class="dotx"></i>ONLINE</span>
+            </div>
+            <div class="help mono">node {{ n.nodeId }} · last write {{ when(n.lastWrite) }}</div>
+            <div style="display:flex;gap:30px;margin-top:2px;flex-wrap:wrap">
+              <div><div class="figN">{{ n.bookingsToday }}</div><div class="help">bookings today</div></div>
+              <div><div class="figN">{{ n.therapistsAvailable }} / {{ n.therapists }}</div>
+                <div class="help">therapists available</div></div>
+              <div><div class="figN">{{ n.rooms }}</div><div class="help">rooms</div></div>
+              <div><div class="figN">{{ n.assessmentsThisWeek }}</div><div class="help">assessments (7d)</div></div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" style="align-self:flex-start"
+                    (click)="open(n)">Manage this branch</button>
           </div>
         }
-        <p class="help" style="margin-top:6px">Aggregated and de-identified. Useful for staffing, and it
-          is the same data that validates the 24-item complaint list.</p>
       </div>
 
-      <div class="card" style="display:flex;flex-direction:column;gap:12px">
-        <h2 class="t-s" style="font-size:22px">Assistant reliability</h2>
-        <div style="display:flex;gap:28px;flex-wrap:wrap">
-          <div><div class="figN" style="font-size:36px">0</div><div class="help">out-of-catalog suggestions</div></div>
-          <div><div class="figN" style="font-size:36px">86%</div><div class="help">agreement with practitioner</div></div>
+      <div class="note warm"><span class="b"></span>
+        <span><b>One node is running.</b> The sync log, node registry and gossip protocol are Sprint 3
+          and are not built yet, so this screen reports the node answering the request and nothing
+          else. A second branch drawn here as "offline" would be a mock-up, not evidence.</span></div>
+
+      <div class="cols">
+        <div class="card" style="display:flex;flex-direction:column;gap:10px;min-width:0">
+          <h2 class="t-s" style="font-size:22px">Most common complaints, last 30 days</h2>
+          @for (c of complaints(); track c.label) {
+            <div style="display:flex;align-items:center;gap:14px">
+              <span style="width:200px;font-size:18px">{{ c.label }}</span>
+              <span class="bar-track"><i [style.width.%]="c.pct"></i></span>
+              <b class="tnum">{{ c.count }}</b>
+            </div>
+          } @empty {
+            <p class="s">No assessments in the last 30 days.</p>
+          }
+          <p class="help" style="margin-top:6px">Aggregated and de-identified. Useful for staffing, and it
+            is the same data that validates the 24-item complaint list.</p>
         </div>
-        <hr class="hr">
-        <div style="font-size:18px;color:var(--color-ink-600)">142 suggestions this month · 3 discarded
-          and logged after validation · 0 reached a client.</div>
-        <p class="help">Out-of-catalog rate is countable because every response is re-checked against
-          the real service list before it is shown.</p>
+
+        @if (assistant(); as a) {
+          <div class="card" style="display:flex;flex-direction:column;gap:12px">
+            <h2 class="t-s" style="font-size:22px">Assistant reliability</h2>
+            <div style="display:flex;gap:28px;flex-wrap:wrap">
+              <div><div class="figN" style="font-size:36px">{{ a.rejectedSuggestions }}</div>
+                <div class="help">suggestions rejected by the server</div></div>
+              <div><div class="figN" style="font-size:36px">{{ a.rejectionRatePct }}%</div>
+                <div class="help">of everything the model proposed</div></div>
+            </div>
+            <hr class="hr">
+            <div style="font-size:18px;color:var(--color-ink-600)">
+              {{ a.calls }} assistant calls · {{ a.ok }} succeeded · {{ a.failed }} fell back ·
+              {{ a.returnedSuggestions }} suggestions shown to clients.</div>
+            <p class="help">{{ a.note }}</p>
+            <p class="help">Counted from <span class="mono">audit_log</span>, not asserted. Every reply
+              is re-checked against the real service list before it is shown, which is what makes the
+              rejected count exist at all.</p>
+            <button type="button" class="link" style="align-self:flex-start"
+                    (click)="goAudit('ASSISTANT_RECOMMEND')">See the rows this is counted from</button>
+          </div>
+        }
       </div>
-    </div>
+    }
   </div>
 </app-dash-shell>

@@ -4,7 +4,13 @@
     <div class="top">
       <div class="head">
         <h1 class="t">Services we can offer you</h1>
-        <p class="s">Filtered against your assessment of 2 August. Prices are what you pay at the counter.</p>
+        @if (cat.unjudged()) {
+          <p class="s">The full menu. Complete a pre-assessment and we will check each
+            treatment against your own record before offering it.</p>
+        } @else {
+          <p class="s">Checked against your most recent pre-assessment. Prices are what you
+            pay at the counter.</p>
+        }
       </div>
       <div class="chips" role="group" aria-label="Filter services">
         @for (f of filters; track f) {
@@ -14,44 +20,61 @@
       </div>
     </div>
 
+    @if (cat.error(); as e) {
+      <div class="note bad"><span class="b"></span>
+        <span>{{ e }} <button type="button" class="link" (click)="retry()">Try again</button></span>
+      </div>
+    }
+
+    @if (cat.loading() && !cat.entries().length) {
+      <p class="s">Loading the menu…</p>
+    }
+
     @if (hidden().length) {
       <div class="note warm"><span class="b"></span>
-        <span><b>{{ hidden().length }} services are hidden.</b>
-          {{ hiddenNames() }} {{ hidden().length === 1 ? 'is' : 'are' }} not advised with
-          {{ hidden()[0].reason }}, which you told us about on 2 August. That rule was written and
-          signed by our bone setter, Gary O. Trinidad — not decided by the app.
+        <span><b>{{ hidden().length }} {{ hidden().length === 1 ? 'service is' : 'services are' }}
+          not advised for you.</b>
+          {{ hiddenNames() }} {{ hidden().length === 1 ? 'is' : 'are' }} ruled out by
+          {{ hidden()[0].reason }} — a rule written and signed by the spa's bone setter, not
+          decided by the app.
           <button type="button" class="link" (click)="explain()">See why</button></span>
       </div>
     }
 
     <div class="grid">
-      @for (s of shown(); track s.id) {
-        <article class="card click svc" [class.best]="s.best" [class.out]="!s.suitable"
-                 (click)="open(s)" [attr.tabindex]="s.suitable ? 0 : -1" [attr.role]="s.suitable ? 'button' : null">
+      @for (s of shown(); track s.serviceId) {
+        <article class="card click svc" [class.best]="best(s)" [class.out]="!s.suitable"
+                 (click)="open(s)" [attr.tabindex]="s.suitable ? 0 : -1"
+                 [attr.role]="s.suitable ? 'button' : null">
           @if (s.suitable) {
             <span class="pill ok" style="align-self:flex-start"><i class="dotx"></i>
-              {{ s.best ? 'BEST MATCH FOR LOWER BACK PAIN' : 'ALSO SUITABLE' }}</span>
+              {{ best(s) ? 'RECOMMENDED FOR YOUR ASSESSMENT' : 'AVAILABLE' }}</span>
           } @else {
             <span class="pill bad" style="align-self:flex-start">NOT ADVISED FOR YOU</span>
           }
-          <div class="thumb" [style.background-image]="'url(/services/' + s.id + '.jpg)'"></div>
+          <div class="thumb" [style.background-image]="'url(/services/' + s.serviceId + '.jpg)'"></div>
           <h2 class="svcName">{{ s.name }}</h2>
-          <p class="s" style="font-size:19px">{{ s.blurb }}</p>
+          <p class="s" style="font-size:19px">{{ s.reason || 'Ask the assistant how this one would
+            suit you.' }}</p>
           @if (s.suitable) {
             <div style="display:flex;gap:10px;flex-wrap:wrap">
-              <span class="pill mute">{{ s.minutes }} min</span>
-              <span class="pill mute">{{ s.therapists }}</span>
+              <span class="pill mute">{{ s.durationMinutes }} min</span>
             </div>
           }
           <div class="foot">
-            <div class="price">₱ {{ s.price }}</div>
+            <div class="price">{{ priceLabel(s.price) }}</div>
             @if (s.suitable) {
-              <button type="button" class="btn btn-sm" [class.btn-primary]="s.best"
-                      [class.btn-ghost]="!s.best" (click)="open(s); $event.stopPropagation()">
+              <button type="button" class="btn btn-sm" [class.btn-primary]="best(s)"
+                      [class.btn-ghost]="!best(s)" (click)="open(s); $event.stopPropagation()">
                 View &amp; book</button>
             }
           </div>
         </article>
+      }
+
+      @if (!cat.loading() && !cat.entries().length && !cat.error()) {
+        <div class="note"><span class="b"></span>
+          <span>The service menu is empty. Ask the front desk to add treatments.</span></div>
       }
 
       <article class="card ask">

@@ -309,3 +309,35 @@ select.input { appearance: none;
 .hr { height: 1px; background: var(--color-line); border: 0; }
 .bar-track { flex: 1; height: 24px; background: var(--color-sage-100); border-radius: 12px; overflow: hidden; }
 .bar-track i { display: block; height: 24px; background: var(--color-forest-700); }
+
+/* ===========================================================================
+   Administration — side drawer, used by A3 accounts, A4 service menu and
+   A4 branches. One vocabulary, because a form that behaves differently in
+   three places is three chances to get it wrong (the B48 lesson).
+   =========================================================================== */
+.scrim2 { position: fixed; inset: 0; background: rgba(43, 42, 38, .42); z-index: 40; border: 0; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100%); background: #fff;
+  z-index: 50; box-shadow: -18px 0 44px rgba(46, 66, 32, .22); display: flex; flex-direction: column; }
+.drawer > header { padding: 22px 26px; border-bottom: 1.5px solid var(--color-line);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex: 0 0 auto; }
+.drawer .dbody { padding: 24px 26px; overflow-y: auto; display: flex; flex-direction: column;
+  gap: 18px; flex: 1; min-height: 0; }
+.drawer > footer { padding: 20px 26px; border-top: 1.5px solid var(--color-line);
+  display: flex; gap: 12px; flex: 0 0 auto; }
+.drawer .x { width: 48px; height: 48px; border-radius: 12px; border: 1.5px solid var(--color-line);
+  background: #fff; font-size: 24px; color: var(--color-ink-600); cursor: pointer; flex: 0 0 auto; }
+.drawer .x:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 2px; }
+.lab2 { display: block; font-size: 15px; font-weight: 600; letter-spacing: 1px;
+  color: var(--color-ink-600); margin-bottom: 6px; }
+.req { color: var(--color-danger-600); }
+
+/* A branch chosen from A2. Big target, because it is a mode switch. */
+.branchcard { display: flex; gap: 18px; align-items: center; cursor: pointer; text-align: left;
+  width: 100%; background: #fff; border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-lg); padding: 20px; }
+.branchcard.on { border: 2.5px solid var(--color-forest-700); }
+.branchcard:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 2px; }
+.tag2 { width: 60px; height: 60px; border-radius: 18px; background: var(--color-sage-100);
+  color: var(--color-forest-900); display: flex; align-items: center; justify-content: center;
+  font-size: 21px; font-weight: 700; flex: 0 0 auto; }
+.tablewrap { overflow-x: auto; }

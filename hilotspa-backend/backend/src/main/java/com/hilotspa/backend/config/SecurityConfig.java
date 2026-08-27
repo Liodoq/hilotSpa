@@ -57,12 +57,26 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                // Self-service, ABOVE the ADMIN rule - Spring takes the FIRST
+                // match, so below it these would never run (the B43 lesson).
+                .requestMatchers("/api/v1/users/me", "/api/v1/users/me/**").authenticated()
                 .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST,   "/api/v1/branches/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,    "/api/v1/branches/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/branches/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST,   "/api/v1/massages/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,    "/api/v1/massages/**").hasRole("ADMIN")
+
+                // Operational data. Reads are branch-scoped inside the service,
+                // so a customer must never reach them at all.
+                .requestMatchers(HttpMethod.GET, "/api/v1/protocols/**").hasAnyRole("STAFF", "ADMIN")
+                .requestMatchers("/api/v1/protocols/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/v1/appointments/schedule").hasAnyRole("STAFF", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/appointments/walk-in").hasAnyRole("STAFF", "ADMIN")
+                .requestMatchers("/api/v1/therapists/**").hasAnyRole("STAFF", "ADMIN")
+                .requestMatchers("/api/v1/rooms/**").hasAnyRole("STAFF", "ADMIN")
+                .requestMatchers("/api/v1/audit-log/**").hasAnyRole("STAFF", "ADMIN")
 
                 .requestMatchers("/api/v1/patient-intake/**").hasAnyRole("STAFF", "ADMIN")
                 // B43: a CUSTOMER must be able to save their OWN profile, or

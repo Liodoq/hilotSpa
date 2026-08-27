@@ -1,45 +1,56 @@
 <app-dash-shell role="STAFF"
   scopeNote="You can only see and change this branch's data."
-  [banner]="offline() ? 'OFFLINE — you can keep booking. 4 changes are queued and will sync when the connection returns.' : null"
-  bannerTone="off" bannerRight="Last synced 14 minutes ago">
+  [banner]="offline() ? 'SIMULATED OFFLINE (X1) — the branch keeps booking. Changes queue locally and sync when the connection returns.' : null"
+  bannerTone="off" bannerRight="Simulation — not a real disconnection">
 
-  <span bar style="font-size:18px">Thursday, 20 August · 2:47 PM</span>
+  <span bar style="font-size:18px">{{ heading() }}</span>
 
   <div class="stack">
+    @if (error(); as e) {
+      <div class="note bad"><span class="b"></span>
+        <span>{{ e }} <button type="button" class="link" (click)="load()">Try again</button></span></div>
+    }
+
     <div class="tiles">
-      <div class="stat"><div class="n">{{ today.length }}</div><div class="k">Bookings today</div></div>
-      <div class="stat"><div class="n">{{ queue.length }}</div><div class="k">Walk-ins waiting</div></div>
-      <div class="stat"><div class="n">{{ available() }} / {{ staff.length }}</div><div class="k">Therapists available</div></div>
-      <div class="stat"><div class="n">₱ 6,150</div><div class="k">Collected today</div></div>
+      <div class="stat"><div class="n">{{ today().length }}</div><div class="k">Bookings today</div></div>
+      <div class="stat"><div class="n">{{ completed() }}</div><div class="k">Completed</div></div>
+      <div class="stat"><div class="n">{{ available() }} / {{ onDuty() }}</div><div class="k">Therapists available</div></div>
+      <div class="stat"><div class="n">{{ fromAssistant() }}</div><div class="k">Booked by the assistant</div></div>
     </div>
 
     <div class="cols">
       <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
         <div style="display:flex;align-items:baseline;justify-content:space-between">
           <h2 class="t-s">Today's schedule</h2>
-          <button type="button" class="link" (click)="toast.show('Opening the week view…')">Open full calendar</button>
+          <button type="button" class="link" (click)="load()">Refresh</button>
         </div>
-        @for (s of today; track s.time) {
-          <div class="slot" [class.walkin]="s.walkIn">
+
+        @if (loading()) { <p class="s">Loading…</p> }
+
+        @if (!loading() && !today().length && !error()) {
+          <div class="note"><span class="b"></span>
+            <span>Nothing is booked at this branch today.</span></div>
+        }
+
+        @for (s of today(); track s.id) {
+          <div class="slot" [class.walkin]="s.source === 'STAFF_MANUAL'">
             <span class="bar"></span>
             <span class="time">{{ s.time }}</span>
             <div style="flex:1;min-width:0">
-              <b>{{ s.service }}</b> · {{ s.minutes }} min
-              <div class="help">{{ s.client }} · {{ s.therapist ?? 'unassigned' }} · {{ s.room }}</div>
+              <b>{{ s.serviceName }}</b> · {{ s.durationMinutes }} min
+              <div class="help">{{ s.client }} · {{ s.therapist }} · {{ s.room }}</div>
             </div>
-            @if (s.walkIn) { <span class="pill warn">Walk-in</span> }
-            @switch (s.state) {
+            @if (s.source === 'STAFF_MANUAL') { <span class="pill warn">Front desk</span> }
+            @if (s.source === 'CHATBOT') { <span class="pill mute">Assistant</span> }
+            @switch (state(s)) {
               @case ('COMPLETED') { <span class="pill mute">Completed</span> }
               @case ('IN_SESSION') { <span class="pill ok"><i class="dotx"></i>In session</span> }
-              @default {
-                @if (!s.therapist) {
-                  <button type="button" class="btn btn-primary btn-sm"
-                          (click)="assign(s.time)">Assign therapist</button>
-                } @else { <span class="pill mute">Upcoming</span> }
-              }
+              @default { <span class="pill mute">Upcoming</span> }
             }
-            @if (s.state === 'IN_SESSION') {
-              <button type="button" class="btn btn-ghost btn-sm" routerLink="/staff/report">View report</button>
+            @if (s.hasAssessment) {
+              <button type="button" class="btn btn-ghost btn-sm" routerLink="/staff/report">View assessment</button>
+            } @else {
+              <span class="pill bad">No assessment</span>
             }
           </div>
         }
@@ -48,19 +59,26 @@
       <aside style="display:flex;flex-direction:column;gap:16px">
         <div class="card" style="display:flex;flex-direction:column;gap:12px">
           <h2 class="t-s" style="font-size:22px">Needs attention</h2>
-          @if (unassigned(); as u) {
-            @if (u) { <div class="note bad"><span class="b"></span><span>{{ u }} booking has no therapist assigned.</span></div> }
+          @if (withoutAssessment()) {
+            <div class="note bad"><span class="b"></span>
+              <span>{{ withoutAssessment() }}
+                {{ withoutAssessment() === 1 ? 'booking has' : 'bookings have' }} no pre-assessment
+                on file — Process Rule #2 says one is taken before the session.</span></div>
           }
-          <div class="note warm"><span class="b"></span>
-            <span>Delia Cruz flagged <b>pregnant</b> — Deep Tissue is excluded.</span></div>
-          <div class="note"><span class="b"></span><span>2 pre-assessments submitted in the last hour.</span></div>
+          @if (!available() && onDuty()) {
+            <div class="note warm"><span class="b"></span>
+              <span>No therapist is marked available. New slots cannot be offered until someone is.</span></div>
+          }
+          @if (!withoutAssessment() && available()) {
+            <div class="note"><span class="b"></span><span>Nothing needs attention right now.</span></div>
+          }
         </div>
         <div class="card" style="display:flex;flex-direction:column;gap:10px">
           <h2 class="t-s" style="font-size:22px">Quick actions</h2>
           <button type="button" class="btn btn-primary btn-block" routerLink="/staff/walkin">Record a walk-in</button>
-          <button type="button" class="btn btn-ghost btn-block" routerLink="/staff/queue">Open the queue</button>
+          <button type="button" class="btn btn-ghost btn-block" routerLink="/staff/resources">Therapists &amp; rooms</button>
           <button type="button" class="btn btn-quiet btn-block" (click)="offline.set(!offline())">
-            {{ offline() ? 'Simulate reconnect' : 'Simulate going offline' }}</button>
+            {{ offline() ? 'End offline simulation' : 'Simulate going offline (X1)' }}</button>
         </div>
       </aside>
     </div>

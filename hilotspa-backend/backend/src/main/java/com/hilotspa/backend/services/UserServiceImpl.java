@@ -10,9 +10,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.hilotspa.backend.config.CurrentUser;
 import com.hilotspa.backend.entities.Branch;
 import com.hilotspa.backend.entities.Role;
 import com.hilotspa.backend.entities.User;
+import com.hilotspa.backend.model.AccountDtos.ChangePassword;
+import com.hilotspa.backend.model.AccountDtos.Me;
+import com.hilotspa.backend.model.AccountDtos.UpdateMe;
 import com.hilotspa.backend.model.UserModel;
 import com.hilotspa.backend.repository.BranchRepository;
 import com.hilotspa.backend.repository.UserRepository;
@@ -122,5 +126,72 @@ public class UserServiceImpl implements UserService {
         } else {
             user.setBranch(null);
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Self-service. The account is identified by the token, never by an id in
+    // the path - otherwise every customer could edit every other customer.
+    // ------------------------------------------------------------------
+
+    private User currentOrThrow() {
+        java.util.UUID id = CurrentUser.id().orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated"));
+        return userRepository.findById(id).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+    }
+
+    @Override
+    public Me me() {
+        return toMe(currentOrThrow());
+    }
+
+    @Override
+    public Me updateMe(UpdateMe body) {
+        User u = currentOrThrow();
+
+        if (body.email() != null && !body.email().isBlank()) {
+            String email = body.email().trim().toLowerCase();
+            if (!email.equals(u.getEmail())) {
+                // Same 409 as registration. Silently keeping the old address
+                // would look like a save that worked.
+                userRepository.findUserByEmail(email).ifPresent(other -> {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "That email is already registered");
+                });
+                u.setEmail(email);
+            }
+        }
+        if (body.firstName() != null && !body.firstName().isBlank()) u.setFirstName(body.firstName().trim());
+        if (body.lastName() != null && !body.lastName().isBlank())   u.setLastName(body.lastName().trim());
+        if (body.middleName() != null) u.setMiddleName(body.middleName().trim());
+        if (body.contact() != null && !body.contact().isBlank())     u.setContact(body.contact().trim());
+        if (body.address() != null && !body.address().isBlank())     u.setAddress(body.address().trim());
+
+        return toMe(userRepository.save(u));
+    }
+
+    @Override
+    public void changeMyPassword(ChangePassword body) {
+        User u = currentOrThrow();
+
+        if (body.newPassword() == null || body.newPassword().length() < 8) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "The new password must be at least 8 characters");
+        }
+        // Proving you know the current one is what stops a borrowed phone from
+        // becoming a stolen account.
+        if (body.currentPassword() == null
+                || !passwordEncoder.matches(body.currentPassword(), u.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Your current password is not correct");
+        }
+        u.setPasswordHash(passwordEncoder.encode(body.newPassword()));
+        userRepository.save(u);
+    }
+
+    private Me toMe(User u) {
+        return new Me(u.getId(), u.getFirstName(), u.getMiddleName(), u.getLastName(),
+                u.getContact(), u.getAddress(), u.getEmail(),
+                u.getRole() == null ? null : u.getRole().name());
     }
 }

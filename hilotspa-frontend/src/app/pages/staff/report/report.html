@@ -1,100 +1,140 @@
 <app-dash-shell role="STAFF"
-  scopeNote="Pre-assessment · Ana Reyes · submitted 20 Aug, 2:38 PM">
-  <button bar type="button" class="btn btn-ghost btn-sm"
-          (click)="toast.show('Sending to the front-desk printer…')">Print</button>
+  scopeNote="Assessments are visible to this branch only.">
+  <span bar style="font-size:18px">
+    @if (form(); as f) { Assessment {{ f.id?.slice(0, 8)?.toUpperCase() }} } @else { No assessment open }
+  </span>
 
-  <div class="cols">
-    <div class="card" style="display:flex;flex-direction:column;gap:12px">
-      <div style="display:flex;gap:12px;align-items:center">
-        <span class="avatar" style="width:56px;height:56px">AR</span>
-        <div><div style="font-size:22px;font-weight:600;color:var(--color-forest-900)">Ana Reyes</div>
-          <div class="help">58 · Female · Married</div></div>
-      </div>
-      <div class="thumbs">
-        <app-body-map view="FRONT" [points]="points" [interactive]="false" />
-        <app-body-map view="BACK"  [points]="points" [interactive]="false" />
-      </div>
-      <hr class="hr">
-      <div><div class="help">CHIEF COMPLAINT</div>
-        <div style="font-size:21px;font-weight:600;color:var(--color-forest-900)">Lower Back Pain</div>
-        <div style="font-size:18px;color:var(--color-ink-600)">1 – 6 months</div></div>
-      <div><div class="help">OCCUPATION</div><div style="font-size:18px">Sari-sari store owner</div></div>
-      <div><div class="help">HISTORY</div>
-        <div style="font-size:17px;color:var(--color-ink-600)">Slipped disc 2019, PT 3 months. Hilot, March 2026.</div></div>
-      <div class="note bad" style="padding:12px 16px;font-size:17px"><span class="b"></span>
-        <span><b>High blood pressure</b> — Deep Tissue and Ventosa excluded</span></div>
-    </div>
+  @if (error(); as e) {
+    <div class="note bad"><span class="b"></span>
+      <span>{{ e }} <button type="button" class="link" (click)="load(null)">Try again</button></span></div>
+  }
 
-    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
-      <div class="card" style="padding:20px 22px">
-        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:12px">
-          <h2 class="t-s" style="font-size:22px">Findings</h2>
-          <span class="help">Regions from the intake form · tick what you observe</span>
+  @if (loading()) { <p class="s">Loading…</p> }
+
+  @if (!loading() && !form()) {
+    <div class="note"><span class="b"></span>
+      <span>Nothing to show. Open a session from the dashboard, or add
+        <span class="mono">?formId=…</span> to this address.</span></div>
+  }
+
+  @if (form(); as f) {
+    <div class="cols">
+      <div class="card" style="display:flex;flex-direction:column;gap:12px">
+        <div><div class="help">ASSESSMENT</div>
+          <div style="font-size:21px;font-weight:600;color:var(--color-forest-900)">
+            {{ session()?.client || 'Client on file' }}</div>
+          <div class="help">{{ f.intent }} · submitted {{ submitted() }}</div></div>
+
+        <div class="thumbs">
+          <app-body-map view="FRONT" [points]="points()" [interactive]="false" />
+          <app-body-map view="BACK"  [points]="points()" [interactive]="false" />
         </div>
-        <table class="tbl findings">
-          <tr><th style="width:150px">REGION</th><th style="width:42px">L</th><th style="width:42px">R</th>
-              <th style="width:58px">PAIN</th><th style="width:60px">STIFF</th>
-              <th style="width:60px">WEAK</th><th style="width:60px">NUMB</th>
-              <th style="width:76px">BEFORE</th><th style="width:80px">AFTER</th></tr>
-          @for (f of findings(); track f.region) {
-            <tr>
-              <td><b>{{ f.region }}</b></td>
-              <td>{{ f.left ? '✓' : '—' }}</td>
-              <td>{{ f.right ? '✓' : '—' }}</td>
-              @for (q of qualities; track q) {
-                <td>
-                  <button type="button" class="qcell" [class.on]="f.marks.includes(q)"
-                          [attr.aria-pressed]="f.marks.includes(q)"
-                          [attr.aria-label]="q + ' for ' + f.region"
-                          (click)="toggleMark(f.region, q)">{{ f.marks.includes(q) ? '✓' : '' }}</button>
-                </td>
-              }
-              <td class="tnum"><b>{{ f.before }}</b></td>
-              <td>
-                @if (f.after === null) { <span class="pill mute" style="padding:4px 10px">—</span> }
-                @else { <b class="tnum">{{ f.after }}</b> }
-              </td>
-            </tr>
+        <hr class="hr">
+        <div><div class="help">CHIEF COMPLAINT</div>
+          <div style="font-size:21px;font-weight:600;color:var(--color-forest-900)">{{ complaint() }}</div>
+          @if (f.mainComplaintDuration) {
+            <div style="font-size:18px;color:var(--color-ink-600)">{{ f.mainComplaintDuration }}</div>
           }
-        </table>
-        <div class="note warm" style="margin-top:14px;padding:12px 16px;font-size:17px"><span class="b"></span>
-          <span><b>AFTER</b> is filled in at the end of the session. Before-and-after on the same
-          client is the only outcome measure the spa already collects.</span></div>
-      </div>
-
-      <div class="card" style="padding:20px 22px">
-        <h2 class="t-s" style="font-size:22px;margin-bottom:10px">Assistant's summary</h2>
-        <p style="font-size:19px;line-height:1.55">
-          Client presents with lower back pain of 1–6 months, worst at the right shoulder (8/10) and
-          lumbar region (7/10), described as sharp and stiff. Prior slipped disc, 2019.
-          <b>Hilot sa Likod</b> matches the marked regions and is permitted under the current protocol.
-        </p>
-        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
-          <span class="pill ok">Hilot sa Likod — suggested</span>
-          <span class="pill mute">Full Body Massage — permitted</span>
-          <span class="pill bad">Deep Tissue — excluded</span>
-          <span class="pill bad">Ventosa — excluded</span>
         </div>
-        <p class="help" style="margin-top:14px">Generated from this record only. Exclusions were applied
-          before the assistant was asked, using the protocol signed by Gary O. Trinidad.</p>
+        @if (f.medicalHistory) {
+          <div><div class="help">HISTORY</div>
+            <div style="font-size:17px;color:var(--color-ink-600)">{{ f.medicalHistory }}</div></div>
+        }
+        @if (f.therapyDetail) {
+          <div><div class="help">PREVIOUS THERAPY</div>
+            <div style="font-size:17px;color:var(--color-ink-600)">{{ f.therapyDetail }}</div></div>
+        }
+        @if (excluded().length) {
+          <div class="note bad" style="padding:12px 16px;font-size:17px"><span class="b"></span>
+            <span><b>{{ excluded().length }} treatment{{ excluded().length === 1 ? '' : 's' }} excluded</b>
+              — {{ excluded()[0].reason }}</span></div>
+        }
       </div>
-    </div>
 
-    <aside style="display:flex;flex-direction:column;gap:14px">
-      <div class="card" style="display:flex;flex-direction:column;gap:10px">
-        <h2 class="t-s" style="font-size:22px">Today's session</h2>
-        <div style="font-size:19px"><b>Hilot sa Likod</b> · 60 min</div>
-        <div style="font-size:18px;color:var(--color-ink-600)">2:00 PM · Marites · Room 2</div>
-        <span class="pill ok" style="align-self:flex-start"><i class="dotx"></i>In session</span>
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+        <div class="card" style="padding:20px 22px;overflow-x:auto">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:12px">
+            <h2 class="t-s" style="font-size:22px">Findings</h2>
+            <span class="help">From the client's own marks · enter AFTER at the end of the session</span>
+          </div>
+          <table class="tbl findings">
+            <tr><th style="width:200px">REGION</th><th style="width:90px">SIDE</th>
+                <th>COMPLAINT</th><th style="width:86px">BEFORE</th>
+                <th style="width:110px">AFTER</th><th style="width:90px">CHANGE</th></tr>
+            @for (f2 of findings(); track f2.id) {
+              <tr>
+                <td><b>{{ f2.region }}</b></td>
+                <td>{{ f2.side }}</td>
+                <td>{{ f2.complaint }}</td>
+                <td class="tnum"><b>{{ f2.before }}</b></td>
+                <td>
+                  <select class="input sm" style="width:86px" [disabled]="saving() === f2.id"
+                          [attr.aria-label]="'After-session score for ' + f2.region"
+                          (change)="setAfter(f2.id, num($event))">
+                    <option value="" [selected]="f2.after === null">—</option>
+                    @for (n of scores; track n) {
+                      <option [value]="n" [selected]="f2.after === n">{{ n }}</option>
+                    }
+                  </select>
+                </td>
+                <td class="tnum">
+                  @if (f2.after !== null) {
+                    <b [style.color]="f2.before - f2.after > 0 ? 'var(--color-forest-700)' : null">
+                      {{ f2.before - f2.after > 0 ? '−' : '' }}{{ abs(f2.before - f2.after) }}</b>
+                  } @else { <span class="pill mute" style="padding:4px 10px">pending</span> }
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" style="text-align:center;color:var(--color-ink-600)">
+                No areas were marked — this was a leisure visit.</td></tr>
+            }
+          </table>
+          <div class="note warm" style="margin-top:14px;padding:12px 16px;font-size:17px"><span class="b"></span>
+            <span><b>AFTER</b> is filled in at the end of the session, by staff. Before-and-after on the
+            same client is the only outcome measure the spa already collects, and the route that writes
+            it is closed to clients.</span></div>
+          @if (complete()) {
+            <div class="note ok" style="margin-top:10px;padding:12px 16px;font-size:17px"><span class="b"></span>
+              <span>Every marked area has an AFTER score. This sheet is complete.</span></div>
+          }
+        </div>
+
+        <div class="card" style="padding:20px 22px">
+          <h2 class="t-s" style="font-size:22px;margin-bottom:10px">What the client may be offered</h2>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            @for (c of catalogue(); track c.serviceId) {
+              <span class="pill" [class.ok]="c.rule === 'INDICATED'"
+                    [class.bad]="!c.suitable" [class.mute]="c.suitable && c.rule !== 'INDICATED'">
+                {{ c.name }}@if (!c.suitable) { — excluded }</span>
+            } @empty {
+              <span class="help">The service menu could not be read.</span>
+            }
+          </div>
+          <p class="help" style="margin-top:14px">Exclusions are applied to this record <b>before</b> the
+            assistant is asked anything, using the protocol table. The app enforces the spa's rule; it
+            does not author one.</p>
+        </div>
       </div>
-      <div class="card" style="display:flex;flex-direction:column;gap:12px;flex:1">
-        <h2 class="t-s" style="font-size:22px">Practitioner's notes</h2>
-        <textarea class="input" rows="5" [value]="notes()" (input)="notes.set(val($event))"
-          placeholder="Tightness along L4–L5, right side worse. Advised warm compress at home…"></textarea>
-        <button type="button" class="btn btn-primary btn-block" (click)="recordAfter()">
-          Record after-session pain</button>
-        <p class="help">Appended to the record. Nothing here is ever overwritten.</p>
-      </div>
-    </aside>
-  </div>
+
+      <aside style="display:flex;flex-direction:column;gap:14px">
+        <div class="card" style="display:flex;flex-direction:column;gap:10px">
+          <h2 class="t-s" style="font-size:22px">Today's session</h2>
+          @if (session(); as s) {
+            <div style="font-size:19px"><b>{{ s.serviceName }}</b> · {{ s.durationMinutes }} min</div>
+            <div style="font-size:18px;color:var(--color-ink-600)">{{ s.time }} · {{ s.therapist }} · {{ s.room }}</div>
+            <span class="pill mute" style="align-self:flex-start">{{ s.status }}</span>
+          } @else {
+            <p class="s">This assessment has no session booked today.</p>
+          }
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;gap:12px;flex:1">
+          <h2 class="t-s" style="font-size:22px">Client's remarks</h2>
+          <textarea class="input" rows="5" readonly [value]="notes()"
+            placeholder="The client left no remarks."></textarea>
+          <p class="help">Read-only here. The assessment is the client's own answers; a practitioner's
+            observations belong in the findings table above, where they are dated and attributable.</p>
+        </div>
+      </aside>
+    </div>
+  }
 </app-dash-shell>

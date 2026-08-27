@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.hibernate.annotations.Check;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -23,6 +24,10 @@ import lombok.ToString;
 
 @Data
 @Entity
+// One of the two must identify the client. Enforced in the service AND here, so
+// a row that names nobody cannot be written by any path, including psql.
+@Check(name = "appointment_has_a_client",
+       constraints = "customer_id IS NOT NULL OR walk_in_name IS NOT NULL")
 @Table(name = "appointment")
 public class Appointment {
     @Id
@@ -35,11 +40,41 @@ public class Appointment {
     @EqualsAndHashCode.Exclude
     private Branch branch;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "customer_id", nullable = false)
+    /**
+     * The account this visit belongs to - NULL for a walk-in (B77).
+     *
+     * A client who arrives at the counter has no account, and the spa records
+     * several every day. Requiring one here meant the schema could not represent
+     * the single most common way this business takes a booking.
+     *
+     * Exactly one of `customer` and `walkInName` is set. That is enforced in
+     * BookingServiceImpl and again by the check constraint on this table, so a
+     * nameless appointment cannot exist however it is written.
+     */
+    @ManyToOne
+    @JoinColumn(name = "customer_id")
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private User customer;
+
+    /**
+     * Who the visit is for, when there is no account to name them.
+     *
+     * Deliberately NOT a User row created at the counter: an account that cannot
+     * log in is a false entry in the accounts screen, and it would quietly
+     * undermine the claim that self-registration is the only way an account
+     * comes into existence.
+     *
+     * The consequence is honest rather than hidden - a walk-in has no account,
+     * so no history follows them between visits. That is exactly what happens
+     * on paper today.
+     */
+    @Column
+    private String walkInName;
+
+    /** Optional. A number to call if the session has to move. */
+    @Column
+    private String walkInContact;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "room_id", nullable = false)

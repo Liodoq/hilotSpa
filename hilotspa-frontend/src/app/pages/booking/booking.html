@@ -1,11 +1,17 @@
 <app-nav />
 <main class="wrap">
+  @if (loading()) {
+    <p class="help" style="padding:24px">Loading your bookings…</p>
+  }
+  @else if (b(); as v) {
   <div class="col">
     <div class="hero">
       <span class="check" aria-hidden="true"><i></i></span>
       <div class="head">
-        <h1 class="t">You are booked</h1>
-        <p class="s">We sent the details to your account. Nothing to pay online — you settle at the counter.</p>
+        <h1 class="t">{{ upcoming().length === 1 ? 'You are booked'
+          : 'You have ' + upcoming().length + ' visits booked' }}</h1>
+        <p class="s">Nothing to pay online — you settle at the counter.
+          @if (later().length) { Your next visit is shown first. }</p>
       </div>
     </div>
 
@@ -13,18 +19,19 @@
       <div class="card" style="padding:0;overflow:hidden">
         <div class="refbar">
           <div><div style="font-size:15px;letter-spacing:2px;color:var(--color-sage-300)">REFERENCE</div>
-            <div class="mono" style="font-size:25px;font-weight:600;letter-spacing:2px">{{ b.ref }}</div></div>
+            <div class="mono" style="font-size:25px;font-weight:600;letter-spacing:2px">{{ v.id.slice(0, 8).toUpperCase() }}</div></div>
           <span class="pill ok"><i class="dotx"></i>Confirmed</span>
         </div>
         <div style="padding:6px 30px 20px">
           <table class="tbl">
-            <tr><td class="k">Service</td><td><b style="font-size:21px">{{ b.service }}</b> · {{ b.minutes }} minutes</td></tr>
-            <tr><td class="k">When</td><td><b>{{ b.day }}, {{ b.date }}</b> · {{ b.time }}</td></tr>
-            <tr><td class="k">Therapist</td><td>{{ b.therapist }}</td></tr>
-            <tr><td class="k">Room</td><td>{{ b.room }}</td></tr>
-            <tr><td class="k">Branch</td><td>{{ b.branch }}</td></tr>
-            <tr><td class="k">Booked through</td><td>Booking assistant · 20 Aug, 2:42 PM</td></tr>
-            <tr><td class="k">Price</td><td><b style="font-size:23px">₱ {{ b.price }}.00</b>
+            <tr><td class="k">Service</td><td><b style="font-size:21px">{{ v.serviceName }}</b> · {{ v.durationMinutes }} minutes</td></tr>
+            <tr><td class="k">When</td><td><b>{{ v.label }}</b></td></tr>
+            <tr><td class="k">Therapist</td><td>{{ v.therapist }}</td></tr>
+            <tr><td class="k">Room</td><td>{{ v.room }}</td></tr>
+            <tr><td class="k">Branch</td><td>{{ v.branch }}</td></tr>
+            <tr><td class="k">Booked through</td><td>{{ v.source === 'CHATBOT' ? 'Booking assistant' : 'Front desk' }} ·
+              {{ v.bookedAt | date:'d MMM, h:mm a' }}</td></tr>
+            <tr><td class="k">Price</td><td><b style="font-size:23px">₱ {{ v.price }}</b>
               <div class="help">Locked in at booking. A later price change will not affect this visit.</div></td></tr>
             <tr><td class="k">Payment</td><td><span class="pill warn">Pay at counter</span></td></tr>
           </table>
@@ -42,12 +49,86 @@
           </ul>
         </div>
         <button type="button" class="btn btn-ghost btn-block"
-                (click)="toast.show('Added to your calendar')">Add to my calendar</button>
+                (click)="addToCalendar(v)">Add to my calendar</button>
         <button type="button" class="btn btn-quiet btn-block" routerLink="/services">Book another visit</button>
         <div class="note"><span class="b"></span>
           <span>Need to change it? Reschedule from <b>My bookings</b>, or call the branch.</span></div>
       </div>
     </div>
+
+    @if (later().length) {
+      <h2 class="t-s" style="margin-top:26px">Also booked</h2>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        @for (v of later(); track v.id) {
+          <div class="card" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+            <div class="datechip" style="flex:0 0 auto">
+              <div class="d">{{ v.label }}</div>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:21px;font-weight:600;color:var(--color-forest-900)">
+                {{ v.serviceName }} · {{ v.durationMinutes }} min</div>
+              <div class="help">{{ v.therapist }} · {{ v.room }} · {{ v.branch }}</div>
+              <div class="help mono">REF {{ v.id.slice(0, 8).toUpperCase() }}</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <span class="pill ok"><i class="dotx"></i>{{ v.status }}</span>
+              <button type="button" class="btn btn-ghost btn-sm"
+                      (click)="addToCalendar(v)">Add to calendar</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (past().length) {
+      <h2 class="t-s" style="margin-top:26px">Past visits</h2>
+      <div class="card" style="padding:8px 22px;overflow-x:auto">
+        <table class="tbl">
+          <tr><th style="width:230px">WHEN</th><th>TREATMENT</th>
+              <th style="width:200px">THERAPIST</th><th style="width:150px">STATUS</th></tr>
+          @for (v of past(); track v.id) {
+            <tr>
+              <td>{{ v.label }}</td>
+              <td><b>{{ v.serviceName }}</b> · {{ v.durationMinutes }} min</td>
+              <td>{{ v.therapist }}</td>
+              <td><span class="pill" [class.mute]="v.status !== 'CANCELLED'"
+                        [class.bad]="v.status === 'CANCELLED'">{{ v.status }}</span></td>
+            </tr>
+          }
+        </table>
+      </div>
+    }
   </div>
+  }
+  @else {
+    <div class="col">
+      <div class="card" style="max-width:640px;margin:48px auto 0;padding:32px;text-align:center">
+        <h1 class="t-s">No upcoming visit</h1>
+        <p class="help" style="margin-top:8px">When you book through the assistant, the details
+          will appear here.</p>
+        <a class="btn btn-primary" style="margin-top:20px;display:inline-block"
+           routerLink="/assessment/intent">Start a pre-assessment</a>
+      </div>
+
+      @if (past().length) {
+        <h2 class="t-s" style="margin-top:26px">Past visits</h2>
+        <div class="card" style="padding:8px 22px;overflow-x:auto">
+          <table class="tbl">
+            <tr><th style="width:230px">WHEN</th><th>TREATMENT</th>
+                <th style="width:200px">THERAPIST</th><th style="width:150px">STATUS</th></tr>
+            @for (v of past(); track v.id) {
+              <tr>
+                <td>{{ v.label }}</td>
+                <td><b>{{ v.serviceName }}</b> · {{ v.durationMinutes }} min</td>
+                <td>{{ v.therapist }}</td>
+                <td><span class="pill" [class.mute]="v.status !== 'CANCELLED'"
+                          [class.bad]="v.status === 'CANCELLED'">{{ v.status }}</span></td>
+              </tr>
+            }
+          </table>
+        </div>
+      }
+    </div>
+  }
 </main>
 <app-toast />
