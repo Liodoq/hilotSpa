@@ -1,0 +1,103 @@
+# 0.18 - the 23 integration tests, on every push.
+#
+# Why this exists: booting is currently the only real check this project has.
+# Spring Data derives queries from METHOD NAMES, so a renamed field compiles
+# cleanly and fails at startup - that has cost three separate sessions
+# (PropertyReferenceException, twice from the same cause). The suite catches it,
+# but only when somebody remembers to run it. Now GitHub remembers.
+#
+# The tests hit a REAL Postgres and the REAL security filter chain on purpose.
+# An in-memory database with the checks mocked out would pass while the thing
+# that actually breaks - branch scoping, double booking, the contraindication
+# filter - went untested.
+
+name: Backend tests
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'hilotspa-backend/**'
+      - '.github/workflows/backend-tests.yml'
+  pull_request:
+    paths:
+      - 'hilotspa-backend/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: mvnw test (Postgres 15)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # Same major version as compose.yaml. A test run on a different Postgres
+        # than the spa runs is a test of something else.
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: hilotspa_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci_only_password
+        ports:
+          - 5432:5432
+        # Without this the first test can connect before the server is accepting
+        # connections, which fails as a confusing "connection refused" rather
+        # than as a wait.
+        options: >-
+          --health-cmd "pg_isready -U postgres -d hilotspa_db"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: hilotspa_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: ci_only_password
+      # Throwaway, and only ever used against a throwaway database. The real one
+      # never leaves the machine it was generated on.
+      JWT_SECRET: ci_only_secret_not_used_anywhere_else_0123456789abcdef
+      JWT_EXPIRATION_MS: 86400000
+      NODE_ID: ci
+      NODE_NAME: GitHub Actions
+      FRONTEND_ORIGIN: http://localhost:4200
+      SPRING_PROFILES_ACTIVE: dev
+      # There is no n8n here. Every assistant call therefore fails and falls back
+      # - which is correct: the fallback path is exactly what must keep working
+      # when the model is unreachable, and the suite asserts on the protocol
+      # table, never on the model's wording.
+      N8N_WEBHOOK_URL: http://localhost:5678/webhook/hilotspa
+      N8N_WEBHOOK_AUTH_HEADER: X-HilotSpa-Key
+      N8N_WEBHOOK_SECRET: ''
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
+      # The repo is checked out from Windows, where git does not carry the
+      # executable bit. Without this the runner fails with "Permission denied"
+      # on a wrapper that works perfectly on his machine.
+      - name: Make the Maven wrapper executable
+        working-directory: hilotspa-backend/backend
+        run: chmod +x ./mvnw
+
+      - name: Run the test suite
+        working-directory: hilotspa-backend/backend
+        run: ./mvnw --batch-mode --no-transfer-progress test
+
+      # Surefire reports are the only place that says WHICH test failed. Reading
+      # "BUILD FAILURE" off the log and guessing has cost real time before.
+      - name: Upload surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: hilotspa-backend/backend/target/surefire-reports/
+          if-no-files-found: warn

@@ -122,6 +122,29 @@ export interface FormsModel {
   remarks?: string | null;
   createdAt?: string;
   painPoints: PatientIntakeModel[];
+  /** Set instead of userId when staff took the assessment for a walk-in (B85). */
+  walkInName?: string | null;
+  /** The visit this assessment led to, if any. Null until something is booked. */
+  visit?: FormVisit | null;
+}
+
+/**
+ * The appointment an assessment produced, flattened for the client's own record.
+ *
+ * Read-only by design: no price, no payment status, nothing actionable. It
+ * exists so a finished session can name the treatment, the practitioner and the
+ * room that produced its pain scores instead of three em-dashes (B92).
+ */
+export interface FormVisit {
+  appointmentId: string;
+  serviceName: string;
+  durationMinutes: number;
+  label: string;
+  start: string;
+  therapist: string;
+  room: string;
+  branch: string;
+  status: string;
 }
 
 /** What POST /api/v1/assistant/recommend/{formId} returns. */

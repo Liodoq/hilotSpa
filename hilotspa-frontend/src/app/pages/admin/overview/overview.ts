@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { DashShell } from '../../../shared/dash-shell/dash-shell';
-import { AdminApi, Overview } from '../../../core/admin.api';
+import { AdminApi, Health, Overview } from '../../../core/admin.api';
 import { BranchContext } from '../../../core/branch-context';
 
 /**
@@ -26,6 +26,12 @@ export class AdminOverview implements OnInit {
   private ctx = inject(BranchContext);
 
   data = signal<Overview | null>(null);
+
+  /**
+   * Operational readiness. Loaded separately and never allowed to break the
+   * page: a health check that takes the screen down with it is worse than none.
+   */
+  health = signal<Health | null>(null);
   loading = signal(true);
   error = signal<string | null>(null);
 
@@ -53,13 +59,23 @@ export class AdminOverview implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     try {
-      this.data.set(await this.api.overview());
+      const [overview, health] = await Promise.all([
+        this.api.overview(),
+        this.api.health().catch(() => null),
+      ]);
+      this.data.set(overview);
+      this.health.set(health);
     } catch {
       this.error.set('We could not build the aggregate.');
     } finally {
       this.loading.set(false);
     }
   }
+
+  /** Everything the health check is unhappy about, worst first. */
+  faults = computed(() =>
+    (this.health()?.checks ?? []).filter(c => c.state !== 'OK')
+      .sort((a, b) => (a.state === 'DOWN' ? -1 : 1) - (b.state === 'DOWN' ? -1 : 1)));
 
   when(iso: string | null): string {
     if (!iso) return 'no writes yet';

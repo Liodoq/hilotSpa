@@ -51,4 +51,20 @@ public interface BookingService {
 
     /** The caller's own appointments, newest first. Branch-scoped for staff. */
     List<Booking> mine();
+
+    /**
+     * Cancel a booking - 2.32.
+     *
+     * The row is marked CANCELLED, never deleted. A deleted appointment takes
+     * its audit trail, its price at booking and the fact that it ever existed
+     * with it; a cancelled one releases the therapist and the room (CANCELLED
+     * is not in BLOCKING) while staying on the record, which is what a clinic
+     * needs and what the paper's audit-log claim requires.
+     *
+     * A client may only cancel their own, and only before it starts. Staff may
+     * cancel anything at their own branch, including a visit already under way,
+     * because a client who leaves halfway is a real thing that happens at a
+     * counter and pretending otherwise just puts a wrong row on the day sheet.
+     */
+    Booking cancel(UUID appointmentId, String reason);
 }

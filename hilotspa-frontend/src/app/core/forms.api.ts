@@ -19,10 +19,19 @@ export class FormsApi {
       this.http.post<AssistantResponse>(`${API_BASE}/assistant/recommend/${formId}`, {}));
   }
 
-  /** One turn of conversation with the assistant, about a specific assessment. */
-  chat(formId: string, message: string): Promise<AssistantChatResponse> {
-    return firstValueFrom(
-      this.http.post<AssistantChatResponse>(`${API_BASE}/assistant/chat/${formId}`, { message }));
+  /**
+   * One turn of conversation with the assistant, about a specific assessment.
+   *
+   * `focusServiceId` is the treatment the conversation has narrowed to. The
+   * server sends that one service's WHOLE calendar and samples the rest, so a
+   * question about a specific time can be answered truthfully instead of from
+   * a two-a-day sample.
+   */
+  chat(formId: string, message: string, focusServiceId?: string | null):
+      Promise<AssistantChatResponse> {
+    return firstValueFrom(this.http.post<AssistantChatResponse>(
+      `${API_BASE}/assistant/chat/${formId}`,
+      { message, focusServiceId: focusServiceId ?? null }));
   }
 
   /** Book a time the client tapped. Does not go near the model — the slotId is
@@ -30,6 +39,19 @@ export class FormsApi {
   confirmSlot(formId: string, slotId: string): Promise<AssistantChatResponse> {
     return firstValueFrom(this.http.post<AssistantChatResponse>(
       `${API_BASE}/assistant/confirm/${formId}`, { slotId }));
+  }
+
+  /**
+   * Cancel a booking — 2.32.
+   *
+   * The row is marked CANCELLED server-side, never deleted, so the audit trail
+   * and the price at booking survive. The therapist and the room are released
+   * because CANCELLED is not a blocking status.
+   */
+  cancelBooking(id: string, reason?: string): Promise<BookingModel> {
+    const q = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+    return firstValueFrom(
+      this.http.delete<BookingModel>(`${API_BASE}/appointments/${id}${q}`));
   }
 
   /** The caller's own appointments. The server scopes this; never filter client-side. */

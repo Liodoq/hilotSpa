@@ -40,7 +40,18 @@
             </div>
             <div style="display:flex;flex-direction:column;gap:10px;flex:0 0 auto">
               <button type="button" class="btn btn-ghost btn-sm" (click)="reschedule()">Reschedule</button>
-              <button type="button" class="btn btn-danger btn-sm" (click)="cancelVisit()">Cancel</button>
+              @if (!confirmingCancel()) {
+                <button type="button" class="btn btn-danger btn-sm"
+                        (click)="askCancel()">Cancel</button>
+              } @else {
+                <!-- The button becomes the question. A modal confirm() blocks the
+                     page and reads as an error to someone not expecting it. -->
+                <button type="button" class="btn btn-danger btn-sm" [disabled]="cancelling()"
+                        (click)="cancelVisit()">
+                  {{ cancelling() ? 'Cancelling…' : 'Yes, cancel this visit' }}</button>
+                <button type="button" class="btn btn-quiet btn-sm" [disabled]="cancelling()"
+                        (click)="keepVisit()">Keep it</button>
+              }
             </div>
           </div>
         } @else {

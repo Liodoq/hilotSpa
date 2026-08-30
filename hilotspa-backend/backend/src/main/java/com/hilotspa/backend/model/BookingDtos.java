@@ -106,6 +106,13 @@ public final class BookingDtos {
             String name,
             String contact,
             String notes,
+            /**
+             * The walk-in's assessment, when staff took one at the counter.
+             * Optional - plenty of walk-ins are booked without one - but when it
+             * is present the visit and the assessment are joined, which is what
+             * makes a walk-in's pain scores usable in Chapter IV. B85.
+             */
+            UUID formId,
             /** Front desks double-tap. Same idea as the agent retry guard. */
             String idempotencyKey) {
     }

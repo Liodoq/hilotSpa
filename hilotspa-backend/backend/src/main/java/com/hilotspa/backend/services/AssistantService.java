@@ -35,7 +35,7 @@ public interface AssistantService {
      * filter, for the same structural reason the recommendation path works:
      * nothing else is ever put in front of it.
      */
-    ChatResponse chat(UUID formId, String message);
+    ChatResponse chat(UUID formId, String message, UUID focusServiceId);
 
     /**
      * Book a time the client tapped.

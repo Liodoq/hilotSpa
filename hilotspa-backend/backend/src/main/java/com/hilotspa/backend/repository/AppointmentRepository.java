@@ -18,6 +18,19 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     List<Appointment> findByCustomerId(UUID customerId);
     List<Appointment> findByBranchIdAndStartTimeBetween(UUID branchId, LocalDateTime from, LocalDateTime to);
 
+    /**
+     * The visits that came out of one assessment.
+     *
+     * A form can produce more than one - a client may book twice off a single
+     * pre-assessment - so this returns a list and the caller decides which one
+     * to show. B92: the FK has existed since the entity was written and nothing
+     * ever read it, which is why a finished session displayed no room.
+     */
+    List<Appointment> findByFormId(UUID formId);
+
+    /** The same, for a page of forms, so a history list is one query not N. */
+    List<Appointment> findByFormIdIn(Collection<UUID> formIds);
+
     boolean existsByTherapistIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
             UUID therapistId, Collection<AppointmentStatus> statuses,
             LocalDateTime candidateEnd, LocalDateTime candidateStart);

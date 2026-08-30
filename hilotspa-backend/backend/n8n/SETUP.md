@@ -375,3 +375,55 @@ out of git — it contains the encrypted service-account key.
   Free text is free text. The mitigations are the system prompt, no tools, and
   the fact that the agent cannot write to anything. Say this plainly in the
   paper rather than letting a panellist find it.
+
+---
+
+## Step 15 — Header Auth on both webhooks (task 2.17)
+
+Until this is done, anything that can reach port 5678 can drive the assistant and
+spend the project's Vertex credits. On a closed laptop that is tolerable. Where a
+real client record exists it is not, and the backend now says so in a WARN line
+at every startup until you set it.
+
+**1. Generate the secret on your own machine.** Never type one into a chat
+window, a screenshot or a commit.
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+**2. Put it in `.env`** (which is gitignored) beside the other secrets:
+
+```
+N8N_WEBHOOK_AUTH_HEADER=X-HilotSpa-Key
+N8N_WEBHOOK_SECRET=<the value you just generated>
+```
+
+**3. Create the n8n credential.** Sidebar → **Credentials** → **Add credential**
+→ search **Header Auth**.
+
+- **Name:** `HilotSpa Webhook Key`
+- **Header Name:** `X-HilotSpa-Key`
+- **Header Value:** the same value
+
+**4. Point both Webhook nodes at it.** Open **HilotSpa Recommend**, click the
+**Webhook** node, set **Authentication** to **Header Auth**, choose
+`HilotSpa Webhook Key`. **Save**, then **Publish**. Repeat for **HilotSpa Chat**.
+
+> **STOP.** `docker compose up -d --build`, then submit an assessment. It should
+> work exactly as before. Now open Admin → Overview: the readiness panel should
+> report **Webhook authentication · OK**.
+
+**If it now returns 401:** the secret in `.env` and the one in the credential do
+not match, or you edited a workflow and did not Publish again. Both are the same
+two traps as Step 6.
+
+**To prove it is actually closed**, call the webhook without the header — it must
+be refused:
+
+```powershell
+curl.exe -X POST http://localhost:5678/webhook/hilotspa/chat -H "Content-Type: application/json" -d "{}"
+```
+
+A **403** is the correct answer and is worth a screenshot for the appendix. A 200
+or a 404 means the node is not using the credential.

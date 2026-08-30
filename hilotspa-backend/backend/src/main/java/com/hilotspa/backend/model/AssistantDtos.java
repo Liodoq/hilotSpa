@@ -88,8 +88,16 @@ public final class AssistantDtos {
             BigDecimal price) {
     }
 
-    /** What Angular posts to /api/v1/assistant/chat/{formId}. */
-    public record ChatRequest(String message) {
+    /**
+     * What Angular posts to /api/v1/assistant/chat/{formId}.
+     *
+     * `focusServiceId` is the treatment the conversation has narrowed to, if
+     * any. It buys DEPTH: that service's whole calendar is sent, so "is there
+     * 3 PM on Thursday?" has a truthful answer, while every other service stays
+     * sampled so the request does not grow with the length of the menu. Null
+     * before the client has chosen, which is when breadth is what they need.
+     */
+    public record ChatRequest(String message, UUID focusServiceId) {
     }
 
     /** Sent to the n8n chat workflow. Same principle as the recommendation
@@ -107,6 +115,13 @@ public final class AssistantDtos {
             Map<String, Boolean> flags,
             List<AllowedService> allowedServices,
             List<ChatSlot> availableSlots,
+            /**
+             * The one treatment whose calendar in availableSlots is COMPLETE,
+             * by name, or null. Everything else is a two-a-day sample. The
+             * agent needs to know the difference: "not in my list" means "taken"
+             * only for this one, and means "I did not look" for the rest.
+             */
+            String completeFor,
             /** The client's OWN bookings only. Never anyone else's - the agent
              *  can see that a slot is taken without learning who has it. */
             List<String> myBookings,

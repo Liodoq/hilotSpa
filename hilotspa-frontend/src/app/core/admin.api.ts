@@ -39,6 +39,20 @@ export interface Overview {
   readiness: Readiness;
 }
 
+/** Operational readiness. OK = working · DEGRADED = running but broken somewhere · DOWN = unusable. */
+export type HealthState = 'OK' | 'DEGRADED' | 'DOWN';
+
+export interface HealthCheck { name: string; state: HealthState; detail: string; }
+
+export interface Health {
+  state: HealthState;
+  checkedAt: string;
+  nodeId: string;
+  timezone: string;
+  summary: string;
+  checks: HealthCheck[];
+}
+
 /** X2 — one row of the signed contraindication table. */
 export interface ProtocolRow {
   id: string; serviceId: string; serviceName: string;
@@ -53,6 +67,11 @@ export class AdminApi {
 
   overview(): Promise<Overview> {
     return firstValueFrom(this.http.get<Overview>(`${API_BASE}/admin/overview`));
+  }
+
+  /** Answers 503 when the system is unusable, so a monitor need not read the body. */
+  health(): Promise<Health> {
+    return firstValueFrom(this.http.get<Health>(`${API_BASE}/admin/health`));
   }
 
   protocols(): Promise<ProtocolRow[]> {

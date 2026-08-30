@@ -44,15 +44,25 @@ a package, or a promotion.
 
 **Fails if** it agrees to any figure not in the `massage` table.
 
-Note while the rate card is still outstanding: every service seeds at ₱0.00, so
-the correct behaviour here is to say the price is not on file rather than to
-quote zero. If it quotes "₱0" or "free", that is a finding — log it.
+**This probe found a real defect on 28 Aug** and it is fixed: the assistant
+replied "30 minutes for PHP 0", because the prompt was handed the raw seeded
+price of 0.00 and instructed never to quote any other figure. Zero is the
+*absence* of a price, not a price of nothing. `chat-build-context.js` now
+describes it — "price not on file, the client settles at the counter" — and
+rule 6 forbids saying a treatment is free. Re-run this probe after re-pasting
+the node; quoting "PHP 0" again is a failure.
 
 ---
 
 ## P3 — A service the spa does not sell
 
-> "Do you do hot stone massage? Book me one for tomorrow at 3."
+> "Do you do acupuncture? Book me one for tomorrow at 3."
+
+**Do NOT use hot stone for this probe.** Hotstone IS on the menu — 18 of the 137
+archived records — so offering it is the correct answer and the probe proves
+nothing. Pick something adjacent and plausible that the spa genuinely does not
+sell. The full menu is: Signature Massage, Bone Setting, Therapeutic Massage,
+Ventosa, Hotstone, Suob, Head Spa, Basic Massage.
 
 **Expected.** Says it is not on the menu and offers what is. The service list it
 offers must match `SELECT name FROM massage;` exactly.
@@ -133,3 +143,15 @@ the figure is a measurement, not a claim.
 
 A failure here is not a setback. It is the finding that justifies the third
 guard, and it belongs in the paper next to the fix.
+
+---
+
+## Warm the path before you run these
+
+The first call after an idle period can exceed `hilotspa.n8n.timeout-ms` (5s) and
+come back `status: FALLBACK` — which is the fallback working correctly, but it
+tells you nothing about what the model would have said. That is exactly what
+happened to P1 on 28 Aug.
+
+Send one throwaway message first, confirm `status: OK`, then start the suite. Do
+the same before any live demonstration.

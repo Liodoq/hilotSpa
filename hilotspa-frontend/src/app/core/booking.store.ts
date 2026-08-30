@@ -22,6 +22,9 @@ import { PainPoint } from './assessment.store';
  * has been retired.
  */
 export interface UpcomingVisit {
+  /** The appointment's real id. `ref` is the short form a client reads out; this
+   *  is the one the cancel endpoint needs. */
+  id: string;
   ref: string; service: string; minutes: number; date: string; day: string; month: string;
   dayNum: string; time: string; therapist: string; room: string; branch: string;
   price: number; status: 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
@@ -101,19 +104,21 @@ export class BookingStore {
   }
 
   /**
-   * Local dismissal only — there is no DELETE /appointments yet.
+   * Cancel a visit for real — 2.32.
    *
-   * It hides the card and says so; it does NOT tell the client the visit is
-   * cancelled, because the row is still CONFIRMED in the database and the
-   * therapist is still blocked. Claiming otherwise would be the worst kind of
-   * bug: one the client only discovers by turning up.
+   * This used to be a local dismissal that hid the card and said so, because
+   * there was no endpoint. There is one now, so the therapist and the room are
+   * genuinely released and the row is marked CANCELLED rather than deleted.
+   *
+   * The list is rebuilt from the SERVER afterwards, never patched optimistically:
+   * if the server refused — the visit has already started, someone else cancelled
+   * it first — the screen must show what the database says, not what the tap
+   * hoped for. That disagreement is the bug a client discovers by turning up.
    */
-  cancel(): UpcomingVisit | null {
-    const v = this.upcoming();
-    this.upcoming.set(null);
-    this.upcomingAll.update(list => list.slice(1));
-    try { localStorage.setItem(KEY, 'CANCELLED'); } catch { /* private mode */ }
-    return v;
+  async cancel(appointmentId: string, reason?: string): Promise<void> {
+    await this.api.cancelBooking(appointmentId, reason);
+    try { localStorage.removeItem(KEY); } catch { /* private mode */ }
+    await this.load();
   }
 
   find(id: string): SessionLog | undefined {
@@ -135,6 +140,7 @@ export class BookingStore {
 function toVisit(b: BookingModel): UpcomingVisit {
   const d = new Date(b.start);
   return {
+    id: b.id,
     ref: b.id.slice(0, 8).toUpperCase(),
     service: b.serviceName,
     minutes: b.durationMinutes,
@@ -168,22 +174,29 @@ function toLog(f: FormsModel): SessionLog {
   const befores = (f.painPoints ?? []).map(p => p.painScoreBefore).filter(n => n != null);
   const afters  = (f.painPoints ?? []).map(p => p.painScoreAfter).filter(n => n != null) as number[];
 
+  // B92 - the visit this assessment produced, when the server found one.
+  // Before this the history could only ever describe the FORM, so a finished
+  // session read "Pre-assessment · 0 minutes · — · — · —" even though the
+  // appointment, the therapist and the room were all sitting in the database
+  // behind a foreign key nothing read.
+  const v = f.visit ?? null;
+
   return {
     id: f.id ?? '',
-    date: formatDate(f.createdAt),
+    date: v ? v.label : formatDate(f.createdAt),
     createdAt: f.createdAt ?? '',
-    // Until appointments exist there is no service, therapist or room to name.
-    // Writing "—" is honest; inventing one is how the demo data problem started.
-    service: 'Pre-assessment',
-    minutes: 0,
+    // Still honest when there is no visit: this client filled the form and never
+    // booked, and saying "Pre-assessment" is exactly right for that row.
+    service: v ? v.serviceName : 'Pre-assessment',
+    minutes: v ? v.durationMinutes : 0,
     complaint: f.intent === 'LEISURE'
       ? 'Here to relax'
       : label(f.mainComplaint) || f.mainComplaintOther || 'Not stated',
     before: befores.length ? Math.max(...befores as number[]) : null,
     after:  afters.length  ? Math.max(...afters) : null,
-    therapist: '—',
-    room: '—',
-    branch: '—',
+    therapist: v && v.therapist ? v.therapist : '—',
+    room: v && v.room ? v.room : '—',
+    branch: v && v.branch ? v.branch : '—',
     duration: f.mainComplaintDuration ?? '',
     notes: f.remarks ?? '',
     points,

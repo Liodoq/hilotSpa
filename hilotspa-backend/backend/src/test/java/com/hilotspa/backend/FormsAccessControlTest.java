@@ -79,6 +79,68 @@ class FormsAccessControlTest {
         throw new IllegalStateException("No seeded branch matching: " + text);
     }
 
+    /**
+     * B45 - a PAIN assessment must say what hurts, and the SERVER must be the
+     * one that says so.
+     *
+     * The wizard has always checked this in the browser, which stops an honest
+     * client and nobody else. It matters because a PAIN form with no complaint
+     * reaches the assistant with nothing for the ServiceProtocol filter to match
+     * on: every contraindication rule is keyed to a condition, so a form naming
+     * no condition is filtered against nothing and the whole menu comes back as
+     * safe. That is the single failure this system exists to prevent.
+     */
+    @Test
+    @DisplayName("the API refuses a PAIN assessment with no complaint")
+    void aPainAssessmentMustNameAComplaint() throws Exception {
+        String ana = tokenFor("ana@customer.test");
+        String branchId = branchIdContaining(ana, "Bulan");
+
+        String body = """
+                {
+                  "branchId": "%s",
+                  "intent": "PAIN",
+                  "mainComplaintDuration": "3 months",
+                  "hasTherapy": false,
+                  "status": "PENDING",
+                  "painPoints": []
+                }
+                """.formatted(branchId);
+
+        mvc.perform(post("/api/v1/forms/create")
+                        .header("Authorization", "Bearer " + ana)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    /**
+     * The other half of the same rule: a LEISURE assessment has no complaint by
+     * definition, and must still save. A guard that blocked this would break the
+     * paper's own leisure path (SS E1), where one tap writes a completed record.
+     */
+    @Test
+    @DisplayName("a LEISURE assessment saves with no complaint")
+    void aLeisureAssessmentNeedsNoComplaint() throws Exception {
+        String ana = tokenFor("ana@customer.test");
+        String branchId = branchIdContaining(ana, "Bulan");
+
+        String body = """
+                {
+                  "branchId": "%s",
+                  "intent": "LEISURE",
+                  "status": "PENDING",
+                  "painPoints": []
+                }
+                """.formatted(branchId);
+
+        mvc.perform(post("/api/v1/forms/create")
+                        .header("Authorization", "Bearer " + ana)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated());
+    }
+
     /** Creates a form and returns the response body. ownerId may be a lie - that is the point. */
     private JsonNode createForm(String token, String ownerId, String branchId) throws Exception {
         String body = """

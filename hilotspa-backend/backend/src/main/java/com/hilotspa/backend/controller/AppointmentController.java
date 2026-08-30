@@ -8,7 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -57,6 +59,20 @@ public class AppointmentController {
                     "No therapist or room is free for that time. Try another, or free "
                     + "someone up on the resources screen.", List.of()));
         }
+    }
+
+    /**
+     * Cancel a booking - 2.32.
+     *
+     * DELETE is the honest verb for the client's intent even though the row is
+     * kept: from the caller's side the appointment is gone. Scoping lives in the
+     * service, because "your own" is a query-level rule that no URL pattern can
+     * express.
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Booking> cancel(@PathVariable UUID id,
+                                          @RequestParam(required = false) String reason) {
+        return ResponseEntity.ok(bookingService.cancel(id, reason));
     }
 
     /**

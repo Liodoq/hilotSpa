@@ -1,7 +1,12 @@
 package com.hilotspa.backend.services;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -13,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.hilotspa.backend.config.CurrentUser;
+import com.hilotspa.backend.entities.Appointment;
+import com.hilotspa.backend.entities.AppointmentStatus;
+import com.hilotspa.backend.entities.AssessmentIntent;
 import com.hilotspa.backend.entities.AuditLog;
 import com.hilotspa.backend.entities.Branch;
 import com.hilotspa.backend.entities.Forms;
@@ -20,7 +28,9 @@ import com.hilotspa.backend.entities.PatientIntake;
 import com.hilotspa.backend.entities.Role;
 import com.hilotspa.backend.entities.User;
 import com.hilotspa.backend.model.FormsModel;
+import com.hilotspa.backend.model.FormsModel.Visit;
 import com.hilotspa.backend.model.PatientIntakeModel;
+import com.hilotspa.backend.repository.AppointmentRepository;
 import com.hilotspa.backend.repository.AuditLogRepository;
 import com.hilotspa.backend.repository.BranchRepository;
 import com.hilotspa.backend.repository.FormsRepository;
@@ -58,6 +68,13 @@ public class FormsServiceImpl implements FormsService {
     @Autowired
     private AuditLogRepository auditLogRepository;
 
+    @Autowired
+    private AppointmentRepository appointmentRepository;
+
+    /** Same wording as the booking screens, so one visit never reads two ways. */
+    private static final DateTimeFormatter LABEL =
+            DateTimeFormatter.ofPattern("EEE d MMM, h:mm a", Locale.ENGLISH);
+
     @Value("${hilotspa.node.id:local-dev}")
     private String nodeId;
 
@@ -84,27 +101,42 @@ public class FormsServiceImpl implements FormsService {
                             HttpStatus.FORBIDDEN, "Staff account has no branch assigned"));
 
         } else {
-            // Customer: the form is theirs, whatever the body said.
+            // Customer: the form is theirs, whatever the body said. A client can
+            // never record an assessment in someone else's name.
             ownerId = actorId;
             branchId = model.getBranchId();
+            model.setWalkInName(null);
         }
 
-        if (ownerId == null || branchId == null) {
+        // B85 - a walk-in has no account, so staff name them instead. Exactly
+        // one of the two identifies the record, and the database enforces the
+        // same rule through the forms_has_a_client check constraint.
+        String walkInName = model.getWalkInName() == null ? null : model.getWalkInName().trim();
+        boolean isWalkIn = ownerId == null && walkInName != null && !walkInName.isBlank();
+
+        if (branchId == null || (ownerId == null && !isWalkIn)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "userId and branchId are required");
+                    "branchId is required, and either userId or a walk-in name");
+        }
+        if (ownerId != null && walkInName != null && !walkInName.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "An assessment belongs to an account or to a named walk-in, not both");
         }
 
         Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Branch not found"));
-        User user = userRepository.findById(ownerId)
+        User user = ownerId == null ? null : userRepository.findById(ownerId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "User not found"));
+
+        requireComplaintWhenInPain(model);
 
         Forms form = new Forms();
         applyFields(form, model);
         form.setBranch(branch);
         form.setUser(user);
+        form.setWalkInName(isWalkIn ? walkInName : null);
         replacePainPoints(form, model.getPainPoints());
 
         return formsTransform.transform(formsRepository.save(form));
@@ -116,7 +148,9 @@ public class FormsServiceImpl implements FormsService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Form not found"));
         assertCanAccess(form);
-        return formsTransform.transform(form);
+        FormsModel model = formsTransform.transform(form);
+        model.setVisit(latestVisit(appointmentRepository.findByFormId(form.getId())));
+        return model;
     }
 
     @Override
@@ -139,7 +173,26 @@ public class FormsServiceImpl implements FormsService {
             forms = formsRepository.findByUserId(userId);
         }
 
-        return forms.stream().map(formsTransform::transform).collect(Collectors.toList());
+        List<FormsModel> models = forms.stream()
+                .map(formsTransform::transform)
+                .collect(Collectors.toList());
+
+        // One query for the whole page. Asking per row turns a history list into
+        // N round trips, and this endpoint is what the client's home screen and
+        // session list both read.
+        List<UUID> ids = forms.stream().map(Forms::getId).filter(java.util.Objects::nonNull).toList();
+        if (!ids.isEmpty()) {
+            Map<UUID, List<Appointment>> byForm = new HashMap<>();
+            for (Appointment a : appointmentRepository.findByFormIdIn(ids)) {
+                if (a.getForm() != null) {
+                    byForm.computeIfAbsent(a.getForm().getId(), k -> new java.util.ArrayList<>()).add(a);
+                }
+            }
+            for (FormsModel m : models) {
+                m.setVisit(latestVisit(byForm.get(m.getId())));
+            }
+        }
+        return models;
     }
 
     @Override
@@ -148,6 +201,8 @@ public class FormsServiceImpl implements FormsService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Form not found"));
         assertCanAccess(form);
+
+        requireComplaintWhenInPain(model);
 
         // applyFields deliberately does not touch user or branch — ownership is
         // set once, at creation, and cannot be reassigned by an update.
@@ -176,6 +231,10 @@ public class FormsServiceImpl implements FormsService {
 
         Forms copy = new Forms();
         copy.setUser(source.getUser());
+        // Carry the walk-in name across too. Copying the user alone would leave a
+        // reused walk-in assessment identifying nobody, and the forms_has_a_client
+        // constraint would reject it at INSERT with nothing useful to say. B85.
+        copy.setWalkInName(source.getWalkInName());
         copy.setBranch(source.getBranch());
         copy.setIntent(source.getIntent());
         copy.setMainComplaint(source.getMainComplaint());
@@ -229,6 +288,71 @@ public class FormsServiceImpl implements FormsService {
             auditLogRepository.save(row);
         } catch (RuntimeException e) {
             log.warn("audit write failed for ASSESSMENT_REUSED {} - {}", copy.getId(), e.toString());
+        }
+    }
+
+    /**
+     * The visit to show for an assessment: the most recent one that still counts.
+     *
+     * Cancelled appointments are skipped - a client who cancelled and rebooked
+     * should see the booking they kept. When every appointment was cancelled the
+     * latest cancelled one is shown rather than nothing, because "you cancelled
+     * this" is information and a blank row is not.
+     */
+    private Visit latestVisit(List<Appointment> found) {
+        if (found == null || found.isEmpty()) {
+            return null;
+        }
+        Appointment best = null;
+        for (Appointment a : found) {
+            if (a.getStartTime() == null) {
+                continue;
+            }
+            boolean live = a.getStatus() != AppointmentStatus.CANCELLED;
+            boolean bestLive = best != null && best.getStatus() != AppointmentStatus.CANCELLED;
+            if (best == null
+                    || (live && !bestLive)
+                    || (live == bestLive && a.getStartTime().isAfter(best.getStartTime()))) {
+                best = a;
+            }
+        }
+        if (best == null) {
+            return null;
+        }
+        return new Visit(
+                best.getId(),
+                best.getService() == null ? "" : best.getService().getName(),
+                best.getEndTime() == null ? 0
+                        : (int) Duration.between(best.getStartTime(), best.getEndTime()).toMinutes(),
+                best.getStartTime().format(LABEL),
+                best.getStartTime(),
+                best.getTherapist() == null ? ""
+                        : best.getTherapist().getFirstName() + " " + best.getTherapist().getLastName(),
+                best.getRoom() == null ? "" : best.getRoom().getName(),
+                best.getBranch() == null ? "" : best.getBranch().getName(),
+                best.getStatus() == null ? "" : best.getStatus().name());
+    }
+
+    /**
+     * B45 - a PAIN assessment must say what hurts.
+     *
+     * The wizard has always enforced this in the browser, which stops an honest
+     * client and nobody else. An assessment with intent=PAIN and no complaint
+     * reaches the assistant with nothing to filter the service protocol against,
+     * so it would recommend from the whole menu with no contraindication check
+     * having anything to check. That is the one failure this system exists to
+     * prevent, so the rule belongs on the server.
+     */
+    private void requireComplaintWhenInPain(FormsModel model) {
+        if (model.getIntent() != AssessmentIntent.PAIN) {
+            return;
+        }
+        boolean named = model.getMainComplaint() != null
+                || (model.getMainComplaintOther() != null
+                    && !model.getMainComplaintOther().isBlank());
+        if (!named) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A pain assessment needs a main complaint, or a description under Others.");
         }
     }
 

@@ -179,6 +179,14 @@ public class BookingServiceImpl implements BookingService {
                         HttpStatus.NOT_FOUND, "Service not found"));
 
         UUID branchId = form.getBranch().getId();
+        if (form.getUser() == null) {
+            // A walk-in assessment (B85). It has no account to bill, notify or
+            // scope "my bookings" by, so it cannot go down the online path -
+            // staff record the visit at the counter instead.
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "That assessment belongs to a walk-in. Record the visit from the "
+                    + "counter instead.");
+        }
         UUID customerId = form.getUser().getId();
         LocalDateTime start = req.start();
         LocalDateTime end = start.plusMinutes(service.getDurationMinute());
@@ -247,6 +255,94 @@ public class BookingServiceImpl implements BookingService {
                 .sorted((a, b) -> b.getStartTime().compareTo(a.getStartTime()))
                 .map(this::toDto)
                 .toList();
+    }
+
+    // --------------------------------------------------------------- cancel
+
+    @Override
+    @Transactional
+    public Booking cancel(UUID appointmentId, String reason) {
+        Appointment a = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Booking not found"));
+
+        assertCanCancel(a);
+
+        if (a.getStatus() == AppointmentStatus.CANCELLED) {
+            // Idempotent on purpose. A double-tap on Cancel is not an error, and
+            // returning 409 here would make the UI show a failure for something
+            // that is already true.
+            return toDto(a);
+        }
+        if (a.getStatus() == AppointmentStatus.COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "That visit has already been completed. The front desk can correct "
+                    + "the record if it is wrong.");
+        }
+
+        a.setStatus(AppointmentStatus.CANCELLED);
+        Appointment saved = appointmentRepository.save(a);
+
+        // A separate action, not a second APPOINTMENT_CREATED row. The audit log
+        // has to answer "who released this therapist, and when" - that is the
+        // question a double-booking dispute actually turns on.
+        try {
+            AuditLog row = new AuditLog();
+            row.setAction("APPOINTMENT_CANCELLED");
+            row.setEntityType("Appointment");
+            row.setEntityId(saved.getId());
+            row.setBranch(saved.getBranch());
+            row.setActor(saved.getCustomer());
+            row.setOriginNodeId(nodeId);
+            row.setDetails(clip("cancelledBy=" + CurrentUser.email().orElse("unknown")
+                    + " start=" + saved.getStartTime()
+                    + " service=" + saved.getService().getName()
+                    + " therapist=" + saved.getTherapist().getId()
+                    + " reason=\"" + (reason == null ? "" : reason.replace('"', '\''))
+                    + "\"", 1000));
+            auditLogRepository.save(row);
+        } catch (Exception ignored) {
+            // An audit failure must not strand a client with a booking they have
+            // already been told is cancelled.
+        }
+        return toDto(saved);
+    }
+
+    /**
+     * Who may cancel what.
+     *
+     * A customer gets their own, and only before it starts - once the hour has
+     * arrived the therapist is standing there and it is the counter's call, not
+     * an app's. Staff get their whole branch with no time limit, because a
+     * client walking out mid-session is a real event and the day sheet has to be
+     * able to say so.
+     */
+    private void assertCanCancel(Appointment a) {
+        if (CurrentUser.isAdmin()) {
+            return;
+        }
+
+        if (CurrentUser.hasRole(Role.STAFF)) {
+            boolean sameBranch = a.getBranch() != null
+                    && CurrentUser.branchId()
+                        .map(b -> b.equals(a.getBranch().getId()))
+                        .orElse(false);
+            if (!sameBranch) {
+                // 404, not 403 - telling a stranger the id exists is itself a leak.
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
+            }
+            return;
+        }
+
+        boolean owns = a.getCustomer() != null
+                && CurrentUser.id().map(u -> u.equals(a.getCustomer().getId())).orElse(false);
+        if (!owns) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
+        }
+        if (!a.getStartTime().isAfter(LocalDateTime.now(ZoneId.of(timezone)))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "That visit has already started. Please speak to the front desk.");
+        }
     }
 
     // ---------------------------------------------------------------- shared
@@ -434,14 +530,28 @@ public class BookingServiceImpl implements BookingService {
             }
         }
 
+        // Join the counter assessment to the visit it produced, when there is
+        // one. Without this a walk-in's pain scores sit in a form nothing points
+        // at, which is the same read-path gap as B92.
+        Forms walkInForm = null;
+        if (req.formId() != null) {
+            walkInForm = formsRepository.findById(req.formId()).orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.NOT_FOUND, "Assessment not found"));
+            if (walkInForm.getBranch() == null
+                    || !branchId.equals(walkInForm.getBranch().getId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "That assessment belongs to another branch");
+            }
+        }
+
         Assignment assignment = assign(branchId, start, end);
 
         Appointment a = new Appointment();
         a.setBranch(branch);
-        a.setCustomer(null);
+        a.setCustomer(walkInForm == null ? null : walkInForm.getUser());
         a.setWalkInName(name);
         a.setWalkInContact(blankToNull(req.contact()));
-        a.setForm(null);
+        a.setForm(walkInForm);
         a.setService(service);
         a.setTherapist(assignment.therapist());
         a.setRoom(assignment.room());

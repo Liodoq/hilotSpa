@@ -14,6 +14,34 @@
         <div class="offer"><p class="help">Checking which services suit your assessment…</p></div>
       }
 
+      <!-- Reached without an assessment: from Home's "book again", from the
+           session report, or by typing the URL. Process Rule #2 still holds,
+           but refusing and stopping made this screen a dead end - a client who
+           had already answered the form was told to go and answer it again. -->
+      @if (noAssessment() && !loading()) {
+        <div class="offer">
+          <div class="help">BEFORE I CAN SUGGEST ANYTHING</div>
+          @if (previous(); as p) {
+            <div style="font-size:19px">Your last assessment was on <b>{{ p.date }}</b>
+              @if (p.complaint) { — {{ p.complaint }} }</div>
+            <div style="font-size:17px;color:var(--color-ink-600)">
+              I will copy those answers onto a new record dated today. Nothing old is
+              passed off as current, and you can change anything afterwards.</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <button type="button" class="btn btn-primary" [disabled]="reusing()"
+                      (click)="useLast()">{{ reusing() ? 'One moment…' : 'Use it' }}</button>
+              <button type="button" class="btn btn-quiet" [disabled]="reusing()"
+                      (click)="startAssessment()">Answer the form again</button>
+            </div>
+          } @else {
+            <div style="font-size:19px">I need a short pre-assessment before I can suggest
+              anything — it takes about a minute.</div>
+            <button type="button" class="btn btn-primary" style="align-self:flex-start"
+                    (click)="startAssessment()">Start the short form</button>
+          }
+        </div>
+      }
+
       @if (stage() === 'suggest' && picks().length) {
         <div class="offer">
           <div class="help">SUGGESTED FOR YOU</div>
@@ -96,15 +124,61 @@
 
     </div>
 
-    <div class="subtitle"><span class="tag">SUBTITLE</span><span>{{ subtitle() }}</span></div>
+    <!-- The caption band. While the assistant is speaking this tracks the voice
+         word by word (SpeechSynthesis boundary events); while the microphone is
+         open it shows what is being heard, so a misheard word is visible before
+         it is sent. aria-live makes the same information reach a screen reader. -->
+    <div class="subtitle" [class.live]="captionKind() !== 'idle'"
+         role="status" aria-live="polite" aria-atomic="true">
+      <span class="tag">{{ captionKind() === 'listening' ? 'HEARING' : 'SUBTITLE' }}</span>
+      <span class="cap">
+        @switch (captionKind()) {
+          @case ('speaking') {
+            <b>{{ captionSaid() }}</b><span class="dim">{{ captionRest() }}</span>
+          }
+          @case ('listening') { {{ micNote() }} }
+          @default { {{ subtitle() }} }
+        }
+      </span>
+    </div>
+
+    @if (speech.canSpeak || speech.canListen) {
+      <div class="voicebar">
+        @if (speech.canSpeak) {
+          <button type="button" class="vbtn" [class.on]="speech.voiceOn()"
+                  [attr.aria-pressed]="speech.voiceOn()" [attr.aria-label]="voiceLabel()"
+                  (click)="toggleVoice()">
+            {{ speech.voiceOn() ? 'Voice on' : 'Voice off' }}</button>
+          <button type="button" class="vbtn" [disabled]="!lastSpoken()"
+                  aria-label="Say that again" (click)="repeat()">Say it again</button>
+        }
+        <!-- Clients code-switch. One button, and both halves of the API follow it. -->
+        <button type="button" class="vbtn" aria-label="Change the assistant's language"
+                (click)="toggleLang()">
+          {{ speech.lang() === 'fil-PH' ? 'Filipino' : 'English' }}</button>
+        @if (!speech.canListen) {
+          <span class="help" style="margin:0">This browser cannot listen — Chrome or Edge can.
+            Typing works everywhere.</span>
+        }
+      </div>
+    }
+
+    @if (speech.micError()) {
+      <p class="help" role="alert" style="color:var(--color-danger-600);margin:0">
+        {{ speech.micError() }}</p>
+    }
 
     <div class="composer">
-      <button type="button" class="mic" [class.live]="listening()" [attr.aria-pressed]="listening()"
-              [attr.aria-label]="listening() ? 'Stop listening' : 'Speak your answer'"
-              (click)="toggleMic()"><i></i></button>
+      @if (speech.canListen) {
+        <button type="button" class="mic" [class.live]="listening()" [attr.aria-pressed]="listening()"
+                [attr.aria-label]="listening() ? 'Stop listening' : 'Speak your answer'"
+                (click)="toggleMic()"><i></i></button>
+      }
       <input class="input" style="flex:1" [value]="draftText()"
              (input)="draftText.set(val($event))" (keydown.enter)="send()"
-             placeholder="Type instead, or tap the microphone to speak…"
+             [placeholder]="speech.canListen
+               ? 'Type here, or tap the microphone to speak…'
+               : 'Type your message here…'"
              aria-label="Message the booking assistant">
       <button type="button" class="btn btn-primary" style="flex:0 0 auto"
               [disabled]="!draftText().trim() || thinking()" (click)="send()">

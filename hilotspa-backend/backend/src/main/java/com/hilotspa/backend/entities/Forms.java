@@ -19,12 +19,18 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.Check;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 @Data
 @Entity
+// Same rule as Appointment: one of the two must identify whose assessment this
+// is. Enforced here as well as in the service, so a row naming nobody cannot be
+// written by any path, psql included. B85.
+@Check(name = "forms_has_a_client",
+       constraints = "users_id IS NOT NULL OR walk_in_name IS NOT NULL")
 @Table(name = "forms")
 public class Forms {
     
@@ -32,11 +38,23 @@ public class Forms {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
   
+    /**
+     * The account this assessment belongs to - null for a walk-in.
+     *
+     * It was NOT NULL, which meant the one group of clients the Delimitation
+     * says staff handle at the counter were the one group who could not be
+     * assessed. Exactly the B77 defect, one table over. B85.
+     */
     @ManyToOne  
-    @JoinColumn(name = "users_id", nullable = false)
+    @JoinColumn(name = "users_id")
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private User user;
+
+    /** Who this is, when there is no account. The counterpart of
+     *  Appointment.walkInName, and the only thing identifying the record. */
+    @Column
+    private String walkInName;
 
     @ManyToOne
     @JoinColumn(name = "branch_id", nullable = false)

@@ -56,6 +56,39 @@ export class Booking {
       .sort((p, q) => new Date(q.start).getTime() - new Date(p.start).getTime());
   });
 
+  /** The booking awaiting a second tap, and the one currently being cancelled.
+   *  Keyed by id so a page showing three visits cannot confirm the wrong one. */
+  protected confirming = signal<string | null>(null);
+  protected cancelling = signal<string | null>(null);
+
+  askCancel(id: string): void { this.confirming.set(id); }
+  keepIt(): void { this.confirming.set(null); }
+
+  /**
+   * Cancel — 2.32.
+   *
+   * The list is reloaded from the server rather than patched here. If the server
+   * refused, the screen has to show what the database says; a page that quietly
+   * disagrees with it is the B69 family of bug all over again.
+   */
+  async cancel(v: BookingModel): Promise<void> {
+    if (this.cancelling()) return;
+    this.cancelling.set(v.id);
+    try {
+      await this.api.cancelBooking(v.id, 'Cancelled by the client from My bookings');
+      this.confirming.set(null);
+      this.toast.show(`Cancelled — ${v.serviceName}, ${v.label}. Nothing to pay.`, 4200);
+      await this.load();
+    } catch (e: unknown) {
+      const status = (e as { status?: number })?.status;
+      this.toast.show(status === 409
+        ? 'That visit has already started. Please speak to the front desk.'
+        : 'We could not cancel that just now. Please try again, or call the branch.', 4200);
+    } finally {
+      this.cancelling.set(null);
+    }
+  }
+
   constructor() { void this.load(); }
 
   private async load(): Promise<void> {

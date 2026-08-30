@@ -52,18 +52,33 @@ export class Home {
   editProfile(): void { this.router.navigateByUrl('/profile'); }
 
   /**
-   * There is no DELETE /appointments yet, so this hides the card and says so.
+   * Cancelling needs two taps — 2.32.
    *
-   * It deliberately does not claim the visit is cancelled: the row is still
-   * CONFIRMED in the database and the therapist is still blocked. Telling a
-   * client otherwise produces the one bug they discover by turning up.
+   * Not a browser confirm(): a modal dialog blocks the page and reads as an
+   * error to someone who is not expecting it. The button becomes the question
+   * instead, and the answer sits next to it.
    */
-  cancelVisit(): void {
-    const v = this.booking.cancel();
-    if (v) {
-      this.toast.show(
-        `Hidden here only — ${v.service} on ${v.date} is still booked. `
-        + `Call the branch to cancel it.`, 4200);
+  protected confirmingCancel = signal(false);
+  protected cancelling = signal(false);
+
+  askCancel(): void { this.confirmingCancel.set(true); }
+  keepVisit(): void { this.confirmingCancel.set(false); }
+
+  async cancelVisit(): Promise<void> {
+    const v = this.booking.upcoming();
+    if (!v || this.cancelling()) return;
+    this.cancelling.set(true);
+    try {
+      await this.booking.cancel(v.id, 'Cancelled by the client from their home screen');
+      this.confirmingCancel.set(false);
+      this.toast.show(`Cancelled — ${v.service} on ${v.date}. Nothing to pay.`, 4200);
+    } catch (e: unknown) {
+      const status = (e as { status?: number })?.status;
+      this.toast.show(status === 409
+        ? 'That visit has already started. Please speak to the front desk.'
+        : 'We could not cancel that just now. Please try again, or call the branch.', 4200);
+    } finally {
+      this.cancelling.set(false);
     }
   }
 

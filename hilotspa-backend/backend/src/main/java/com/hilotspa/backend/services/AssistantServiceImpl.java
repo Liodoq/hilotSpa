@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -25,6 +26,8 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
+
+import jakarta.annotation.PostConstruct;
 
 import com.hilotspa.backend.config.CurrentUser;
 import com.hilotspa.backend.entities.AuditLog;
@@ -93,6 +96,13 @@ public class AssistantServiceImpl implements AssistantService {
     @Value("${hilotspa.n8n.timeout-ms:5000}")
     private int timeoutMs;
 
+    /** Task 2.17 - shared secret sent on every webhook call. Blank = no header. */
+    @Value("${hilotspa.n8n.auth-header:X-HilotSpa-Key}")
+    private String n8nAuthHeader;
+
+    @Value("${hilotspa.n8n.auth-secret:}")
+    private String n8nSecret;
+
     @Value("${hilotspa.node.id:local-dev}")
     private String nodeId;
 
@@ -104,7 +114,39 @@ public class AssistantServiceImpl implements AssistantService {
 
     /** Slots offered per service. Enough choice to be useful, short enough to
      *  keep the prompt readable and cheap. */
-    private static final int SLOTS_PER_SERVICE = 8;
+    /**
+     * How many open times per service the assistant is allowed to see.
+     *
+     * Raised from 8 when it became clear the old number was not the real
+     * problem - the ORDER was. See spread() below.
+     */
+    /** The booking window the agent may talk about. Capped again server-side by
+     *  hilotspa.booking.max-days. */
+    private static final int SLOT_DAYS = 7;
+
+    /** How many times from any one day. Two - a morning and an afternoon - so
+     *  no single day eats the whole budget and no day is represented by 9:00 AM
+     *  alone. */
+    private static final int SLOTS_PER_DAY = 2;
+
+    /**
+     * How many open times per service the agent may see: enough for every open
+     * day in the window to offer both. Deliberately derived rather than typed,
+     * so raising the window cannot silently starve the later days again.
+     */
+    private static final int SLOTS_PER_SERVICE = SLOT_DAYS * SLOTS_PER_DAY;
+
+    /**
+     * The service the conversation has narrowed to gets its WHOLE calendar.
+     *
+     * Sampling two times a day is right for browsing and wrong for answering
+     * "is there 3 PM on Thursday?" - the agent would say no, meaning only that
+     * 3 PM was not in the sample. Once a client has chosen a treatment, that
+     * one service is sent at full resolution, so a question about a specific
+     * time has a truthful answer and a bookable id behind it. Only one service
+     * is ever expanded, so the request does not grow with the menu.
+     */
+    private static final int SLOTS_FOR_FOCUS = 140;
 
     @Override
     public RecommendResponse recommend(UUID formId) {
@@ -262,7 +304,7 @@ public class AssistantServiceImpl implements AssistantService {
     // ------------------------------------------------------------------ chat
 
     @Override
-    public ChatResponse chat(UUID formId, String message) {
+    public ChatResponse chat(UUID formId, String message, UUID focusServiceId) {
         if (message == null || message.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Message is required");
         }
@@ -280,7 +322,7 @@ public class AssistantServiceImpl implements AssistantService {
                     "REFER", null, null, List.of());
         }
 
-        Map<String, ChatSlot> slotsById = bookableSlots(formId, allowed);
+        Map<String, ChatSlot> slotsById = bookableSlots(formId, allowed, focusServiceId);
 
         RecommendRequest base = buildRequest(form, allowed);
         ChatToN8n body = new ChatToN8n(
@@ -297,6 +339,7 @@ public class AssistantServiceImpl implements AssistantService {
                 base.flags(),
                 allowed,
                 List.copyOf(slotsById.values()),
+                nameOf(allowed, focusServiceId),
                 myBookingSummaries(),
                 List.of());
 
@@ -380,7 +423,13 @@ public class AssistantServiceImpl implements AssistantService {
 
         // Recomputed, not trusted from the client. A slotId that was open when
         // the page rendered may have gone since.
-        Map<String, ChatSlot> slotsById = bookableSlots(formId, allowedServicesFor(form));
+        //
+        // The tapped service is expanded to its FULL calendar. Without this a
+        // time the client can see and tap - one that came from the focused list
+        // - could be missing from the sample recomputed here, and the tap would
+        // fail with "that time has just gone" while the time was still free.
+        Map<String, ChatSlot> slotsById = bookableSlots(
+                formId, allowedServicesFor(form), serviceIdIn(request.slotId()));
         ChatSlot slot = slotsById.get(request.slotId());
         if (slot == null) {
             return new ChatResponse(
@@ -419,15 +468,20 @@ public class AssistantServiceImpl implements AssistantService {
                     "chat-" + form.getId() + "-" + slot.slotId(),
                     consent));
             // The times just changed - hand back the fresh set, not the stale one.
+            // Still focused on the treatment just booked: a client who books one
+            // visit often wants a second, and that is the calendar they are
+            // looking at.
             return new ChatResponse(reply, "BOOKED", booking, null,
-                    List.copyOf(bookableSlots(form.getId(), allowedServicesFor(form)).values()));
+                    List.copyOf(bookableSlots(form.getId(), allowedServicesFor(form),
+                            slot.serviceId()).values()));
         } catch (ResponseStatusException e) {
             if (e.getStatusCode() == HttpStatus.CONFLICT) {
                 return new ChatResponse(
                         "That time was taken just before I could hold it. "
                         + "Tap another below and I will book it.",
                         "CONFLICT", null, null,
-                        List.copyOf(bookableSlots(form.getId(), allowedServicesFor(form)).values()));
+                        List.copyOf(bookableSlots(form.getId(), allowedServicesFor(form),
+                                slot.serviceId()).values()));
             }
             return new ChatResponse(frontDesk(), "FALLBACK", null, devOnly(e.toString()),
                     List.copyOf(slotsById.values()));
@@ -447,15 +501,15 @@ public class AssistantServiceImpl implements AssistantService {
      * what the confirm endpoint validates a tapped slotId against, so the tap
      * path and the conversational path are checked identically.
      */
-    private Map<String, ChatSlot> bookableSlots(UUID formId, List<AllowedService> allowed) {
+    private Map<String, ChatSlot> bookableSlots(UUID formId, List<AllowedService> allowed,
+                                               UUID focusServiceId) {
         Map<String, ChatSlot> slotsById = new LinkedHashMap<>();
         for (AllowedService svc : allowed) {
+            boolean focused = svc.serviceId().equals(focusServiceId);
             try {
-                for (Slot slot : bookingService
-                        .availability(formId, svc.serviceId(), null, 7).slots()) {
-                    if (countFor(slotsById, svc.serviceId()) >= SLOTS_PER_SERVICE) {
-                        break;
-                    }
+                List<Slot> open = bookingService
+                        .availability(formId, svc.serviceId(), null, SLOT_DAYS).slots();
+                for (Slot slot : focused ? cap(open, SLOTS_FOR_FOCUS) : spread(open)) {
                     String key = svc.serviceId() + "@" + slot.slotId();
                     slotsById.put(key, new ChatSlot(key, svc.serviceId(), svc.name(),
                             slot.label(), svc.durationMinutes(), svc.price(),
@@ -470,6 +524,102 @@ public class AssistantServiceImpl implements AssistantService {
             }
         }
         return slotsById;
+    }
+
+    /**
+     * Choose WHICH of a service's open times the assistant is shown.
+     *
+     * The old rule was "the first eight", and availability comes back in
+     * chronological order - so in practice that meant "the first eight of the
+     * earliest open day": 9:00 through 12:30, and nothing else all week. A
+     * client asking about any later date was told the service was not available
+     * then. That was false: the times existed, they had simply been cut off
+     * before the agent could see them. B89.
+     *
+     * The rule now is coverage first. Every open day in the window gets its
+     * earliest time before any day gets a second one, and the second pick comes
+     * from the middle of that day so mornings and afternoons are both on offer.
+     * The agent can therefore answer truthfully about any date in the window,
+     * which is what "Analyzing available time, dates, and resources" in the
+     * Scope actually promises.
+     */
+    /**
+     * The service a slotId belongs to.
+     *
+     * The key is "serviceId@startIsoTime", built in bookableSlots. Reading it
+     * back is what lets the tap path expand exactly the service that was
+     * tapped, without the client being trusted to tell us which one it was -
+     * an id that does not parse simply expands nothing and the tap falls
+     * through to the normal "that time has gone" answer.
+     */
+    /** The focused service's display name, for the prompt. Null when the client
+     *  has not chosen one - which is also the honest answer to "which calendar
+     *  is complete?" at that point: none of them. */
+    private static String nameOf(List<AllowedService> allowed, UUID serviceId) {
+        if (serviceId == null) {
+            return null;
+        }
+        for (AllowedService a : allowed) {
+            if (a.serviceId().equals(serviceId)) {
+                return a.name() + ", " + a.durationMinutes() + " minutes";
+            }
+        }
+        return null;
+    }
+
+    private static UUID serviceIdIn(String slotId) {
+        int at = slotId == null ? -1 : slotId.indexOf('@');
+        if (at <= 0) {
+            return null;
+        }
+        try {
+            return UUID.fromString(slotId.substring(0, at));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /** The whole calendar, with a ceiling so a pathological configuration - a
+     *  five-minute slot step, say - cannot produce an unbounded request. */
+    private static List<Slot> cap(List<Slot> available, int max) {
+        return available.size() <= max ? available : available.subList(0, max);
+    }
+
+    private static List<Slot> spread(List<Slot> available) {
+        Map<LocalDate, List<Slot>> byDay = new LinkedHashMap<>();
+        for (Slot s : available) {
+            if (s.start() == null) {
+                continue;
+            }
+            byDay.computeIfAbsent(s.start().toLocalDate(), d -> new ArrayList<>()).add(s);
+        }
+
+        List<Slot> out = new ArrayList<>();
+        // Pass 1 - one time on every open day, nearest first.
+        for (List<Slot> day : byDay.values()) {
+            if (out.size() >= SLOTS_PER_SERVICE) {
+                break;
+            }
+            out.add(day.get(0));
+        }
+        // Pass 2 - a middle-of-the-day time, nearest days first, while there is
+        // budget left. Without this every offer is 9:00 AM.
+        if (SLOTS_PER_DAY > 1) {
+            for (List<Slot> day : byDay.values()) {
+                if (out.size() >= SLOTS_PER_SERVICE) {
+                    break;
+                }
+                if (day.size() < 2) {
+                    continue;
+                }
+                Slot mid = day.get(day.size() / 2);
+                if (!out.contains(mid)) {
+                    out.add(mid);
+                }
+            }
+        }
+        out.sort(Comparator.comparing(Slot::start));
+        return out;
     }
 
     private static final DateTimeFormatter DAY_FMT =
@@ -503,15 +653,6 @@ public class AssistantServiceImpl implements AssistantService {
         return start == null ? "" : start.format(TIME_FMT);
     }
 
-    private static int countFor(Map<String, ChatSlot> slots, UUID serviceId) {
-        int n = 0;
-        for (ChatSlot s : slots.values()) {
-            if (s.serviceId().equals(serviceId)) {
-                n++;
-            }
-        }
-        return n;
-    }
 
     /**
       * One line per booking the CALLER already has.
@@ -616,15 +757,39 @@ public class AssistantServiceImpl implements AssistantService {
         factory.setConnectTimeout(Duration.ofMillis(timeoutMs));
         factory.setReadTimeout(Duration.ofMillis(timeoutMs));
 
-        return RestClient.builder()
+        RestClient.RequestBodySpec request = RestClient.builder()
                 .requestFactory(factory)
                 .build()
                 .post()
                 .uri(n8nUrl + path)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .body(type);
+                .contentType(MediaType.APPLICATION_JSON);
+
+        // Task 2.17. Without this, anything that can reach port 5678 can drive
+        // the assistant and spend the project's Vertex credits. The header is
+        // omitted when unset so a fresh clone still runs - and the application
+        // WARNS at startup rather than failing quietly open.
+        if (n8nSecret != null && !n8nSecret.isBlank()) {
+            request = request.header(n8nAuthHeader, n8nSecret);
+        }
+
+        return request.body(body).retrieve().body(type);
+    }
+
+    /**
+     * Says out loud that the assistant is reachable by anyone on the network.
+     *
+     * A security gap you have to remember is a security gap. Same pattern as the
+     * seeder's warnings about missing prices and unsigned rules: the system
+     * states its own readiness at boot instead of leaving it to be discovered.
+     */
+    @PostConstruct
+    void warnIfWebhooksAreOpen() {
+        if (n8nSecret == null || n8nSecret.isBlank()) {
+            log.warn("n8n webhooks are UNAUTHENTICATED - N8N_WEBHOOK_SECRET is not set. "
+                    + "Anything that can reach {} can drive the assistant. Acceptable on a dev "
+                    + "laptop only; set it before any real client record exists (task 2.17).",
+                    n8nUrl);
+        }
     }
 
     // -------------------------------------------------------------- validate

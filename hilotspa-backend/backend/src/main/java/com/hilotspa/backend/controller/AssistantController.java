@@ -51,7 +51,8 @@ public class AssistantController {
     @PostMapping("/chat/{formId}")
     public ResponseEntity<ChatResponse> chat(@PathVariable UUID formId,
                                              @RequestBody ChatRequest body) {
-        return ResponseEntity.ok(assistantService.chat(formId, body.message()));
+        return ResponseEntity.ok(
+                assistantService.chat(formId, body.message(), body.focusServiceId()));
     }
 
     /**

@@ -10,3 +10,27 @@
   .split { grid-template-columns: 1fr; height: auto; }
   .context { border-left: 0; border-top: 1.5px solid var(--color-line); }
 }
+
+/* ---- 2.6 voice + subtitles ------------------------------------------------
+   The band is always present so the layout never jumps between speaking and
+   silent; .live only brightens it. .cap b is the part already spoken. */
+.subtitle { transition: background .2s ease; }
+.subtitle.live { background: var(--color-forest-700); }
+.subtitle .cap { min-height: 1.4em; }
+.subtitle .cap b { font-weight: 600; }
+.subtitle .cap .dim { opacity: .55; }
+
+.voicebar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.vbtn { font-size: 17px; padding: 9px 16px; border-radius: 999px; background: #fff;
+  border: 1.5px solid var(--color-line); color: var(--color-forest-900); min-height: 44px; }
+.vbtn:disabled { opacity: .45; }
+.vbtn.on { background: var(--color-forest-700); border-color: var(--color-forest-700); color: #fff; }
+
+/* The microphone pulses while it is open, so "is it listening?" is answerable
+   from across the room rather than from the caption text. */
+.mic.live { animation: micpulse 1.2s ease-in-out infinite; }
+@keyframes micpulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(45, 90, 61, .55); }
+  50%      { box-shadow: 0 0 0 14px rgba(45, 90, 61, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .mic.live { animation: none; } }

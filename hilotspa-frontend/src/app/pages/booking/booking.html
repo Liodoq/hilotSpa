@@ -51,8 +51,31 @@
         <button type="button" class="btn btn-ghost btn-block"
                 (click)="addToCalendar(v)">Add to my calendar</button>
         <button type="button" class="btn btn-quiet btn-block" routerLink="/services">Book another visit</button>
+
+        <!-- Two taps, not a modal confirm(): a dialog blocks the page and reads
+             as an error to someone who was not expecting one. -->
+        @if (confirming() === v.id) {
+          <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:19px;color:var(--color-forest-900)">
+              Cancel <b>{{ v.serviceName }}</b> on {{ v.label }}?</div>
+            <div class="help">Your therapist and room are released straight away. Nothing is
+              charged either way — you have not paid.</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button type="button" class="btn btn-danger" [disabled]="cancelling() === v.id"
+                      (click)="cancel(v)">
+                {{ cancelling() === v.id ? 'Cancelling…' : 'Yes, cancel it' }}</button>
+              <button type="button" class="btn btn-quiet" [disabled]="cancelling() === v.id"
+                      (click)="keepIt()">Keep it</button>
+            </div>
+          </div>
+        } @else {
+          <button type="button" class="btn btn-danger btn-block"
+                  (click)="askCancel(v.id)">Cancel this visit</button>
+        }
+
         <div class="note"><span class="b"></span>
-          <span>Need to change it? Reschedule from <b>My bookings</b>, or call the branch.</span></div>
+          <span>Need a different time? Cancel and book again from the assistant, or call the
+          branch.</span></div>
       </div>
     </div>
 
@@ -74,6 +97,16 @@
               <span class="pill ok"><i class="dotx"></i>{{ v.status }}</span>
               <button type="button" class="btn btn-ghost btn-sm"
                       (click)="addToCalendar(v)">Add to calendar</button>
+              @if (confirming() === v.id) {
+                <button type="button" class="btn btn-danger btn-sm" [disabled]="cancelling() === v.id"
+                        (click)="cancel(v)">
+                  {{ cancelling() === v.id ? 'Cancelling…' : 'Yes, cancel' }}</button>
+                <button type="button" class="btn btn-quiet btn-sm" [disabled]="cancelling() === v.id"
+                        (click)="keepIt()">Keep it</button>
+              } @else {
+                <button type="button" class="btn btn-danger btn-sm"
+                        (click)="askCancel(v.id)">Cancel</button>
+              }
             </div>
           </div>
         }

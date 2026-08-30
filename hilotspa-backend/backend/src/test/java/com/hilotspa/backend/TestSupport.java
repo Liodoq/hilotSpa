@@ -1,5 +1,6 @@
 package com.hilotspa.backend;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -77,6 +78,10 @@ final class TestSupport {
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body)).andReturn();
+    }
+
+    MvcResult deleteRaw(String token, String path) throws Exception {
+        return mvc.perform(delete(path).header("Authorization", "Bearer " + token)).andReturn();
     }
 
     JsonNode parse(MvcResult result) throws Exception {

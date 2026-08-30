@@ -16,7 +16,34 @@
         <div class="stat"><div class="n">{{ d.nodesOnline }} / {{ d.nodesTotal }}</div><div class="k">Nodes online</div></div>
       </div>
 
-      @if (readiness(); as r) {
+      <!-- Readiness first, because this system degrades quietly by design: when
+         Vertex or n8n dies the client still gets a sensible answer and nothing
+         else on this page would say so. -->
+    @if (health(); as h) {
+      <div class="card" style="display:flex;flex-direction:column;gap:12px"
+           [style.border]="'2.5px solid ' + (h.state === 'OK' ? 'var(--color-forest-700)'
+             : h.state === 'DOWN' ? 'var(--color-danger-600)' : 'var(--color-gold-700)')">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <span class="pill" [class.ok]="h.state === 'OK'" [class.warn]="h.state === 'DEGRADED'"
+                [class.bad]="h.state === 'DOWN'"><i class="dotx"></i>{{ h.state }}</span>
+          <span style="font-size:19px">{{ h.summary }}</span>
+          <span class="help" style="margin-left:auto">node {{ h.nodeId }} · {{ h.timezone }}</span>
+        </div>
+        @if (faults().length) {
+          <hr class="hr">
+          @for (c of faults(); track c.name) {
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <span class="pill" style="flex:0 0 auto"
+                    [class.warn]="c.state === 'DEGRADED'" [class.bad]="c.state === 'DOWN'">
+                {{ c.name }}</span>
+              <span style="font-size:17px;color:var(--color-ink-600)">{{ c.detail }}</span>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    @if (readiness(); as r) {
         @if (blocked()) {
           <div class="note bad"><span class="b"></span>
             <span>
