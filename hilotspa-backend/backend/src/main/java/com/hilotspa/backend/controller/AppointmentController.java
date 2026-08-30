@@ -115,8 +115,16 @@ public class AppointmentController {
             }
             Availability fresh = bookingService.availability(
                     body.formId(), body.serviceId(), body.start().toLocalDate(), 7);
+            // Use the service's own reason when it gave one. Two different
+            // conflicts arrive here - the slot went to somebody else, and the
+            // CLIENT is already booked at that hour (rule 4, task 2.36) - and
+            // flattening both into "that time was just taken" tells a client
+            // something false about a time that is, for everyone else, free.
+            String reason = e.getReason();
             return ResponseEntity.status(HttpStatus.CONFLICT).body(new SlotTaken(
-                    "That time was just taken. Here are the closest times still open.",
+                    reason != null && !reason.isBlank()
+                            ? reason
+                            : "That time was just taken. Here are the closest times still open.",
                     fresh.slots().stream().limit(4).toList()));
         }
     }

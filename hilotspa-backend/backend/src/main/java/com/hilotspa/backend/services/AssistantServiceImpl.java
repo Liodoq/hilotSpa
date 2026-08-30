@@ -477,9 +477,15 @@ public class AssistantServiceImpl implements AssistantService {
                             slot.serviceId()).values()));
         } catch (ResponseStatusException e) {
             if (e.getStatusCode() == HttpStatus.CONFLICT) {
+                // Spring's own words when it has them: "the slot went" and "you
+                // are already booked then" are different problems with different
+                // fixes, and only one of them is solved by tapping another time.
+                String reason = e.getReason();
                 return new ChatResponse(
-                        "That time was taken just before I could hold it. "
-                        + "Tap another below and I will book it.",
+                        reason != null && !reason.isBlank()
+                                ? reason + " The other open times are below."
+                                : "That time was taken just before I could hold it. "
+                                  + "Tap another below and I will book it.",
                         "CONFLICT", null, null,
                         List.copyOf(bookableSlots(form.getId(), allowedServicesFor(form),
                                 slot.serviceId()).values()));

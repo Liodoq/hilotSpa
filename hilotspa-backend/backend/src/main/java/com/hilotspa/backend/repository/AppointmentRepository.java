@@ -28,6 +28,23 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
      */
     List<Appointment> findByFormId(UUID formId);
 
+    /**
+     * Does this client already have a live booking overlapping this window?
+     *
+     * Rule 4 (task 2.36). The three rules the spa stated - a free therapist, a
+     * free room, no clash with an existing booking - are all about the SPA's
+     * resources. None of them notices that one person cannot be in two rooms at
+     * once, so a client could hold a 9:00 Signature and a 9:00 Ventosa with
+     * every rule satisfied.
+     *
+     * Half-open, matching overlaps() everywhere else: a 3 PM finish and a 3 PM
+     * start do not collide.
+     */
+
+    List<Appointment> findByCustomerIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+            UUID customerId, Collection<AppointmentStatus> statuses,
+            LocalDateTime end, LocalDateTime start);
+
     /** The same, for a page of forms, so a history list is one query not N. */
     List<Appointment> findByFormIdIn(Collection<UUID> formIds);
 

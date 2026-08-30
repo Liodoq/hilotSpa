@@ -63,6 +63,40 @@
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+		<!--
+		  Task 0.7 / defence risk R12.
+
+		  ddl-auto=update is not a migration strategy for a system whose whole
+		  claim is that N independent branch nodes hold the same schema. It
+		  silently declines to relax a NOT NULL or add a check constraint to a
+		  populated table - which is exactly what bit B66, B77 and B85 - so nodes
+		  drift apart in ways nothing reports. Flyway makes the schema a numbered,
+		  ordered, identical sequence every node applies.
+
+		  IT MUST BE THE STARTER, NOT flyway-core.
+
+		  Under Spring Boot 3, flyway-core on the classpath was enough: every
+		  auto-configuration lived in one spring-boot-autoconfigure jar. Boot 4
+		  split auto-configuration into one module per technology, so
+		  FlywayAutoConfiguration now ships in its own module that arrives with
+		  spring-boot-starter-flyway. With only flyway-core present, the class
+		  FlywayAutoConfiguration is @ConditionalOnClass-ing against is there, the
+		  auto-configuration itself is NOT, and every spring.flyway.* property
+		  becomes an inert string. No error, no warning, no log line - the
+		  application starts perfectly and simply never migrates.
+
+		  flyway-database-postgresql stays: it is a separate artifact from Flyway
+		  10 onward, and without it the core library cannot talk to Postgres.
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>

@@ -85,6 +85,68 @@ class DoubleBookingTest {
                 """.formatted(formId, serviceId, start, key);
     }
 
+    // ---------------------------------------------------------- rule 4
+
+    /**
+     * Task 2.36 - one client cannot be in two rooms at once.
+     *
+     * The spa stated three rules and all three are about the SPA's resources: a
+     * free therapist, a free room, no clash with an existing booking. None of
+     * them looks at the CLIENT, so a 9:00 Signature and a 9:00 Ventosa satisfied
+     * every one of them - different therapist, different room - and left two
+     * therapists waiting for one person.
+     *
+     * The message is asserted, not just the status. Bulan has a spare
+     * therapist-and-room pair at that minute, so a bare 409 could equally mean
+     * the branch ran out, and a test that cannot tell those apart proves
+     * nothing.
+     */
+    @Test
+    @DisplayName("a client cannot book two treatments at the same time")
+    void oneClientCannotBeInTwoRoomsAtOnce() throws Exception {
+        TestSupport api = api();
+        Fixture f = setUp(api);
+
+        MvcResult first = api.postRaw(f.anaToken(), "/api/v1/appointments",
+                bookBody(f.anaFormId(), f.serviceId(), f.start(), "ana-rule4-1"));
+        assertThat(first.getResponse().getStatus()).isEqualTo(201);
+
+        // A DIFFERENT treatment, same minute. A free therapist and a free room
+        // both exist for it - only the client is unavailable.
+        String otherService = api.serviceIdNamed(f.anaToken(), "Ventosa", 30);
+        MvcResult second = api.postRaw(f.anaToken(), "/api/v1/appointments",
+                bookBody(f.anaFormId(), otherService, f.start(), "ana-rule4-2"));
+
+        assertThat(second.getResponse().getStatus()).isEqualTo(409);
+        assertThat(second.getResponse().getContentAsString())
+                .as("the refusal must say the CLIENT is busy, not that the slot is gone - "
+                    + "they need different things done about them")
+                .contains("You already have");
+    }
+
+    /**
+     * The other half: rule 4 is about the client, not the minute.
+     *
+     * Without this, a rule that simply blocked the whole time slot for everyone
+     * would pass the test above and quietly halve the spa's capacity.
+     */
+    @Test
+    @DisplayName("a different client can still book that same minute")
+    void ruleFourDoesNotBlockTheSlotItself() throws Exception {
+        TestSupport api = api();
+        Fixture f = setUp(api);
+
+        assertThat(api.postRaw(f.anaToken(), "/api/v1/appointments",
+                bookBody(f.anaFormId(), f.serviceId(), f.start(), "ana-rule4-3"))
+                .getResponse().getStatus()).isEqualTo(201);
+
+        MvcResult ben = api.postRaw(f.benToken(), "/api/v1/appointments",
+                bookBody(f.benFormId(), f.serviceId(), f.start(), "ben-rule4"));
+        assertThat(ben.getResponse().getStatus())
+                .as("Ben has no booking at that time, and Bulan has a second therapist and room")
+                .isEqualTo(201);
+    }
+
     // ------------------------------------------------------- exhaustion
 
     @Test

@@ -12,7 +12,10 @@ import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,6 +57,13 @@ import com.hilotspa.backend.repository.TherapistRepository;
  */
 @Service
 public class BookingServiceImpl implements BookingService {
+
+    /**
+     * Named LOG, not `log`, on purpose: audit() builds a local AuditLog called
+     * `log`, and a field it silently shadows is a trap for whoever edits this
+     * next.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(BookingServiceImpl.class);
 
     /** An appointment in any of these states occupies its therapist and room. */
     private static final List<AppointmentStatus> BLOCKING = List.of(
@@ -206,6 +216,25 @@ public class BookingServiceImpl implements BookingService {
             }
         }
 
+        // Rule 4 - a client cannot be in two rooms at once (task 2.36).
+        //
+        // The spa's three rules are all about the SPA's resources: a free
+        // therapist, a free room, no clash with an existing booking. None of
+        // them notices the CLIENT. The idempotency guard above only catches an
+        // identical repeat, so nothing stopped one person holding a 9:00
+        // Signature and a 9:00 Ventosa - different therapist, different room,
+        // every stated rule satisfied, and two therapists standing idle at 9:00.
+        List<Appointment> clash = appointmentRepository
+                .findByCustomerIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+                        customerId, BLOCKING, end, start);
+        if (!clash.isEmpty()) {
+            Appointment other = clash.get(0);
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "You already have " + other.getService().getName() + " booked at "
+                    + other.getStartTime().format(LABEL)
+                    + ". Cancel that first, or choose a different time.");
+        }
+
         Assignment assignment = assign(branchId, start, end);
         Therapist therapist = assignment.therapist();
         Room room = assignment.room();
@@ -228,7 +257,7 @@ public class BookingServiceImpl implements BookingService {
         a.setPriceAtBooking(service.getPrice());
         a.setOriginNodeId(nodeId);
 
-        Appointment saved = appointmentRepository.save(a);
+        Appointment saved = writeOrConflict(a);
         audit(saved, req.consentText());
         return toDto(saved);
     }
@@ -380,23 +409,49 @@ public class BookingServiceImpl implements BookingService {
      * words are what authorised the booking. Storing them is what makes this
      * auditable rather than merely convenient.
      */
+    /**
+     * Write the appointment, and translate the database's veto into an answer.
+     *
+     * The EXCLUDE constraints added in V2 are the backstop for the one case
+     * assign() cannot cover: two transactions passing the same check four
+     * milliseconds apart. When that happens the loser's INSERT is rejected by
+     * Postgres, and the client must be told "that time just went" - not handed a
+     * 500 for a race the system handled correctly.
+     *
+     * saveAndFlush, not save: JPA is free to defer the INSERT to commit, by
+     * which point this catch block is long out of scope and the violation
+     * surfaces as an unhandled 500 from somewhere unrelated.
+     */
+    private Appointment writeOrConflict(Appointment a) {
+        try {
+            return appointmentRepository.saveAndFlush(a);
+        } catch (DataIntegrityViolationException e) {
+            LOG.warn("Appointment rejected by the database at {} for therapist {}: {}",
+                    a.getStartTime(),
+                    a.getTherapist() == null ? null : a.getTherapist().getId(),
+                    e.getMostSpecificCause().getMessage());
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "That time was just taken. Please choose another.");
+        }
+    }
+
     private void audit(Appointment a, String consentText) {
         try {
-            AuditLog log = new AuditLog();
-            log.setAction("APPOINTMENT_CREATED");
-            log.setEntityType("Appointment");
-            log.setEntityId(a.getId());
-            log.setBranch(a.getBranch());
+            AuditLog row = new AuditLog();
+            row.setAction("APPOINTMENT_CREATED");
+            row.setEntityType("Appointment");
+            row.setEntityId(a.getId());
+            row.setBranch(a.getBranch());
             // Null for a walk-in - there is no account to attribute it to. The
             // details line carries who recorded it instead.
-            log.setActor(a.getCustomer());
-            log.setOriginNodeId(nodeId);
-            log.setDetails(clip("source=CHATBOT start=" + a.getStartTime()
+            row.setActor(a.getCustomer());
+            row.setOriginNodeId(nodeId);
+            row.setDetails(clip("source=CHATBOT start=" + a.getStartTime()
                     + " service=" + a.getService().getName()
                     + " therapist=" + a.getTherapist().getId()
                     + " consent=\"" + (consentText == null ? "" : consentText.replace('"', '\''))
                     + "\"", 1000));
-            auditLogRepository.save(log);
+            auditLogRepository.save(row);
         } catch (Exception ignored) {
             // An audit failure must not undo a booking the client already has.
         }
@@ -564,7 +619,7 @@ public class BookingServiceImpl implements BookingService {
         a.setOriginNodeId(nodeId);
         a.setNotes(blankToNull(req.notes()));
 
-        Appointment saved = appointmentRepository.save(a);
+        Appointment saved = writeOrConflict(a);
         audit(saved, "Walk-in recorded at the counter by "
                 + CurrentUser.email().orElse("staff"));
         return toDto(saved);
