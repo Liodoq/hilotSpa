@@ -4,7 +4,18 @@
     <div class="col">
       <div class="topline">
         <button type="button" class="link" (click)="back()">&larr; Back to my sessions</button>
-        <span class="pill mute">Read only</span>
+        <div style="display:flex;gap:12px;align-items:center">
+          <button type="button" class="btn btn-quiet btn-sm" (click)="print()">Print or save as PDF</button>
+          <span class="pill mute">Read only</span>
+        </div>
+      </div>
+
+      <!-- Print-only masthead. On screen the app bar already says whose spa this
+           is; on paper the sheet would otherwise be anonymous, and an anonymous
+           clinical record is not much use in a folder. -->
+      <div class="printhead">
+        <div class="pbrand">Knead Wellness Spa</div>
+        <div class="pmeta">Session record · {{ s.branch }}</div>
       </div>
 
       <div class="head">
@@ -60,8 +71,29 @@
           }
 
           <hr class="hr">
+
+          <!-- H9 - the safety checklist used to be a sentence buried in the free
+               text below. On a printed sheet in a client's folder this is the
+               part the practitioner reads first. -->
+          <h2 class="t-s" style="font-size:23px">Safety checklist</h2>
+          @if (s.flags.length) {
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              @for (f of s.flags; track f) { <span class="pill warn">{{ f }}</span> }
+            </div>
+          } @else {
+            <p class="s">Nothing was flagged at the pre-assessment.</p>
+          }
+          @if (s.pressure) {
+            <p class="help" style="margin-top:6px">Preferred pressure: <b>{{ s.pressure }}</b></p>
+          }
+
+          <hr class="hr">
           <h2 class="t-s" style="font-size:23px">Notes</h2>
-          <p style="font-size:19px;line-height:1.55;color:var(--color-ink-600)">{{ s.notes }}</p>
+          @if (s.notes) {
+            <p style="font-size:19px;line-height:1.55;color:var(--color-ink-600)">{{ s.notes }}</p>
+          } @else {
+            <p class="s">No additional notes for this visit.</p>
+          }
         </div>
 
         <aside style="display:flex;flex-direction:column;gap:16px">
@@ -81,6 +113,18 @@
             Book this again</button>
         </aside>
       </div>
+    </div>
+  } @else if (!store.loaded()) {
+    <div class="col" style="text-align:center;padding-top:60px">
+      <h1 class="t">Opening your session record…</h1>
+    </div>
+  } @else if (store.unreachable()) {
+    <div class="col" style="text-align:center;padding-top:60px">
+      <h1 class="t">We cannot reach the spa right now</h1>
+      <p class="s">Your record is safe — we just cannot read it from here at the moment.
+        Try again shortly, or ask the front desk.</p>
+      <button type="button" class="btn btn-ghost" style="align-self:center" (click)="back()">
+        Back to my sessions</button>
     </div>
   } @else {
     <div class="col" style="text-align:center;padding-top:60px">

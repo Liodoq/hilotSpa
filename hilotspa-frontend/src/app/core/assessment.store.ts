@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import {
   AnatomicalRegion, AssessmentIntent, BodyView, ComplaintType,
-  FormsModel, PatientIntakeModel,
+  FormsModel, PatientIntakeModel, PressurePreference, SafetyFlag,
 } from './models';
 import { ProfileStore } from './profile.store';
 import { Side } from './body-hotspots';
@@ -33,8 +33,8 @@ export interface AssessmentDraft {
   hasTherapy: boolean | null;
   therapyKind: string;
   therapyWhen: string;
-  flags: string[];
-  pressure: string | null;
+  flags: SafetyFlag[];
+  pressure: PressurePreference | null;
   consented: boolean;
 }
 
@@ -109,7 +109,7 @@ export class AssessmentStore {
     });
   }
 
-  toggleFlag(f: string): void {
+  toggleFlag(f: SafetyFlag): void {
     this.draft.update(d => ({
       ...d,
       flags: d.flags.includes(f) ? d.flags.filter(x => x !== f) : [...d.flags, f],
@@ -145,26 +145,29 @@ export class AssessmentStore {
         ? [d.therapyKind, d.therapyWhen].filter(Boolean).join(', ') || null
         : null,
       status: 'SUBMITTED',
-      remarks: buildRemarks(d),
+      // H9 / B44 - real columns at last. These used to be flattened into a
+      // sentence inside remarks, which meant nobody could query them, no
+      // protocol rule could key on them, and the assistant was told only that
+      // "something was noted".
+      safetyFlags: d.flags,
+      pressurePreference: d.pressure,
+      // remarks is now what it always should have been: free text, and empty
+      // unless a human actually wrote something.
+      remarks: null,
       painPoints: points,
     };
   }
 }
 
-/**
- * What is LEFT of the stopgap.
+/*
+ * buildRemarks() lived here.
  *
- * Occupation now lives on Demographics (§H1) and the two history answers have
- * real columns (§H2), so they are gone from here.
+ * It flattened the safety checklist and the pressure preference into a sentence
+ * because neither had a column: "Flagged: Pregnant, Taking blood thinners |
+ * Preferred pressure: Firm". Both have real columns as of 2026-08-30 (H9 / B44),
+ * so the stopgap is gone and `remarks` is free text again.
  *
- * The safety checklist and the pressure preference still have nowhere
- * structured to go. They are the input to the contraindication filter, so they
- * deserve real columns — logged as §H9. Until then they are packed here rather
- * than silently dropped.
+ * Kept as a note rather than deleted silently: assessments written before that
+ * date still carry those sentences in remarks, and anyone reading old records
+ * needs to know why.
  */
-function buildRemarks(d: AssessmentDraft): string {
-  const bits: string[] = [];
-  if (d.flags.length) bits.push(`Flagged: ${d.flags.join(', ')}`);
-  if (d.pressure) bits.push(`Preferred pressure: ${d.pressure}`);
-  return bits.join(' | ');
-}

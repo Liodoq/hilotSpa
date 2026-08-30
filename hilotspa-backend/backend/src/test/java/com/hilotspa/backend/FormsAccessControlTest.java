@@ -1,6 +1,9 @@
 package com.hilotspa.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.ArrayList;
+import java.util.List;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -77,6 +80,60 @@ class FormsAccessControlTest {
             }
         }
         throw new IllegalStateException("No seeded branch matching: " + text);
+    }
+
+    /**
+     * H9 / B44 - the safety checklist survives the round trip as structured data.
+     *
+     * It used to be flattened into a sentence inside `remarks`, so this test
+     * would have been impossible to write: there was nothing to assert on but a
+     * substring. Reading the flags back by name is the difference between a
+     * record the practitioner's rules can key on and a note somebody has to read.
+     */
+    @Test
+    @DisplayName("safety flags and the pressure preference are stored as data, not prose")
+    void theSafetyChecklistRoundTrips() throws Exception {
+        String ana = tokenFor("ana@customer.test");
+        String branchId = branchIdContaining(ana, "Bulan");
+
+        String body = """
+                {
+                  "branchId": "%s",
+                  "intent": "PAIN",
+                  "mainComplaint": "LOWER_BACK_PAIN",
+                  "mainComplaintDuration": "3 months",
+                  "hasTherapy": false,
+                  "status": "PENDING",
+                  "safetyFlags": ["BLOOD_THINNERS", "OSTEOPOROSIS"],
+                  "pressurePreference": "LIGHT",
+                  "painPoints": []
+                }
+                """.formatted(branchId);
+
+        String created = mvc.perform(post("/api/v1/forms/create")
+                        .header("Authorization", "Bearer " + ana)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode saved = json.readTree(created);
+        String id = saved.get("id").asText();
+
+        // Read it back through the API rather than trusting the create response -
+        // an @ElementCollection that is written but never persisted would still
+        // echo correctly on the way out.
+        JsonNode reread = getAs(ana, "/api/v1/forms/" + id);
+
+        assertThat(reread.get("pressurePreference").asText()).isEqualTo("LIGHT");
+
+        List<String> flags = new ArrayList<>();
+        for (JsonNode f : reread.get("safetyFlags")) {
+            flags.add(f.asText());
+        }
+        assertThat(flags)
+                .as("both ticked boxes must come back, by name")
+                .containsExactlyInAnyOrder("BLOOD_THINNERS", "OSTEOPOROSIS");
     }
 
     /**

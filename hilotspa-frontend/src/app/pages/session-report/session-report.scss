@@ -20,3 +20,64 @@
 .thumbs ::ng-deep .mk { width: 26px; height: 26px; font-size: 13px; border-width: 2px; }
 .thumbs ::ng-deep .halo, .thumbs ::ng-deep .pin { display: none; }
 @media (max-width: 1200px) { .cols { grid-template-columns: 1fr; } }
+
+/* Screen only. On paper the masthead replaces the app bar. */
+.printhead { display: none; }
+
+/* ---------------------------------------------------------------------------
+   Print / Save as PDF.
+
+   A session record is the one screen in this app with a life outside the
+   browser: the spa files paper, and a client wants to take the before/after
+   away with them. Everything interactive is removed rather than merely hidden
+   from view, because a printed button is a button nobody can press.
+
+   Colours are forced with print-color-adjust: browsers strip backgrounds by
+   default, and the pain scores ARE the colour - a grey 8 next to a grey 3 loses
+   the whole point of the page.
+--------------------------------------------------------------------------- */
+@media print {
+  :host { background: #fff; min-height: 0; }
+
+  /* The app bar, the toast host, and every control. */
+  app-nav, app-toast, .topline, .btn, button, .link { display: none !important; }
+
+  .printhead {
+    display: block;
+    border-bottom: 2px solid var(--color-forest-900);
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+  .pbrand { font-size: 20pt; font-weight: 700; color: var(--color-forest-900); }
+  .pmeta  { font-size: 10pt; color: #444; }
+
+  .wrap { padding: 0; display: block; }
+  .col  { max-width: none; gap: 12px; }
+
+  /* One column. Two columns of cards across a page break is unreadable. */
+  .cols { display: block; }
+  .cols > * + * { margin-top: 12px; }
+
+  .card {
+    border: 1px solid #999;
+    box-shadow: none;
+    /* Never split a card across pages - a pain score on one sheet and its label
+       on the next is worse than a short page. */
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .baNum, .pill, .note {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* The body map is the most useful thing on the sheet for the practitioner. */
+  .thumbs ::ng-deep .figure svg { width: 150px; height: 320px; }
+
+  h1.t   { font-size: 18pt; }
+  h2.t-s { font-size: 12pt; }
+  body, .s, .kv { font-size: 10pt; }
+
+  @page { margin: 14mm; }
+}

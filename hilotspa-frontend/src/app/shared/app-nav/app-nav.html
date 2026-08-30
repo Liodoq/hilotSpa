@@ -1,3 +1,13 @@
+@if (net.degraded()) {
+  <!-- Says what is true and nothing more. There is no service worker and no
+       local write queue, so promising that anything will be sent later would be
+       a lie the client discovers by turning up. What IS true is that a booking
+       already made is on the server and unaffected. -->
+  <div class="banner off" role="status">
+    <span class="dotw"></span>{{ net.message('CUSTOMER') }}
+  </div>
+}
+
 <header class="appbar">
   <a class="brand" routerLink="/home" aria-label="Knead Wellness Spa, home">
     <app-logo [size]="58" />

@@ -23,7 +23,20 @@
 
       <section>
         <h2 class="t-s" style="margin-bottom:14px">Your next visit</h2>
-        @if (next(); as v) {
+        <!-- Three states, not two. "No upcoming visit" is only true once we have
+             actually asked and been told so; showing it while the answer is still
+             in flight sends a client who IS booked to queue at the counter. -->
+        @if (!booking.loaded()) {
+          <div class="card" style="padding:28px;text-align:center">
+            <p class="s">Checking your bookings…</p>
+          </div>
+        } @else if (booking.unreachable()) {
+          <div class="card" style="padding:28px;text-align:center;display:flex;flex-direction:column;gap:10px">
+            <p class="s">We cannot reach the spa right now, so we cannot show your bookings.</p>
+            <p class="help">This does not affect anything you have already booked — your visit
+              still stands. Try again in a moment, or call the branch.</p>
+          </div>
+        } @else if (next(); as v) {
           <div class="card visit">
             <div class="datechip">
               <div class="m">{{ v.month }}</div><div class="d">{{ v.dayNum }}</div><div class="w">{{ v.day }}</div>
@@ -64,6 +77,9 @@
 
       <section>
         <h2 class="t-s" style="margin-bottom:14px">Past sessions</h2>
+        @if (!booking.loaded()) {
+          <div class="card" style="padding:22px"><p class="help" style="margin:0">Loading…</p></div>
+        } @else {
         <div class="card" style="padding:6px 22px">
           <table class="tbl">
             @for (v of past(); track v.id) {
@@ -79,9 +95,20 @@
                   <button type="button" class="link" (click)="viewReport(v.id)">View report</button>
                 </td>
               </tr>
+            } @empty {
+              <tr><td colspan="5" style="padding:18px 0">
+                <span class="help">
+                  @if (booking.unreachable()) {
+                    We cannot reach the spa right now, so your past sessions are not showing.
+                  } @else {
+                    No sessions yet. Your record fills in after your first visit.
+                  }
+                </span>
+              </td></tr>
             }
           </table>
         </div>
+        }
       </section>
     </div>
 

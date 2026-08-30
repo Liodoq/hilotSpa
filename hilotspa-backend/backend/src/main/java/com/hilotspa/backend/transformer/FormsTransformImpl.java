@@ -29,6 +29,10 @@ public class FormsTransformImpl implements FormsTransform {
         formsModel.setIntent(formsEntity.getIntent());
         formsModel.setCreatedAt(formsEntity.getCreatedAt());
         formsModel.setWalkInName(formsEntity.getWalkInName());
+        formsModel.setPressurePreference(formsEntity.getPressurePreference());
+        if (formsEntity.getSafetyFlags() != null) {
+            formsModel.setSafetyFlags(new java.util.ArrayList<>(formsEntity.getSafetyFlags()));
+        }
         if (formsEntity.getBranch() != null) {
         formsModel.setBranchId(formsEntity.getBranch().getId());
         }
@@ -60,6 +64,10 @@ public class FormsTransformImpl implements FormsTransform {
         formsEntity.setRemarks(formsModel.getRemarks());
         formsEntity.setIntent(formsModel.getIntent());
         formsEntity.setWalkInName(formsModel.getWalkInName());
+        formsEntity.setPressurePreference(formsModel.getPressurePreference());
+        if (formsModel.getSafetyFlags() != null) {
+            formsEntity.setSafetyFlags(new java.util.LinkedHashSet<>(formsModel.getSafetyFlags()));
+        }
         return formsEntity;
     }
 }

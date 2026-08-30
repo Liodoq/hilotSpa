@@ -9,6 +9,8 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import com.hilotspa.backend.entities.AssessmentIntent;
 import com.hilotspa.backend.entities.ComplaintType;
+import com.hilotspa.backend.entities.PressurePreference;
+import com.hilotspa.backend.entities.SafetyFlag;
 
 import lombok.Data;
 @Data
@@ -27,6 +29,12 @@ public class FormsModel {
     private String therapyDetail;
     private String status;
     private String remarks;
+
+    /** H9 - the safety checklist, by enum name. Was packed into remarks. */
+    private List<SafetyFlag> safetyFlags = new ArrayList<>();
+
+    /** H9 - LIGHT / MEDIUM / FIRM. Was packed into remarks. */
+    private PressurePreference pressurePreference;
     private AssessmentIntent intent;
 
     @CreationTimestamp

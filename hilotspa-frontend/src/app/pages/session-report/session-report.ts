@@ -23,7 +23,18 @@ import { severityClass } from '../../core/region.util';
 })
 export class SessionReport {
   private router = inject(Router);
-  private store = inject(BookingStore);
+  protected store = inject(BookingStore);
+
+  constructor() {
+    // Opening /report/:id directly - a refresh, a pasted link, a new tab - used
+    // to render "we could not find that session" for as long as the history took
+    // to arrive, because the component reads a store somebody else fills. It is
+    // a false statement, and an alarming one: it says the record might belong to
+    // another account. Ask for the data ourselves rather than hoping.
+    if (!this.store.loaded()) {
+      void this.store.load();
+    }
+  }
 
   /** bound from the route via withComponentInputBinding() */
   id = input<string>('');
@@ -33,6 +44,16 @@ export class SessionReport {
    *  showed the same demo body map regardless of which session was opened. */
   protected points = computed<PainPoint[]>(() => this.session()?.points ?? []);
   protected sev = severityClass;
+
+  /**
+   * Print, or save as PDF from the print dialog.
+   *
+   * The spa keeps paper records, and a client asking "what did you do to me and
+   * what did it change" deserves something they can carry out of the building.
+   * window.print() rather than a PDF library: no dependency, no server round
+   * trip, works offline, and every browser's dialog already offers Save as PDF.
+   */
+  print(): void { window.print(); }
 
   back(): void { this.router.navigateByUrl('/home'); }
   again(): void { this.router.navigateByUrl('/book'); }

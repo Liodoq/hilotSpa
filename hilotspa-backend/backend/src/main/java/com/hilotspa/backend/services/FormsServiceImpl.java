@@ -235,6 +235,10 @@ public class FormsServiceImpl implements FormsService {
         // reused walk-in assessment identifying nobody, and the forms_has_a_client
         // constraint would reject it at INSERT with nothing useful to say. B85.
         copy.setWalkInName(source.getWalkInName());
+        // Safety flags are the whole reason a reuse is safe to offer at all -
+        // dropping them would hand the assistant a client with no contraindications.
+        copy.getSafetyFlags().addAll(source.getSafetyFlags());
+        copy.setPressurePreference(source.getPressurePreference());
         copy.setBranch(source.getBranch());
         copy.setIntent(source.getIntent());
         copy.setMainComplaint(source.getMainComplaint());
@@ -367,6 +371,16 @@ public class FormsServiceImpl implements FormsService {
         form.setStatus(model.getStatus());
         form.setIntent(model.getIntent());
         form.setRemarks(model.getRemarks());
+
+        // H9 / B44 - the safety checklist and the pressure preference have real
+        // columns now. Replace rather than merge: an unticked box must be able
+        // to become unticked, and a set that only ever grows would make a
+        // corrected assessment impossible.
+        form.getSafetyFlags().clear();
+        if (model.getSafetyFlags() != null) {
+            form.getSafetyFlags().addAll(model.getSafetyFlags());
+        }
+        form.setPressurePreference(model.getPressurePreference());
     }
 
     /**

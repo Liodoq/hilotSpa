@@ -76,11 +76,11 @@
         </div>
 
         <div class="grid2">
-          @for (f of flags(); track f) {
-            <button type="button" class="tile" [class.on]="draft().flags.includes(f)"
-                    [attr.aria-pressed]="draft().flags.includes(f)"
-                    (click)="store.toggleFlag(f)">
-              <span class="box"></span>{{ f }}
+          @for (f of flags(); track f.value) {
+            <button type="button" class="tile" [class.on]="draft().flags.includes(f.value)"
+                    [attr.aria-pressed]="draft().flags.includes(f.value)"
+                    (click)="store.toggleFlag(f.value)">
+              <span class="box"></span>{{ f.label }}
             </button>
           }
         </div>
@@ -88,10 +88,11 @@
         <div class="field">
           <span class="lab" id="preslab">Preferred pressure</span>
           <div class="seg" role="group" aria-labelledby="preslab">
-            @for (p of pressures; track p) {
-              <button type="button" class="opt" [class.on]="draft().pressure === p"
-                      [attr.aria-pressed]="draft().pressure === p"
-                      (click)="store.patch({ pressure: p })"><span class="dot"></span>{{ p }}</button>
+            @for (p of pressures; track p.value) {
+              <button type="button" class="opt" [class.on]="draft().pressure === p.value"
+                      [attr.aria-pressed]="draft().pressure === p.value"
+                      (click)="store.patch({ pressure: p.value })">
+                <span class="dot"></span>{{ p.label }}</button>
             }
           </div>
         </div>

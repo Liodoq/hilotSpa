@@ -7,7 +7,12 @@ import java.util.UUID;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -55,6 +60,29 @@ public class Forms {
      *  Appointment.walkInName, and the only thing identifying the record. */
     @Column
     private String walkInName;
+
+    /**
+     * The safety checklist - paper-deltas H9, bug B44.
+     *
+     * A real table rather than a string, so the practitioner's ServiceProtocol
+     * rules can eventually key on a condition and not only on a complaint, and
+     * so "how many clients present on blood thinners" is a query rather than a
+     * grep. A set, because ticking a box twice is not more true.
+     */
+    @ElementCollection(fetch = jakarta.persistence.FetchType.EAGER)
+    @CollectionTable(name = "forms_safety_flag",
+                     joinColumns = @JoinColumn(name = "forms_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "flag")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<SafetyFlag> safetyFlags = new LinkedHashSet<>();
+
+    /** A preference, not a finding. It was sharing a text field with the safety
+     *  checklist, which is how the two got confused. */
+    @Enumerated(EnumType.STRING)
+    @Column
+    private PressurePreference pressurePreference;
 
     @ManyToOne
     @JoinColumn(name = "branch_id", nullable = false)

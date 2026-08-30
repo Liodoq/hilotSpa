@@ -6,7 +6,7 @@ import { AssessmentStore } from '../../../core/assessment.store';
 import { ProfileStore } from '../../../core/profile.store';
 import { AuthService } from '../../../core/auth.service';
 import { FormsApi } from '../../../core/forms.api';
-import { AnatomicalRegion, COMPLAINTS, REGIONS } from '../../../core/models';
+import { AnatomicalRegion, COMPLAINTS, PRESSURES, REGIONS, safetyFlagLabel } from '../../../core/models';
 import { describeHttpError } from '../../../core/http-error';
 
 /**
@@ -25,6 +25,16 @@ export class Review {
   private auth = inject(AuthService);
   private api = inject(FormsApi);
   protected store = inject(AssessmentStore);
+
+  /** The safety checklist in the client's own words, for the review screen. */
+  protected flagLabels = computed(() => {
+    const f = this.store.draft().flags;
+    return f.length ? f.map(safetyFlagLabel).join(', ') : 'nothing';
+  });
+
+  protected pressureLabel = computed(() =>
+    PRESSURES.find(p => p.value === this.store.draft().pressure)?.label ?? '');
+
   protected profileStore = inject(ProfileStore);
   protected draft = this.store.draft;
   protected profile = this.profileStore.profile;

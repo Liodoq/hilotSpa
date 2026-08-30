@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Shell } from '../../../shared/shell/shell';
 import { AssessmentStore } from '../../../core/assessment.store';
 import { ProfileStore } from '../../../core/profile.store';
+import { PRESSURES, SAFETY_FLAGS } from '../../../core/models';
 
 /**
  * C6 — both history questions are quoted verbatim from Appendix A.
@@ -24,7 +25,7 @@ export class History {
   protected draft = this.store.draft;
 
   protected therapyKinds = ['Hilot', 'Massage', 'Physical therapy', 'Chiropractic', 'Acupuncture', 'Other'];
-  protected pressures = ['Light', 'Medium', 'Firm'];
+  protected pressures = PRESSURES;
   /**
    * Pregnancy is not offered when the profile records male.
    *
@@ -33,20 +34,13 @@ export class History {
    * ask men either.
    */
   protected flags = computed(() => {
-    const all = [
-      'Pregnant',
-      'High blood pressure',
-      'Heart condition',
-      'Diabetes',
-      'Varicose veins',
-      'Fracture or surgery in the last 6 weeks',
-      'Open wound or skin infection',
-      'Cancer, or under treatment',
-      'Taking blood thinners',
-      'Osteoporosis',
-    ];
+    // The list, its wording and its order all live in models.ts now, in step
+    // with SafetyFlag.java. What is stored is the enum name, so the sentence can
+    // be reworded later without orphaning every record that used the old one.
     const sex = (this.profile.profile().sex ?? '').toLowerCase();
-    return sex.startsWith('m') ? all.filter(f => f !== 'Pregnant') : all;
+    return sex.startsWith('m')
+      ? SAFETY_FLAGS.filter(f => f.value !== 'PREGNANT')
+      : SAFETY_FLAGS;
   });
 
   val(ev: Event): string {

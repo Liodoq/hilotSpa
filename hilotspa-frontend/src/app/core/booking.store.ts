@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { FormsApi } from './forms.api';
-import { BookingModel, FormsModel } from './models';
+import { BookingModel, FormsModel, PRESSURES, safetyFlagLabel } from './models';
 import { PainPoint } from './assessment.store';
 
 /**
@@ -32,6 +32,10 @@ export interface UpcomingVisit {
 
 export interface SessionLog {
   id: string;
+  /** H9 - the safety checklist as ticked, so the record and the printed sheet
+   *  can show what the practitioner was working around. */
+  flags: string[];
+  pressure: string | null;
   date: string;
   /** Raw ISO timestamp. `date` is for display; this is for arithmetic. */
   createdAt: string;
@@ -67,12 +71,23 @@ export class BookingStore {
 
   readonly history = signal<SessionLog[]>([]);
   readonly loaded = signal(false);
+
+  /**
+   * True when the last load could not reach the server.
+   *
+   * Without this an empty list means two completely different things - "you
+   * have no bookings" and "we could not ask" - and the screen picks the
+   * frightening one. A client at the spa reading "no upcoming visit" because
+   * the wifi dropped will go and queue at the counter.
+   */
+  readonly unreachable = signal(false);
   readonly hasUpcoming = computed(() => this.upcoming() !== null);
 
   /** The body map on the wellness profile: the client's OWN most recent marks. */
   readonly lastPoints = computed<PainPoint[]>(() => this.history()[0]?.points ?? []);
 
   async load(): Promise<void> {
+    let reachable = true;
     try {
       const forms = await this.api.myForms();
       const logs = (forms ?? [])
@@ -81,8 +96,10 @@ export class BookingStore {
         .map(toLog);
       this.history.set(logs);
     } catch {
-      // Not logged in, or offline. Show nothing rather than someone else's data.
+      // Not logged in, or offline. Show nothing rather than someone else's data -
+      // but RECORD that we could not ask, so the screen can say so.
       this.history.set([]);
+      reachable = false;
     }
 
     // Appointments are a separate call and must not be lost if it fails — the
@@ -98,8 +115,10 @@ export class BookingStore {
     } catch {
       this.upcomingAll.set([]);
       this.upcoming.set(null);
+      reachable = false;
     }
 
+    this.unreachable.set(!reachable);
     this.loaded.set(true);
   }
 
@@ -130,6 +149,7 @@ export class BookingStore {
     this.upcoming.set(null);
     this.upcomingAll.set([]);
     this.loaded.set(false);
+    this.unreachable.set(false);
     try { localStorage.removeItem(KEY); } catch { /* private mode */ }
   }
 }
@@ -183,6 +203,10 @@ function toLog(f: FormsModel): SessionLog {
 
   return {
     id: f.id ?? '',
+    flags: (f.safetyFlags ?? []).map(safetyFlagLabel),
+    pressure: f.pressurePreference
+      ? (PRESSURES.find(p => p.value === f.pressurePreference)?.label ?? null)
+      : null,
     date: v ? v.label : formatDate(f.createdAt),
     createdAt: f.createdAt ?? '',
     // Still honest when there is no visit: this client filled the form and never

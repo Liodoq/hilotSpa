@@ -70,8 +70,11 @@
               {{ draft().hadIllness ? (draft().illnessDetail || 'yes') : 'none reported' }}</div>
             <div><span>Therapy before</span>
               {{ draft().hasTherapy ? (draft().therapyKind + (draft().therapyWhen ? ', ' + draft().therapyWhen : '')) : 'none' }}</div>
-            <div><span>Flagged</span> {{ draft().flags.length ? draft().flags.join(', ') : 'nothing' }}</div>
-            @if (draft().pressure) { <div><span>Pressure</span> {{ draft().pressure }}</div> }
+            <!-- The draft holds enum names now (H9). Read them back in the exact
+                 wording the client ticked - a review screen that says
+                 "OPEN_WOUND_OR_SKIN_INFECTION" is not a review. -->
+            <div><span>Flagged</span> {{ flagLabels() }}</div>
+            @if (draft().pressure) { <div><span>Pressure</span> {{ pressureLabel() }}</div> }
           </div>
         </section>
       }

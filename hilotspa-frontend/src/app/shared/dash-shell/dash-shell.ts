@@ -2,6 +2,7 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { BranchContext } from '../../core/branch-context';
+import { Connectivity } from '../../core/connectivity';
 import { Logo } from '../logo/logo';
 import { Toast } from '../toast/toast';
 
@@ -45,6 +46,7 @@ const ADMIN_NAV: NavItem[] = [
 })
 export class DashShell {
   protected auth = inject(AuthService);
+  protected net = inject(Connectivity);
   protected ctx = inject(BranchContext);
   private router = inject(Router);
 

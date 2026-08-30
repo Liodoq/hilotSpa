@@ -124,6 +124,10 @@ export interface FormsModel {
   painPoints: PatientIntakeModel[];
   /** Set instead of userId when staff took the assessment for a walk-in (B85). */
   walkInName?: string | null;
+  /** H9 - the safety checklist, by enum name. Used to be prose inside remarks. */
+  safetyFlags?: SafetyFlag[];
+  /** H9 - LIGHT / MEDIUM / FIRM. Used to be prose inside remarks. */
+  pressurePreference?: PressurePreference | null;
   /** The visit this assessment led to, if any. Null until something is booked. */
   visit?: FormVisit | null;
 }
@@ -135,6 +139,46 @@ export interface FormsModel {
  * exists so a finished session can name the treatment, the practitioner and the
  * room that produced its pain scores instead of three em-dashes (B92).
  */
+/**
+ * The safety checklist, as the server stores it (paper-deltas H9).
+ *
+ * Enum names, not the sentences the client read. The label lives in
+ * SAFETY_FLAGS below so the wording can be corrected without orphaning every
+ * record that used the old sentence - the same reason ComplaintType carries a
+ * displayName (B27).
+ */
+export type SafetyFlag =
+  | 'PREGNANT' | 'HIGH_BLOOD_PRESSURE' | 'HEART_CONDITION' | 'DIABETES'
+  | 'VARICOSE_VEINS' | 'RECENT_FRACTURE_OR_SURGERY' | 'OPEN_WOUND_OR_SKIN_INFECTION'
+  | 'CANCER_OR_UNDER_TREATMENT' | 'BLOOD_THINNERS' | 'OSTEOPOROSIS';
+
+export type PressurePreference = 'LIGHT' | 'MEDIUM' | 'FIRM';
+
+/** Must stay word for word in step with SafetyFlag.java. */
+export const SAFETY_FLAGS: { value: SafetyFlag; label: string }[] = [
+  { value: 'PREGNANT',                     label: 'Pregnant' },
+  { value: 'HIGH_BLOOD_PRESSURE',          label: 'High blood pressure' },
+  { value: 'HEART_CONDITION',              label: 'Heart condition' },
+  { value: 'DIABETES',                     label: 'Diabetes' },
+  { value: 'VARICOSE_VEINS',               label: 'Varicose veins' },
+  { value: 'RECENT_FRACTURE_OR_SURGERY',   label: 'Fracture or surgery in the last 6 weeks' },
+  { value: 'OPEN_WOUND_OR_SKIN_INFECTION', label: 'Open wound or skin infection' },
+  { value: 'CANCER_OR_UNDER_TREATMENT',    label: 'Cancer, or under treatment' },
+  { value: 'BLOOD_THINNERS',               label: 'Taking blood thinners' },
+  { value: 'OSTEOPOROSIS',                 label: 'Osteoporosis' },
+];
+
+export const PRESSURES: { value: PressurePreference; label: string }[] = [
+  { value: 'LIGHT',  label: 'Light' },
+  { value: 'MEDIUM', label: 'Medium' },
+  { value: 'FIRM',   label: 'Firm' },
+];
+
+/** The sentence a client read, for a stored flag. */
+export function safetyFlagLabel(v: SafetyFlag | string): string {
+  return SAFETY_FLAGS.find(f => f.value === v)?.label ?? String(v);
+}
+
 export interface FormVisit {
   appointmentId: string;
   serviceName: string;

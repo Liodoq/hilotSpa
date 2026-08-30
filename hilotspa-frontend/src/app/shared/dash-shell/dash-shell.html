@@ -1,4 +1,16 @@
 <div class="frame">
+  <!-- The REAL connectivity state, above any banner a screen passed in. It is
+       first because a simulated-offline banner sitting on top of a genuine
+       outage would be actively misleading, and staff need to know which of the
+       two they are looking at. -->
+  @if (net.degraded()) {
+    <div class="banner off" role="status">
+      <span class="dotw"></span>{{ net.message('STAFF') }}
+      <span style="margin-left:auto;font-weight:400;font-size:17px">
+        {{ net.offline() ? 'No network on this device' : 'Node not answering' }}</span>
+    </div>
+  }
+
   @if (banner(); as b) {
     <div class="banner" [class.off]="bannerTone() === 'off'" [class.ctx]="bannerTone() === 'ctx'">
       <span class="dotw"></span>{{ b }}

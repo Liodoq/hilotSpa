@@ -36,6 +36,7 @@ import com.hilotspa.backend.entities.Forms;
 import com.hilotspa.backend.entities.Massage;
 import com.hilotspa.backend.entities.PatientIntake;
 import com.hilotspa.backend.entities.ProtocolRule;
+import com.hilotspa.backend.entities.SafetyFlag;
 import com.hilotspa.backend.entities.Role;
 import com.hilotspa.backend.entities.ServiceProtocol;
 import com.hilotspa.backend.model.AssistantDtos.AllowedService;
@@ -714,22 +715,37 @@ public class AssistantServiceImpl implements AssistantService {
                 form.getIntent() == null ? null : form.getIntent().name(),
                 complaint,
                 form.getMainComplaintDuration(),
-                null,
+                // H9 - was hardcoded null while the preference sat unparsed in a
+                // free-text field. The client said Firm; the assistant can say it back.
+                form.getPressurePreference() == null
+                        ? null : form.getPressurePreference().getDisplayName(),
                 points,
                 flagsFrom(form),
                 allowed);
     }
 
     /**
-     * TODO (paper-deltas H9) - safety flags and pressure preference are still
-     * packed into the free-text remarks field. Until they have columns, the
-     * assistant is told only that something was noted, never a parsed claim.
+     * What the client ticked on the safety checklist - H9 / B44, now real.
+     *
+     * Until today these lived in the free-text remarks column, so the assistant
+     * was told only `noted_on_record: true`: a parsed claim pulled out of prose
+     * is a guess, and guessing about pregnancy is not something this system
+     * should do. They are enum-backed rows now, so the flag the client ticked is
+     * the flag the model is told about, in the client's own wording.
+     *
+     * These do NOT filter the service list. That is deliberate - the filter runs
+     * off the practitioner's signed ServiceProtocol table, and no rule keys on a
+     * safety flag until she has authored one (task 4.13). The model may take
+     * them into account when it explains a choice; it may not invent a rule.
      */
     private Map<String, Boolean> flagsFrom(Forms form) {
         Map<String, Boolean> flags = new LinkedHashMap<>();
+        for (SafetyFlag f : form.getSafetyFlags()) {
+            flags.put(f.name().toLowerCase(), true);
+        }
         String remarks = form.getRemarks();
         if (remarks != null && !remarks.isBlank()) {
-            flags.put("noted_on_record", true);
+            flags.put("free_text_note_on_record", true);
         }
         if (Boolean.TRUE.equals(form.getHadIllness())) {
             flags.put("past_illness_reported", true);
