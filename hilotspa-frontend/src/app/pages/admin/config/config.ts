@@ -101,12 +101,13 @@ export class AdminConfig implements OnInit {
   // ------------------------------------------------- A6 service menu actions
 
   addService(): void {
-    this.menuDrawer.set({ id: null, name: '', minutes: '60', price: '0' });
+    this.menuDrawer.set({ id: null, name: '', minutes: '60', price: '0', imageName: '' });
   }
 
   editService(m: MassageDto): void {
     this.menuDrawer.set({ id: m.id, name: m.name,
-      minutes: String(m.durationMinute), price: String(m.price ?? 0) });
+      minutes: String(m.durationMinute), price: String(m.price ?? 0),
+      imageName: m.imageName ?? '' });
   }
 
   patchMenu(part: Partial<MenuForm>): void {
@@ -122,6 +123,9 @@ export class AdminConfig implements OnInit {
     try {
       const saved = await this.ops.saveMassage(d.id, {
         name: d.name.trim(), durationMinute: Number(d.minutes), price: Number(d.price),
+        // Sent even when blank: an empty string is how a photo is REMOVED, and
+        // the server tells blank from null on purpose.
+        imageName: d.imageName.trim(),
       });
       this.menuDrawer.set(null);
       await this.load();
@@ -210,4 +214,9 @@ interface MenuForm {
   name: string;
   minutes: string;
   price: string;
+  /** Photo filename in the app's public/services/ folder. A FILENAME, never the
+   *  service id: ids are regenerated on every reseed and the photographs would
+   *  break. Blank means the spa has not supplied one, and the screens show a
+   *  tinted block rather than a broken image. */
+  imageName: string;
 }

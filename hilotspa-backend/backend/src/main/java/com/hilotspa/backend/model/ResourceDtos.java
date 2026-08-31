@@ -11,12 +11,13 @@ public final class ResourceDtos {
 
     public record TherapistDto(
             UUID id, String firstName, String lastName,
-            String status, boolean active, UUID branchId, String branchName) {
+            String status, String sex, boolean active, UUID branchId, String branchName) {
     }
 
     /** Create/update. branchId is ignored for STAFF — they get their own. */
     public record TherapistWrite(
-            String firstName, String lastName, String status, Boolean active, UUID branchId) {
+            String firstName, String lastName, String status, String sex,
+            Boolean active, UUID branchId) {
     }
 
     public record RoomDto(UUID id, String name, boolean active, UUID branchId, String branchName) {

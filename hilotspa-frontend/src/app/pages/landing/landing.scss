@@ -1,0 +1,58 @@
+:host { display: block; min-height: 100dvh; background: var(--color-cream); }
+
+/* The hero carries the one idea the rest of the page explains: this spa asks
+   what hurts before it sells you anything. */
+.hero { padding: 76px 24px 64px; display: flex; justify-content: center; }
+.heroIn { width: 100%; max-width: 1080px; display: flex; flex-direction: column;
+  align-items: center; text-align: center; gap: 20px; }
+.eyebrow { font-size: 15px; letter-spacing: 2.4px; text-transform: uppercase;
+  color: var(--color-forest-700); font-weight: 600; }
+.hero h1 { font-size: clamp(34px, 6vw, 62px); line-height: 1.04; margin: 0;
+  color: var(--color-forest-900); text-wrap: balance; max-width: 16ch; }
+.hero .sub { font-size: 21px; color: var(--color-ink-600); max-width: 56ch; margin: 0; }
+.heroActions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+
+.band { padding: 56px 24px; display: flex; justify-content: center; }
+.band.alt { background: #fff; border-top: 1.5px solid var(--color-line);
+  border-bottom: 1.5px solid var(--color-line); }
+.bandIn { width: 100%; max-width: 1080px; display: flex; flex-direction: column; gap: 22px; }
+.bandHead { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.bandHead h2 { margin: 0; font-size: 30px; color: var(--color-forest-900); }
+.bandHead .link { margin-left: auto; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+.svc { background: #fff; border: 1.5px solid var(--color-line); border-radius: var(--radius-lg);
+  overflow: hidden; display: flex; flex-direction: column; text-align: left; padding: 0; }
+.svc .shot { height: 172px; background-color: var(--color-sage-100);
+  background-size: cover; background-position: center; }
+.svc .body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 5px; }
+.svc .nm { font-size: 21px; font-weight: 600; color: var(--color-forest-900); }
+.svc .meta { font-size: 17px; color: var(--color-ink-600); }
+
+/* Three claims, and each is true of the running system rather than a slogan. */
+.three { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 22px; }
+.three .it h3 { margin: 0 0 6px; font-size: 21px; color: var(--color-forest-900); }
+.three .it p { margin: 0; font-size: 17.5px; color: var(--color-ink-600); }
+.three .n { font-size: 14px; letter-spacing: 2px; color: var(--color-gold-700);
+  font-weight: 700; margin-bottom: 8px; }
+
+.contact { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; }
+.contact .k { font-size: 14px; letter-spacing: 1.8px; text-transform: uppercase;
+  color: var(--color-ink-600); margin-bottom: 5px; }
+.contact .v { font-size: 19px; color: var(--color-forest-900); }
+
+footer.foot { padding: 30px 24px 46px; text-align: center; font-size: 16px;
+  color: var(--color-ink-600); }
+
+@media (max-width: 700px) { .hero { padding: 46px 18px 40px; } .band { padding: 40px 18px; } }
+
+/* First names and an initial disc — no photographs. A therapist's face on a
+   public URL needs their consent on paper, not a design decision. */
+.team { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+.member { display: flex; align-items: center; gap: 14px; background: var(--color-cream);
+  border: 1.5px solid var(--color-line); border-radius: var(--radius-lg); padding: 14px 16px; }
+.member .disc { width: 46px; height: 46px; border-radius: 50%; flex: 0 0 auto;
+  background: var(--color-forest-700); color: #fff; display: flex; align-items: center;
+  justify-content: center; font-size: 20px; font-weight: 600; }
+.member .nm { font-size: 20px; font-weight: 600; color: var(--color-forest-900); }
+.member .meta { font-size: 16px; color: var(--color-ink-600); }

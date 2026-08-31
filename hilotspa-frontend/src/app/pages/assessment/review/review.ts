@@ -6,7 +6,7 @@ import { AssessmentStore } from '../../../core/assessment.store';
 import { ProfileStore } from '../../../core/profile.store';
 import { AuthService } from '../../../core/auth.service';
 import { FormsApi } from '../../../core/forms.api';
-import { AnatomicalRegion, COMPLAINTS, PRESSURES, REGIONS, safetyFlagLabel } from '../../../core/models';
+import { AnatomicalRegion, COMPLAINTS, PRESSURES, REGIONS, THERAPIST_PREFERENCES, safetyFlagLabel } from '../../../core/models';
 import { describeHttpError } from '../../../core/http-error';
 
 /**
@@ -34,6 +34,10 @@ export class Review {
 
   protected pressureLabel = computed(() =>
     PRESSURES.find(p => p.value === this.store.draft().pressure)?.label ?? '');
+
+  protected therapistLabel = computed(() =>
+    THERAPIST_PREFERENCES.find(t => t.value === this.store.draft().therapist)?.label
+      ?? 'No preference');
 
   protected profileStore = inject(ProfileStore);
   protected draft = this.store.draft;

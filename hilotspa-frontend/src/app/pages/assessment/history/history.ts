@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { Shell } from '../../../shared/shell/shell';
 import { AssessmentStore } from '../../../core/assessment.store';
 import { ProfileStore } from '../../../core/profile.store';
-import { PRESSURES, SAFETY_FLAGS } from '../../../core/models';
+import { PRESSURES, SAFETY_FLAGS, THERAPIST_PREFERENCES } from '../../../core/models';
 
 /**
  * C6 — both history questions are quoted verbatim from Appendix A.
@@ -26,6 +26,7 @@ export class History {
 
   protected therapyKinds = ['Hilot', 'Massage', 'Physical therapy', 'Chiropractic', 'Acupuncture', 'Other'];
   protected pressures = PRESSURES;
+  protected therapistOptions = THERAPIST_PREFERENCES;
   /**
    * Pregnancy is not offered when the profile records male.
    *

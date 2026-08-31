@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import {
   AnatomicalRegion, AssessmentIntent, BodyView, ComplaintType,
-  FormsModel, PatientIntakeModel, PressurePreference, SafetyFlag,
+  FormsModel, PatientIntakeModel, PressurePreference, SafetyFlag, Sex,
 } from './models';
 import { ProfileStore } from './profile.store';
 import { Side } from './body-hotspots';
@@ -35,6 +35,8 @@ export interface AssessmentDraft {
   therapyWhen: string;
   flags: SafetyFlag[];
   pressure: PressurePreference | null;
+  /** null = no preference. Honoured in availability AND at assignment. */
+  therapist: Sex | null;
   consented: boolean;
 }
 
@@ -42,6 +44,7 @@ const EMPTY: AssessmentDraft = {
   intent: null, points: [], complaints: [], mainComplaint: null,
   mainComplaintOther: null, duration: null, hadIllness: null, illnessDetail: '',
   hasTherapy: null, therapyKind: '', therapyWhen: '', flags: [], pressure: null,
+  therapist: null,
   consented: false,
 };
 
@@ -151,6 +154,7 @@ export class AssessmentStore {
       // "something was noted".
       safetyFlags: d.flags,
       pressurePreference: d.pressure,
+      therapistPreference: d.therapist,
       // remarks is now what it always should have been: free text, and empty
       // unless a human actually wrote something.
       remarks: null,

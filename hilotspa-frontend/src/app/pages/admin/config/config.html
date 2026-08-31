@@ -267,6 +267,23 @@
             deliberate — a guessed price is a false statement made to a client.</p>
         }
       </div>
+      <div>
+        <label class="lab2" for="mi">PHOTO FILE</label>
+        <input id="mi" class="input" [value]="d.imageName" placeholder="hilot.jpg"
+               (input)="patchMenu({ imageName: val($event) })">
+        @if (d.imageName.trim()) {
+          <div style="margin-top:10px;height:120px;border-radius:var(--radius-md);
+                      background-color:var(--color-sage-100);background-size:cover;
+                      background-position:center"
+               [style.background-image]="'url(/services/' + d.imageName.trim() + ')'"></div>
+          <p class="help" style="margin-top:8px">If this stays a plain green block, the file is not
+            in <span class="mono">public/services/</span> under that exact name.</p>
+        } @else {
+          <p class="help" style="margin-top:8px">The file name only — the photo itself lives in
+            <span class="mono">public/services/</span>. Leave this blank and the treatment shows a
+            plain tinted block, which is honest about a photograph we do not have.</p>
+        }
+      </div>
       <div class="note"><span class="b"></span>
         <span>A price change never affects a booking already made. The price is copied onto the
           appointment at the moment it is booked.</span></div>

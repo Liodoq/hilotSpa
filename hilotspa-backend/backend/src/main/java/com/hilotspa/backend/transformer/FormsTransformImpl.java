@@ -30,6 +30,7 @@ public class FormsTransformImpl implements FormsTransform {
         formsModel.setCreatedAt(formsEntity.getCreatedAt());
         formsModel.setWalkInName(formsEntity.getWalkInName());
         formsModel.setPressurePreference(formsEntity.getPressurePreference());
+        formsModel.setTherapistPreference(formsEntity.getTherapistPreference());
         if (formsEntity.getSafetyFlags() != null) {
             formsModel.setSafetyFlags(new java.util.ArrayList<>(formsEntity.getSafetyFlags()));
         }
@@ -65,6 +66,7 @@ public class FormsTransformImpl implements FormsTransform {
         formsEntity.setIntent(formsModel.getIntent());
         formsEntity.setWalkInName(formsModel.getWalkInName());
         formsEntity.setPressurePreference(formsModel.getPressurePreference());
+        formsEntity.setTherapistPreference(formsModel.getTherapistPreference());
         if (formsModel.getSafetyFlags() != null) {
             formsEntity.setSafetyFlags(new java.util.LinkedHashSet<>(formsModel.getSafetyFlags()));
         }

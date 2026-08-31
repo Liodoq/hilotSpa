@@ -128,6 +128,8 @@ export interface FormsModel {
   safetyFlags?: SafetyFlag[];
   /** H9 - LIGHT / MEDIUM / FIRM. Used to be prose inside remarks. */
   pressurePreference?: PressurePreference | null;
+  /** FEMALE, MALE, or null for no preference. */
+  therapistPreference?: Sex | null;
   /** The visit this assessment led to, if any. Null until something is booked. */
   visit?: FormVisit | null;
 }
@@ -153,6 +155,21 @@ export type SafetyFlag =
   | 'CANCER_OR_UNDER_TREATMENT' | 'BLOOD_THINNERS' | 'OSTEOPOROSIS';
 
 export type PressurePreference = 'LIGHT' | 'MEDIUM' | 'FIRM';
+
+/**
+ * A therapist's sex, and the client's preference about it.
+ *
+ * There is no 'ANY'. A client with no preference has null — an absent
+ * preference is absent, not a third kind of choice, and storing it as one would
+ * make "never asked" indistinguishable from "said it does not matter".
+ */
+export type Sex = 'FEMALE' | 'MALE';
+
+export const THERAPIST_PREFERENCES: { value: Sex | null; label: string; note: string }[] = [
+  { value: null,     label: 'No preference', note: 'Any of our therapists' },
+  { value: 'FEMALE', label: 'A woman',       note: 'Female therapist only' },
+  { value: 'MALE',   label: 'A man',         note: 'Male therapist only' },
+];
 
 /** Must stay word for word in step with SafetyFlag.java. */
 export const SAFETY_FLAGS: { value: SafetyFlag; label: string }[] = [

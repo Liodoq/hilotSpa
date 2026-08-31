@@ -56,6 +56,13 @@ public class SecurityConfig {
                 // --- Public ---
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // The public site: the spa's own details and its live menu, and
+                // nothing else. Read-only by construction - PublicController has
+                // no write mapping and returns a DTO built only from Massage, so
+                // there is no client, no protocol rule and no availability it
+                // could expose even by mistake. GET only, so a POST to this
+                // prefix falls through to authenticated() below.
+                .requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
 
                 // Self-service, ABOVE the ADMIN rule - Spring takes the FIRST
                 // match, so below it these would never run (the B43 lesson).

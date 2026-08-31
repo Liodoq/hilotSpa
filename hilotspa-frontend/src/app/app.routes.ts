@@ -4,7 +4,18 @@ import { roleGuard } from './core/role.guard';
 import { profileGuard } from './core/profile.guard';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'login' },
+  // --- Public. No guard, and that is the point ------------------------------
+  // Every route used to sit behind authGuard and '' redirected to the login
+  // form, so the first thing anyone met - a client, an adviser, a panelist
+  // opening the URL - was a password box. A spa that cannot show its own menu
+  // without an account is an intranet, not a spa website.
+  //
+  // Browsing is public; BOOKING is not, and stays gated behind a completed
+  // pre-assessment exactly as Process Rule #2 requires.
+  { path: '', pathMatch: 'full',
+    loadComponent: () => import('./pages/landing/landing').then(m => m.Landing) },
+  { path: 'contact',
+    loadComponent: () => import('./pages/contact/contact').then(m => m.Contact) },
 
   /* ---- public ---- */
   { path: 'login',    loadComponent: () => import('./pages/login/login').then(m => m.Login) },
@@ -12,11 +23,11 @@ export const routes: Routes = [
 
   /* ---- customer ---- */
   { path: 'home',     canActivate: [authGuard], loadComponent: () => import('./pages/home/home').then(m => m.Home) },
-  { path: 'services', canActivate: [authGuard], loadComponent: () => import('./pages/services/services').then(m => m.Services) },
-  { path: 'services/:id', canActivate: [authGuard], loadComponent: () => import('./pages/service-detail/service-detail').then(m => m.ServiceDetail) },
+  { path: 'services', loadComponent: () => import('./pages/services/services').then(m => m.Services) },
+  { path: 'services/:id', loadComponent: () => import('./pages/service-detail/service-detail').then(m => m.ServiceDetail) },
   { path: 'book',     canActivate: [authGuard], loadComponent: () => import('./pages/book/book').then(m => m.Book) },
   { path: 'booking',  canActivate: [authGuard], loadComponent: () => import('./pages/booking/booking').then(m => m.Booking) },
-  { path: 'about',    canActivate: [authGuard], loadComponent: () => import('./pages/about/about').then(m => m.About) },
+  { path: 'about',    loadComponent: () => import('./pages/about/about').then(m => m.About) },
   { path: 'account',  canActivate: [authGuard], loadComponent: () => import('./pages/account/account').then(m => m.Account) },
   { path: 'profile',  canActivate: [authGuard], loadComponent: () => import('./pages/profile/profile').then(m => m.Profile) },
   { path: 'report/:id', canActivate: [authGuard], loadComponent: () => import('./pages/session-report/session-report').then(m => m.SessionReport) },

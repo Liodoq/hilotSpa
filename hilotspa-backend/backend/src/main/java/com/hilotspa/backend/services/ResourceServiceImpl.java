@@ -15,6 +15,7 @@ import com.hilotspa.backend.config.CurrentUser;
 import com.hilotspa.backend.entities.AuditLog;
 import com.hilotspa.backend.entities.Branch;
 import com.hilotspa.backend.entities.Room;
+import com.hilotspa.backend.entities.Sex;
 import com.hilotspa.backend.entities.Therapist;
 import com.hilotspa.backend.entities.TherapistStatus;
 import com.hilotspa.backend.model.ResourceDtos.AuditRow;
@@ -146,6 +147,13 @@ public class ResourceServiceImpl implements ResourceService {
         if (body.active() != null) {
             t.setActive(body.active());
         }
+        // Blank clears it. A therapist whose sex is not recorded is offered only
+        // to clients with no preference - never guessed at, and never quietly
+        // matched to a request they might not meet.
+        if (body.sex() != null) {
+            String raw = body.sex().trim();
+            t.setSex(raw.isEmpty() ? null : parseSex(raw));
+        }
 
         boolean creating = id == null;
         Therapist saved = therapistRepository.save(t);
@@ -154,6 +162,15 @@ public class ResourceServiceImpl implements ResourceService {
                 saved.getFirstName() + " " + saved.getLastName() + " / " + saved.getStatus()
                         + (saved.isActive() ? "" : " / inactive"));
         return toDto(saved);
+    }
+
+    private Sex parseSex(String raw) {
+        try {
+            return Sex.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Unknown sex '" + raw + "'. Use FEMALE or MALE, or leave it blank.");
+        }
     }
 
     private TherapistStatus parseStatus(String raw) {
@@ -168,6 +185,7 @@ public class ResourceServiceImpl implements ResourceService {
     private TherapistDto toDto(Therapist t) {
         return new TherapistDto(t.getId(), t.getFirstName(), t.getLastName(),
                 t.getStatus() == null ? null : t.getStatus().name(),
+                t.getSex() == null ? null : t.getSex().name(),
                 t.isActive(), t.getBranch().getId(), t.getBranch().getName());
     }
 

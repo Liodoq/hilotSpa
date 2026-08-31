@@ -29,15 +29,25 @@ export class Services implements OnInit {
 
   protected priceLabel = priceLabel;
 
-  protected filters = ['Recommended for you', 'All services', '45 minutes or less'];
-  filter = signal(this.filters[0]);
+  /**
+   * "Recommended for you" only means something once an assessment has been
+   * judged. Offering it to a visitor would promise a personal ranking that
+   * cannot exist yet.
+   */
+  protected filters = computed(() => this.cat.anonymous()
+    ? ['All services', '45 minutes or less']
+    : ['Recommended for you', 'All services', '45 minutes or less']);
+
+  filter = signal('Recommended for you');
 
   hidden = computed(() => this.cat.excluded());
   hiddenNames = computed(() => this.hidden().map(s => s.name).join(' and '));
 
   shown = computed<CatalogueEntry[]>(() => {
     const all = this.cat.entries();
-    const f = this.filter();
+    // A visitor has no personal ranking, so fall back to the full list rather
+    // than sorting by a rule nobody applied.
+    const f = this.cat.anonymous() ? 'All services' : this.filter();
     if (f === 'All services') return all;
     if (f === '45 minutes or less') return all.filter(s => (s.durationMinutes ?? 0) <= 45);
     // "Recommended for you" — INDICATED first, then neutral, exclusions last but
@@ -67,6 +77,11 @@ export class Services implements OnInit {
   }
 
   retry(): void { void this.cat.load(true); }
+
+  /** The treatment photo, or null so the tile keeps its tinted placeholder. */
+  photo(file: string | null | undefined): string | null {
+    return file ? `url(/services/${file})` : null;
+  }
 }
 
 function rank(s: CatalogueEntry): number {

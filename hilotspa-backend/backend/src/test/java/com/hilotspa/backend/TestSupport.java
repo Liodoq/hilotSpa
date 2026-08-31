@@ -118,6 +118,20 @@ final class TestSupport {
      */
     JsonNode createForm(String token, String branchId, String mainComplaint,
                         String secondCondition) throws Exception {
+        return createForm(token, branchId, mainComplaint, secondCondition, null);
+    }
+
+    /**
+     * The same, with a therapist preference - FEMALE, MALE, or null for none.
+     *
+     * Set at creation rather than by a later PUT on purpose: updateForm is a
+     * full replace, so a partial body would blank the complaint and the pain
+     * points, and the test would then be asserting against an assessment no
+     * client could ever have produced. The wizard posts the whole thing at once,
+     * so this is what really happens.
+     */
+    JsonNode createForm(String token, String branchId, String mainComplaint,
+                        String secondCondition, String therapistPreference) throws Exception {
         String body = """
                 {
                   "branchId": "%s",
@@ -127,13 +141,17 @@ final class TestSupport {
                   "hadIllness": false,
                   "hasTherapy": false,
                   "status": "PENDING",
+                  %s
                   "painPoints": [
                     { "bodyView": "BACK", "anatomicalRegion": "LUMBAR", "side": "CENTRE",
                       "coordinateX": 500, "coordinateY": 380,
                       "painScoreBefore": 8, "complaintType": "%s" }
                   ]
                 }
-                """.formatted(branchId, mainComplaint, secondCondition);
+                """.formatted(branchId, mainComplaint,
+                        therapistPreference == null ? ""
+                                : "\"therapistPreference\": \"" + therapistPreference + "\",",
+                        secondCondition);
 
         MvcResult res = postRaw(token, "/api/v1/forms/create", body);
         if (res.getResponse().getStatus() != 201) {

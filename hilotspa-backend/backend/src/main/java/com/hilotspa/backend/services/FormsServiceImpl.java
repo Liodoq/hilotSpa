@@ -239,6 +239,7 @@ public class FormsServiceImpl implements FormsService {
         // dropping them would hand the assistant a client with no contraindications.
         copy.getSafetyFlags().addAll(source.getSafetyFlags());
         copy.setPressurePreference(source.getPressurePreference());
+        copy.setTherapistPreference(source.getTherapistPreference());
         copy.setBranch(source.getBranch());
         copy.setIntent(source.getIntent());
         copy.setMainComplaint(source.getMainComplaint());
@@ -381,6 +382,7 @@ public class FormsServiceImpl implements FormsService {
             form.getSafetyFlags().addAll(model.getSafetyFlags());
         }
         form.setPressurePreference(model.getPressurePreference());
+        form.setTherapistPreference(model.getTherapistPreference());
     }
 
     /**

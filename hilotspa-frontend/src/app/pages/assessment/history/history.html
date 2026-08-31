@@ -85,6 +85,24 @@
           }
         </div>
 
+        <!-- Hilot is close, hands-on work. A client who cannot say who they are
+             comfortable being treated by will not come back, and here that is a
+             matter of dignity rather than a nicety. Honoured in availability and
+             again when the therapist is actually assigned. -->
+        <div class="field">
+          <span class="lab" id="thlab">Would you prefer a female or male therapist?</span>
+          <div class="seg" role="group" aria-labelledby="thlab">
+            @for (t of therapistOptions; track t.label) {
+              <button type="button" class="opt" [class.on]="draft().therapist === t.value"
+                      [attr.aria-pressed]="draft().therapist === t.value"
+                      (click)="store.patch({ therapist: t.value })">
+                <span class="dot"></span>{{ t.label }}</button>
+            }
+          </div>
+          <p class="help" style="margin-top:8px">We only offer you times when a therapist you are
+            comfortable with is genuinely free. Choosing one means fewer times to pick from.</p>
+        </div>
+
         <div class="field">
           <span class="lab" id="preslab">Preferred pressure</span>
           <div class="seg" role="group" aria-labelledby="preslab">

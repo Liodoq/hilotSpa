@@ -32,6 +32,9 @@ public class MassageServiceImpl implements MassageService {
         massage.setDurationMinute(massageModel.getDurationMinute());
         massage.setPrice(massageModel.getPrice() == null ? BigDecimal.ZERO : massageModel.getPrice());
         massage.setActive(massageModel.getActive() == null ? Boolean.TRUE : massageModel.getActive());
+        if (massageModel.getImageName() != null && !massageModel.getImageName().isBlank()) {
+            massage.setImageName(massageModel.getImageName().trim());
+        }
         return massageTransform.transform(massageRepository.save(massage));
     }
 
@@ -61,6 +64,13 @@ public class MassageServiceImpl implements MassageService {
         }
         if (massageModel.getActive() != null) {
             massage.setActive(massageModel.getActive());
+        }
+        // An empty string is how the admin CLEARS a photo, so blank and null
+        // mean different things here and the usual isBlank() guard would make
+        // removing a photo impossible.
+        if (massageModel.getImageName() != null) {
+            String file = massageModel.getImageName().trim();
+            massage.setImageName(file.isEmpty() ? null : file);
         }
 
         return massageTransform.transform(massageRepository.save(massage));

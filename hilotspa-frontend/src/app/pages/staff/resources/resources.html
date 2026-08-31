@@ -38,6 +38,23 @@
                 {{ label(st) }}</button>
             }
           </div>
+          <div>
+            <div class="help" style="margin-bottom:6px">CLIENTS MAY ASK FOR</div>
+            <div class="chips" role="group" [attr.aria-label]="'Sex for ' + name(s)">
+              @for (x of sexes; track x.value) {
+                <button type="button" class="chip" [class.on]="s.sex === x.value"
+                        [disabled]="saving() === s.id"
+                        [attr.aria-pressed]="s.sex === x.value" (click)="setSex(s, x.value)">
+                  {{ x.label }}</button>
+              }
+            </div>
+            @if (!s.sex) {
+              <p class="help" style="margin-top:6px">Not recorded, so {{ name(s) }} is only offered
+                to clients who said they had no preference. Tap one to record it, or leave it
+                blank.</p>
+            }
+          </div>
+
           @if (!s.active) {
             <div class="note bad" style="padding:12px 16px;font-size:17px"><span class="b"></span>
               <span>No longer employed here — excluded from every slot search.</span></div>

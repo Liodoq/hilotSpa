@@ -17,6 +17,7 @@ import com.hilotspa.backend.entities.Massage;
 import com.hilotspa.backend.entities.ProtocolRule;
 import com.hilotspa.backend.entities.Role;
 import com.hilotspa.backend.entities.Room;
+import com.hilotspa.backend.entities.Sex;
 import com.hilotspa.backend.entities.ServiceProtocol;
 import com.hilotspa.backend.entities.Therapist;
 import com.hilotspa.backend.entities.TherapistStatus;
@@ -108,9 +109,9 @@ public class DevDataSeeder implements CommandLineRunner {
         user("Ben", "Lim", "ben@customer.test", Role.CUSTOMER, null);
 
         // --- Resources (each owned by exactly one branch) --------------------
-        therapist("Lito", "Fernandez", bulan);
-        therapist("Rosa", "Delgado", bulan);
-        therapist("Ernesto", "Bautista", sorsogon);
+        therapist("Lito", "Fernandez", bulan, Sex.MALE);
+        therapist("Rosa", "Delgado", bulan, Sex.FEMALE);
+        therapist("Ernesto", "Bautista", sorsogon, Sex.MALE);
 
         room("Treatment Room 1", bulan);
         room("Treatment Room 2", bulan);
@@ -125,16 +126,16 @@ public class DevDataSeeder implements CommandLineRunner {
         // This matters more than it looks: the assistant QUOTES the price to a
         // client. A guessed price is a false statement made to a real customer,
         // not a placeholder, so it is left visibly wrong instead of plausibly wrong.
-        Massage sig60    = service("Signature Massage",   60, "0.00");   // 84 records
-        Massage sig90    = service("Signature Massage",   90, "0.00");   //  2 records
-        Massage bone60   = service("Bone Setting",        60, "0.00");   // 46 records
-        Massage thera60  = service("Therapeutic Massage", 60, "0.00");   // 24 records
-        Massage ventosa  = service("Ventosa",             30, "0.00");   // 22 records
-        Massage hotstone = service("Hotstone",            30, "0.00");   // 18 records
-        Massage suob     = service("Suob",                30, "0.00");   //  8 records
-        Massage headspa  = service("Head Spa",            60, "0.00");   //  6 records
-        Massage basic60  = service("Basic Massage",       60, "0.00");   //  5 records
-        Massage basic90  = service("Basic Massage",       90, "0.00");   //  3 records
+        Massage sig60    = service("Signature Massage",   60, "0.00", "signature-massage.jpg");   // 84 records
+        Massage sig90    = service("Signature Massage",   90, "0.00", "signature-massage.jpg");   //  2 records
+        Massage bone60   = service("Bone Setting",        60, "0.00", "bone-setting.jpg");   // 46 records
+        Massage thera60  = service("Therapeutic Massage", 60, "0.00", "therapeutic-massage.jpg");   // 24 records
+        Massage ventosa  = service("Ventosa",             30, "0.00", "ventosa.jpg");   // 22 records
+        Massage hotstone = service("Hotstone",            30, "0.00", "hotstone.jpg");   // 18 records
+        Massage suob     = service("Suob",                30, "0.00", "suob.jpg");   //  8 records
+        Massage headspa  = service("Head Spa",            60, "0.00", "head-spa.jpg");   //  6 records
+        Massage basic60  = service("Basic Massage",       60, "0.00", "basic-massage.jpg");   //  5 records
+        Massage basic90  = service("Basic Massage",       90, "0.00", "basic-massage.jpg");   //  3 records
 
         // --- Service protocols ----------------------------------------------
         // INDICATED rules DERIVED from what was historically availed. Each carries
@@ -235,10 +236,14 @@ public class DevDataSeeder implements CommandLineRunner {
         return userRepository.save(u);
     }
 
-    private Therapist therapist(String firstName, String lastName, Branch branch) {
+    private Therapist therapist(String firstName, String lastName, Branch branch, Sex sex) {
         Therapist t = new Therapist();
         t.setFirstName(firstName);
         t.setLastName(lastName);
+        // Clients may ask for a woman or a man. A therapist with no sex recorded
+        // matches no preference at all, so seeding it is what makes the feature
+        // demonstrable rather than theoretical.
+        t.setSex(sex);
         t.setBranch(branch);
         t.setStatus(TherapistStatus.AVAILABLE);
         t.setActive(true);
@@ -253,10 +258,14 @@ public class DevDataSeeder implements CommandLineRunner {
         return roomRepository.save(r);
     }
 
-    private Massage service(String name, int minutes, String price) {
+    private Massage service(String name, int minutes, String price, String imageName) {
         Massage m = new Massage();
         m.setName(name);
         m.setDurationMinute(minutes);
+        // A filename, never the id. Ids are regenerated on every reseed; a
+        // photograph called "hilot.jpg" survives that and a human can match it
+        // to a treatment. Missing files fall back to a tinted block.
+        m.setImageName(imageName);
         // String constructor, never the double one - new BigDecimal(0.1) is not 0.1
         m.setPrice(new BigDecimal(price));
         return massageRepository.save(m);

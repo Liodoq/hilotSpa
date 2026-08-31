@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DashShell } from '../../../shared/dash-shell/dash-shell';
 import { BranchContext } from '../../../core/branch-context';
 import { ToastService } from '../../../core/toast.service';
+import { describeHttpError } from '../../../core/http-error';
 import { OpsApi, RoomDto, ScheduleRow, TherapistDto } from '../../../core/ops.api';
 
 type Status = TherapistDto['status'];
@@ -31,6 +32,14 @@ export class StaffResources implements OnInit {
   protected toast = inject(ToastService);
 
   protected statuses: Status[] = ['AVAILABLE', 'BUSY', 'ON_BREAK', 'OFF_DUTY'];
+
+  /** Clients may ask for a woman or a man, and the booking rules honour it — so
+   *  a therapist with no sex recorded is offered ONLY to clients who expressed
+   *  no preference. Never guessed at. */
+  protected sexes: { value: string; label: string }[] = [
+    { value: 'FEMALE', label: 'Female' },
+    { value: 'MALE',   label: 'Male' },
+  ];
 
   staff = signal<TherapistDto[]>([]);
   rooms = signal<RoomDto[]>([]);
@@ -86,6 +95,21 @@ export class StaffResources implements OnInit {
   }
 
   /** Optimistic, then reconciled with what the server actually stored. */
+  async setSex(t: TherapistDto, sex: string): Promise<void> {
+    if (this.saving()) return;
+    this.saving.set(t.id);
+    try {
+      // Tapping the one already set clears it, which is how a therapist who
+      // would rather not have it recorded gets left out of the matching.
+      await this.api.saveTherapist(t.id, { sex: t.sex === sex ? '' : sex });
+      await this.load();
+    } catch (e: unknown) {
+      this.toast.show(describeHttpError(e, 'That did not save.'), 3200);
+    } finally {
+      this.saving.set(null);
+    }
+  }
+
   async setStatus(t: TherapistDto, status: Status): Promise<void> {
     if (t.status === status || this.saving()) return;
     const before = t.status;

@@ -44,6 +44,22 @@ public class Massage {
     @Column
     private Boolean active;
 
+    /**
+     * The photograph for this treatment, as a filename in the app's
+     * public/services/ folder - "hilot.jpg", "ventosa.jpg".
+     *
+     * A FILENAME, not the service id. The screens used to build the path from
+     * the UUID, which is regenerated on every reseed: real photographs would
+     * have needed renaming after every `docker compose down -v`, and the files
+     * would have been called things no human could match to a treatment. The
+     * admin sets this on the service menu screen (A6).
+     *
+     * Null is fine and expected - the screens fall back to a plain tinted
+     * block, which is honest about a photograph the spa has not supplied.
+     */
+    @Column
+    private String imageName;
+
     /** Null means "yes" - see the field comment. */
     public boolean isOnSale() {
         return active == null || active;

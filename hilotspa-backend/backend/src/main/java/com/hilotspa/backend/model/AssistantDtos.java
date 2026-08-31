@@ -48,7 +48,10 @@ public final class AssistantDtos {
             BigDecimal price,
             boolean suitable,
             String rule,
-            String reason) {
+            String reason,
+            /** Photo filename in public/services/, or null. Never the id - see
+             *  Massage.imageName for why. */
+            String imageName) {
     }
 
     public record PainPointView(

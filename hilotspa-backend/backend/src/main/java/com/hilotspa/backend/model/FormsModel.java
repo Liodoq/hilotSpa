@@ -11,6 +11,7 @@ import com.hilotspa.backend.entities.AssessmentIntent;
 import com.hilotspa.backend.entities.ComplaintType;
 import com.hilotspa.backend.entities.PressurePreference;
 import com.hilotspa.backend.entities.SafetyFlag;
+import com.hilotspa.backend.entities.Sex;
 
 import lombok.Data;
 @Data
@@ -35,6 +36,10 @@ public class FormsModel {
 
     /** H9 - LIGHT / MEDIUM / FIRM. Was packed into remarks. */
     private PressurePreference pressurePreference;
+
+    /** FEMALE, MALE, or null for no preference. Null is not "either" by
+     *  accident - it is the honest record of a question left unanswered. */
+    private Sex therapistPreference;
     private AssessmentIntent intent;
 
     @CreationTimestamp

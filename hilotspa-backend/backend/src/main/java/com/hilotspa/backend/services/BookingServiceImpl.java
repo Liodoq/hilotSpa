@@ -32,7 +32,9 @@ import com.hilotspa.backend.entities.Massage;
 import com.hilotspa.backend.entities.PaymentStatus;
 import com.hilotspa.backend.entities.Role;
 import com.hilotspa.backend.entities.Room;
+import com.hilotspa.backend.entities.Sex;
 import com.hilotspa.backend.entities.Therapist;
+import com.hilotspa.backend.entities.TherapistStatus;
 import com.hilotspa.backend.model.BookingDtos.Availability;
 import com.hilotspa.backend.model.BookingDtos.BookRequest;
 import com.hilotspa.backend.model.BookingDtos.Booking;
@@ -107,10 +109,35 @@ public class BookingServiceImpl implements BookingService {
         List<Therapist> therapists = therapistRepository.findByBranchIdAndActiveTrue(branchId);
         List<Room> rooms = roomRepository.findByBranchIdAndActiveTrue(branchId);
 
+        // The client may have asked for a woman or a man. Applied HERE as well as
+        // at assignment: offering a time only a male therapist could cover, to a
+        // client who asked for a woman, is a promise the write path then breaks.
+        //
+        // A therapist whose sex is not recorded matches NO preference. Guessing
+        // would be the one mistake this feature exists to prevent.
+        Sex want = form.getTherapistPreference();
+        if (want != null) {
+            therapists = therapists.stream().filter(t -> want == t.getSex()).toList();
+        }
+
+        // Task 2.38 - TherapistStatus is honoured, and only for TODAY.
+        //
+        // active=false means the therapist has left the spa: gone from every day.
+        // status is a different thing - a right-now flag with no end time, set at
+        // the front desk when someone goes on break or off shift. Applying it to
+        // the whole week would mean marking one person ON_BREAK also emptied next
+        // Tuesday, which is nonsense and would teach staff never to touch the
+        // control. So it removes them from today's remaining slots and nothing
+        // else: nobody has said they will still be off tomorrow.
+        List<Therapist> onDutyNow = therapists.stream().filter(BookingServiceImpl::onDuty).toList();
+        LocalDate todayHere = now.toLocalDate();
+
         List<Slot> slots = new ArrayList<>();
         if (therapists.isEmpty() || rooms.isEmpty()) {
-            // No staff or no room means no availability. Saying so plainly beats
-            // offering times nobody can honour.
+            // No staff, no room, or nobody matching the client's preference. An
+            // empty list is the honest answer; the SCREEN is what has to explain
+            // which of those it was, because "no female therapist works at this
+            // branch" and "no times left this week" are very different messages.
             return new Availability(timezone, now, serviceId, service.getName(),
                     service.getDurationMinute(), service.getPrice(), slots);
         }
@@ -134,11 +161,15 @@ public class BookingServiceImpl implements BookingService {
             LocalDateTime cursor = d.atTime(openHour, 0);
             LocalDateTime lastStart = d.atTime(closeHour, 0).minusMinutes(duration);
 
+            // Today is judged against who is actually on the floor; later days
+            // against everyone who works here.
+            List<Therapist> pool = d.equals(todayHere) ? onDutyNow : therapists;
+
             while (!cursor.isAfter(lastStart)) {
                 LocalDateTime slotEnd = cursor.plusMinutes(duration);
 
                 // Never offer a time that has already passed today.
-                if (cursor.isAfter(now) && anyFree(therapists, rooms, booked, cursor, slotEnd)) {
+                if (cursor.isAfter(now) && anyFree(pool, rooms, booked, cursor, slotEnd)) {
                     slots.add(new Slot(cursor.toString(), cursor, cursor.format(LABEL)));
                 }
                 cursor = cursor.plusMinutes(slotMinutes);
@@ -147,6 +178,18 @@ public class BookingServiceImpl implements BookingService {
 
         return new Availability(timezone, now, serviceId, service.getName(),
                 duration, service.getPrice(), slots);
+    }
+
+    /**
+     * Is this therapist on the floor right now?
+     *
+     * Null counts as yes. The column was added late and older rows may not have
+     * one; refusing to book a therapist because nobody has ever touched their
+     * status would take the branch offline for a data gap, which is the wrong
+     * way round.
+     */
+    private static boolean onDuty(Therapist t) {
+        return t.getStatus() == null || t.getStatus() == TherapistStatus.AVAILABLE;
     }
 
     /** A slot is open only when BOTH a therapist and a room are free for it. */
@@ -235,7 +278,7 @@ public class BookingServiceImpl implements BookingService {
                     + ". Cancel that first, or choose a different time.");
         }
 
-        Assignment assignment = assign(branchId, start, end);
+        Assignment assignment = assign(branchId, start, end, form.getTherapistPreference());
         Therapist therapist = assignment.therapist();
         Room room = assignment.room();
 
@@ -516,14 +559,38 @@ public class BookingServiceImpl implements BookingService {
      * award the same therapist, because whichever transaction commits second
      * re-reads these rows and finds them taken.
      */
-    private Assignment assign(UUID branchId, LocalDateTime start, LocalDateTime end) {
+    /**
+     * Pick a free therapist and room, applying every rule availability applied.
+     *
+     * `want` is the client's preference about their therapist's sex, or null for
+     * none. It is checked here as well as when times were offered, because those
+     * are two moments and the roster can change between them - and because a
+     * preference honoured only by the screen is worse than none at all: the
+     * client is told they will be treated by a woman, and then is not.
+     */
+    private Assignment assign(UUID branchId, LocalDateTime start, LocalDateTime end, Sex want) {
+        // Same rule as availability, applied again at the moment of writing:
+        // status is only consulted for a visit starting TODAY. Without this a
+        // walk-in could be handed to somebody the front desk had just marked
+        // off duty, thirty seconds after the screen stopped offering them.
+        boolean today = start.toLocalDate().equals(LocalDate.now(ZoneId.of(timezone)));
+
         Therapist therapist = therapistRepository.findByBranchIdAndActiveTrue(branchId).stream()
+                .filter(t -> want == null || want == t.getSex())
+                .filter(t -> !today || onDuty(t))
                 .filter(t -> !appointmentRepository
                         .existsByTherapistIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
                                 t.getId(), BLOCKING, end, start))
                 .findFirst()
+                // Say WHICH constraint bit. "That time was just taken" and "no
+                // female therapist is free then" send the client to do two
+                // different things, and only one of them is trying another time.
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
-                        "That time was just taken"));
+                        want == null
+                                ? "That time was just taken"
+                                : "No " + want.getDisplayName().toLowerCase()
+                                  + " therapist is free at that time. Please choose another time, "
+                                  + "or change your preference on your assessment."));
 
         Room room = roomRepository.findByBranchIdAndActiveTrue(branchId).stream()
                 .filter(r -> !appointmentRepository
@@ -599,7 +666,9 @@ public class BookingServiceImpl implements BookingService {
             }
         }
 
-        Assignment assignment = assign(branchId, start, end);
+        // A walk-in assessed at the counter may have stated a preference too.
+        Assignment assignment = assign(branchId, start, end,
+                walkInForm == null ? null : walkInForm.getTherapistPreference());
 
         Appointment a = new Appointment();
         a.setBranch(branch);

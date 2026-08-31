@@ -1,6 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { CatalogueEntry, OpsApi } from './ops.api';
 import { BookingStore } from './booking.store';
+import { AuthService } from './auth.service';
+import { PublicApi, PublicService } from './public.api';
 
 /**
  * The service menu, as the SERVER judges it for this client.
@@ -15,7 +17,20 @@ import { BookingStore } from './booking.store';
 @Injectable({ providedIn: 'root' })
 export class CatalogueStore {
   private api = inject(OpsApi);
+  private pub = inject(PublicApi);
+  private auth = inject(AuthService);
   private bookings = inject(BookingStore);
+
+  /**
+   * True when the menu came from the PUBLIC endpoint — a visitor who has not
+   * signed in.
+   *
+   * The screens need to know, because everything protocol-related is absent in
+   * that case. Showing "no exclusions apply to your assessment" to someone
+   * without an assessment would be a claim about a judgement that was never
+   * made, which is the same class of untruth as B91.
+   */
+  readonly anonymous = signal(false);
 
   readonly entries = signal<CatalogueEntry[]>([]);
   readonly loading = signal(false);
@@ -37,6 +52,19 @@ export class CatalogueStore {
     this.loading.set(true);
     this.error.set(null);
     try {
+      if (!this.auth.token()) {
+        // A visitor browsing the menu before they have an account. They get the
+        // treatments and nothing else: no protocol rule, no contraindication
+        // verdict, no availability. Those are judgements about a named client,
+        // and there is no client here.
+        this.anonymous.set(true);
+        this.formId.set(null);
+        this.entries.set((await this.pub.services()).map(toEntry));
+        this.loaded.set(true);
+        return;
+      }
+
+      this.anonymous.set(false);
       if (!this.bookings.loaded()) await this.bookings.load();
       // The newest assessment is what the menu is judged against. history is
       // already sorted newest-first by the store.
@@ -60,8 +88,31 @@ export class CatalogueStore {
     this.entries.set([]);
     this.formId.set(null);
     this.loaded.set(false);
+    this.anonymous.set(false);
     this.error.set(null);
   }
+}
+
+/**
+ * A public treatment, shaped like a catalogue entry so both screens can render
+ * one list.
+ *
+ * `suitable: true` and `rule: null` are the honest values: nothing was
+ * excluded because nothing was judged. `rule: 'NEUTRAL'` would be a lie — it
+ * would say the protocol table looked at this and had no opinion, when in fact
+ * the protocol table was never consulted.
+ */
+function toEntry(s: PublicService): CatalogueEntry {
+  return {
+    serviceId: s.id,
+    name: s.name,
+    durationMinutes: s.durationMinutes,
+    price: s.price,
+    suitable: true,
+    rule: null,
+    reason: null,
+    imageName: s.imageName,
+  };
 }
 
 /**

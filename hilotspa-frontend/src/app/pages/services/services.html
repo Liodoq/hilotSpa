@@ -3,8 +3,14 @@
   <div class="col">
     <div class="top">
       <div class="head">
-        <h1 class="t">Services we can offer you</h1>
-        @if (cat.unjudged()) {
+        <h1 class="t">{{ cat.anonymous() ? 'Our treatments' : 'Services we can offer you' }}</h1>
+        <!-- Three states, and they are genuinely different: a visitor with no
+             account, a client who has not been assessed yet, and a client whose
+             record has actually been checked. -->
+        @if (cat.anonymous()) {
+          <p class="s">Everything we offer. Create an account and tell us where it hurts, and
+            we will check each treatment against your own record before offering it.</p>
+        } @else if (cat.unjudged()) {
           <p class="s">The full menu. Complete a pre-assessment and we will check each
             treatment against your own record before offering it.</p>
         } @else {
@@ -13,7 +19,7 @@
         }
       </div>
       <div class="chips" role="group" aria-label="Filter services">
-        @for (f of filters; track f) {
+        @for (f of filters(); track f) {
           <button type="button" class="chip" [class.on]="filter() === f"
                   [attr.aria-pressed]="filter() === f" (click)="filter.set(f)">{{ f }}</button>
         }
@@ -30,7 +36,9 @@
       <p class="s">Loading the menu…</p>
     }
 
-    @if (hidden().length) {
+    <!-- Only a signed-in client with an assessment has exclusions. Showing this
+         to a visitor would describe a judgement that was never made. -->
+    @if (!cat.anonymous() && hidden().length) {
       <div class="note warm"><span class="b"></span>
         <span><b>{{ hidden().length }} {{ hidden().length === 1 ? 'service is' : 'services are' }}
           not advised for you.</b>
@@ -52,7 +60,10 @@
           } @else {
             <span class="pill bad" style="align-self:flex-start">NOT ADVISED FOR YOU</span>
           }
-          <div class="thumb" [style.background-image]="'url(/services/' + s.serviceId + '.jpg)'"></div>
+          <!-- A filename the admin set, not the service id: ids are regenerated
+               on every reseed and the photographs would break. Missing photo =
+               a tinted block, never a broken image. -->
+          <div class="thumb" [style.background-image]="photo(s.imageName)"></div>
           <h2 class="svcName">{{ s.name }}</h2>
           <p class="s" style="font-size:19px">{{ s.reason || 'Ask the assistant how this one would
             suit you.' }}</p>

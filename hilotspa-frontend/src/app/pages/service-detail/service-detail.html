@@ -4,7 +4,7 @@
     <div class="col">
       <button type="button" class="link" (click)="back()">&larr; All services</button>
 
-      <div class="hero" [style.background-image]="'url(/services/' + s.serviceId + '.jpg)'">
+      <div class="hero" [style.background-image]="photo(s.imageName)">
         <div class="scrim"></div>
         <div class="heroText">
           @if (best()) { <span class="pill ok"><i class="dotx"></i>RECOMMENDED FOR YOUR ASSESSMENT</span> }
@@ -25,8 +25,14 @@
           </div>
 
           <div class="card">
-            <h2 class="t-s" style="font-size:24px;margin-bottom:12px">How this was judged for you</h2>
-            @if (cat.unjudged()) {
+            <h2 class="t-s" style="font-size:24px;margin-bottom:12px">
+              {{ cat.anonymous() ? 'How we decide if this suits you' : 'How this was judged for you' }}</h2>
+            @if (cat.anonymous()) {
+              <p class="s">Our bone setter has written down which treatments suit which
+                conditions, and signed it. Once you have an account and have told us where it
+                hurts, this page says plainly whether this treatment is advised for you — and if
+                it is not, which rule ruled it out.</p>
+            } @else if (cat.unjudged()) {
               <p class="s">You have no pre-assessment on record yet, so nothing has been checked
                 against your history. Complete one and this page will say why this treatment is or
                 is not advised for you.</p>

@@ -84,6 +84,21 @@ public class Forms {
     @Column
     private PressurePreference pressurePreference;
 
+    /**
+     * "I would rather be treated by a woman" - or a man, or it does not matter.
+     *
+     * NULL MEANS NO PREFERENCE, and that is deliberate: a client who has not
+     * expressed one has not expressed one, and inventing a third enum value for
+     * it would let "no preference" be stored as though it were a choice.
+     *
+     * Honoured in availability AND at the moment of assignment, because a
+     * preference the screen respects and the write path ignores is worse than
+     * none: the client is told they will get a woman and then does not.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column
+    private Sex therapistPreference;
+
     @ManyToOne
     @JoinColumn(name = "branch_id", nullable = false)
     @ToString.Exclude

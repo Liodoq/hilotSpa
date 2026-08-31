@@ -15,6 +15,9 @@ import { Branch } from './models';
 export interface TherapistDto {
   id: string; firstName: string; lastName: string;
   status: 'AVAILABLE' | 'BUSY' | 'ON_BREAK' | 'OFF_DUTY';
+  /** FEMALE / MALE, or null when not recorded. A therapist with no sex recorded
+   *  is offered only to clients who expressed no preference — never guessed at. */
+  sex: string | null;
   active: boolean; branchId: string; branchName: string;
 }
 
@@ -42,6 +45,9 @@ export interface MassageDto {
   durationMinute: number;
   price: number;
   active: boolean;
+  /** Photo filename in public/services/ — "hilot.jpg". A filename, never the
+   *  id: ids are regenerated on every reseed and photos would break. */
+  imageName?: string | null;
 }
 
 export interface WalkInRequest {
@@ -59,6 +65,9 @@ export interface WalkInRequest {
 export interface CatalogueEntry {
   serviceId: string; name: string; durationMinutes: number; price: number;
   suitable: boolean; rule: string | null; reason: string | null;
+  /** Photo filename in public/services/, or null when the spa has not supplied
+   *  one. Never the service id — see Massage.imageName. */
+  imageName?: string | null;
 }
 
 export interface AccountRow {

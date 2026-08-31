@@ -75,6 +75,7 @@
                  "OPEN_WOUND_OR_SKIN_INFECTION" is not a review. -->
             <div><span>Flagged</span> {{ flagLabels() }}</div>
             @if (draft().pressure) { <div><span>Pressure</span> {{ pressureLabel() }}</div> }
+            <div><span>Therapist</span> {{ therapistLabel() }}</div>
           </div>
         </section>
       }

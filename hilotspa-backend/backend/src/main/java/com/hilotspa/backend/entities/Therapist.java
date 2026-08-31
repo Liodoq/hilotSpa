@@ -46,6 +46,20 @@ public class Therapist {
     @Column(nullable = false)
     private TherapistStatus status = TherapistStatus.OFF_DUTY;
 
+    /**
+     * The therapist's sex, because clients are allowed to ask for a woman or a
+     * man and that is a matter of dignity, not preference in the trivial sense.
+     * Especially here: hilot is close, hands-on work, and a client who cannot
+     * say who they are comfortable with will simply not come back.
+     *
+     * Nullable. Older rows predate the column, and a therapist with no sex
+     * recorded is offered only to clients who expressed no preference - never
+     * guessed at, and never quietly matched to a request they might not meet.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column
+    private Sex sex;
+
     @Column(nullable = false)
     private boolean active = true;
 

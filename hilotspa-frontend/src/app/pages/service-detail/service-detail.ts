@@ -39,7 +39,22 @@ export class ServiceDetail implements OnInit {
 
   back(): void { this.router.navigateByUrl('/services'); }
 
+  /** The treatment photo, or null so the hero keeps its tinted placeholder. */
+  photo(file: string | null | undefined): string | null {
+    return file ? `url(/services/${file})` : null;
+  }
+
   book(s: CatalogueEntry): void {
+    // A visitor can read the whole menu, but booking needs an account and an
+    // assessment - Process Rule #2 is not relaxed for the public site. Send
+    // them to register and remember what they were looking at.
+    if (this.cat.anonymous()) {
+      this.store.wantedService.set(s.name);
+      this.toast.show(`${s.name} chosen — create an account to book it`, 3200);
+      this.router.navigateByUrl('/register');
+      return;
+    }
+
     this.store.resetAll();
     this.store.wantedService.set(s.name);
     this.toast.show(`${s.name} chosen — a short pre-assessment first`, 2800);

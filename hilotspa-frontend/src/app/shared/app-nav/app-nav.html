@@ -9,18 +9,36 @@
 }
 
 <header class="appbar">
-  <a class="brand" routerLink="/home" aria-label="Knead Wellness Spa, home">
+  <a class="brand" [routerLink]="auth.token() ? '/home' : '/'" aria-label="Knead Wellness Spa, home">
     <app-logo [size]="58" />
     <span><b>Knead Wellness Spa</b><small>Bulan, Sorsogon</small></span>
   </a>
 
-  <nav class="navlinks" aria-label="Main">
-    <a routerLink="/home"     routerLinkActive="on">HOME</a>
-    <a routerLink="/services" routerLinkActive="on">SERVICES</a>
-    <a routerLink="/booking"  routerLinkActive="on">MY BOOKINGS</a>
-    <a routerLink="/about"    routerLinkActive="on">ABOUT</a>
-  </nav>
+  <!-- The same bar serves signed-in clients and visitors. A visitor browsing
+       the menu should not be shown "MY BOOKINGS", and a client should not be
+       shown "Create account". -->
+  @if (auth.token()) {
+    <nav class="navlinks" aria-label="Main">
+      <a routerLink="/home"     routerLinkActive="on">HOME</a>
+      <a routerLink="/services" routerLinkActive="on">SERVICES</a>
+      <a routerLink="/booking"  routerLinkActive="on">MY BOOKINGS</a>
+      <a routerLink="/about"    routerLinkActive="on">ABOUT</a>
+    </nav>
+  } @else {
+    <nav class="navlinks" aria-label="Main">
+      <a routerLink="/"         routerLinkActive="on" [routerLinkActiveOptions]="{exact:true}">HOME</a>
+      <a routerLink="/services" routerLinkActive="on">SERVICES</a>
+      <a routerLink="/about"    routerLinkActive="on">ABOUT</a>
+      <a routerLink="/contact"  routerLinkActive="on">CONTACT</a>
+    </nav>
 
+    <div class="account">
+      <a class="btn btn-quiet btn-sm" routerLink="/login">Sign in</a>
+      <a class="btn btn-primary btn-sm" routerLink="/register">Create account</a>
+    </div>
+  }
+
+  @if (auth.token()) {
   <div class="account">
     <span style="font-size:19px;font-weight:500">{{ auth.fullName() || 'Guest' }}</span>
     <button type="button" class="avatar" [attr.aria-expanded]="open()" aria-haspopup="menu"
@@ -41,4 +59,5 @@
       <button type="button" class="scrim" aria-label="Close menu" (click)="open.set(false)"></button>
     }
   </div>
+  }
 </header>
