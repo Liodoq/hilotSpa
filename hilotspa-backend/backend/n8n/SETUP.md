@@ -389,8 +389,15 @@ at every startup until you set it.
 window, a screenshot or a commit.
 
 ```powershell
-python -c "import secrets; print(secrets.token_urlsafe(32))"
+$b = New-Object byte[] 32
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+[Convert]::ToBase64String($b).TrimEnd('=').Replace('+','-').Replace('/','_')
 ```
+
+(There is no Python on this machine and there should not be — it is not in the
+stack. The line above is the .NET crypto RNG, which is what `secrets` uses on
+Windows anyway. If you would rather use Node, which you already have for
+Angular: `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`)
 
 **2. Put it in `.env`** (which is gitignored) beside the other secrets:
 

@@ -49,6 +49,24 @@ export class AuthService {
     this.router.navigateByUrl('/login');
   }
 
+  /**
+   * Drop a session the server has already refused (B93). Called by the
+   * interceptor on a 401.
+   *
+   * Deliberately does NOT navigate. A 401 can arrive while a visitor is reading
+   * the landing page — throwing them at a login form they never asked for would
+   * be a worse answer than quietly showing them the public menu. The expiry
+   * check in restore() catches the common case at startup; this catches the
+   * rest: a token revoked mid-session, or one signed with a JWT_SECRET that has
+   * since been rotated.
+   */
+  expire(): void {
+    if (this.session() === null) return;
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* private mode */ }
+    this.session.set(null);
+    this.wipeClientData();
+  }
+
   private accept(res: AuthResponse): void {
     const previous = this.session()?.userId ?? null;
 
@@ -84,11 +102,51 @@ export class AuthService {
   }
 }
 
+/**
+ * The session stored on this browser, or null if there is not a usable one.
+ *
+ * B93: this used to return whatever blob was in localStorage. A token that had
+ * expired since the last visit still restored, so the header rendered the old
+ * client's name and MY BOOKINGS while every authenticated call came back 401 —
+ * including the service menu, which then showed "our menu is not loading" to
+ * someone the app believed was signed in. The stale half of a session is worse
+ * than no session: it looks like the app is broken rather than logged out.
+ *
+ * This checks `exp` only. It is a DISPLAY decision, not a security one — the
+ * browser cannot verify the signature and must never be trusted to. The server
+ * remains the only authority on whether a token is good; this just stops the UI
+ * from claiming a session the server is going to refuse.
+ */
 function restore(): AuthResponse | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as AuthResponse) : null;
+    if (!raw) return null;
+    const session = JSON.parse(raw) as AuthResponse;
+    if (!session?.token || expiresAt(session.token) <= Date.now()) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return session;
   } catch {
     return null;
+  }
+}
+
+/**
+ * The `exp` claim in milliseconds, or 0 for anything we cannot read.
+ *
+ * 0 means "treat it as expired". A token whose payload will not decode is not a
+ * token we should be sending anywhere.
+ */
+function expiresAt(token: string): number {
+  const parts = token.split('.');
+  if (parts.length !== 3) return 0;
+  try {
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const pad = b64.length % 4 ? '='.repeat(4 - (b64.length % 4)) : '';
+    const exp = (JSON.parse(atob(b64 + pad)) as { exp?: number }).exp;
+    return typeof exp === 'number' ? exp * 1000 : 0;
+  } catch {
+    return 0;
   }
 }

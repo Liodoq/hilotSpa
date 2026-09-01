@@ -47,3 +47,6 @@ n8n_data.tgz
 # Local compose backups
 compose.yaml.bak
 compose.yaml.pre-n8n
+
+# Local .env backups taken during hardening. Contain real secrets.
+.env.bak*

@@ -16,7 +16,8 @@ import { API_BASE } from './api.config';
  * time, which is a different message.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const token = inject(AuthService).token();
+  const auth = inject(AuthService);
+  const token = auth.token();
   const net = inject(Connectivity);
   const ours = req.url.startsWith(API_BASE);
   const isAuthCall = req.url.includes('/auth/');
@@ -30,8 +31,17 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(outgoing).pipe(
     tap(() => net.noteReachable()),
     catchError((err: unknown) => {
-      if ((err as { status?: number })?.status === 0) {
+      const status = (err as { status?: number })?.status;
+      if (status === 0) {
         net.noteUnreachable();
+      }
+      // B93: the server has refused this token. Drop the session rather than
+      // keep re-sending it — otherwise the header goes on showing the client's
+      // name while every call behind it fails, which reads as a broken app
+      // instead of an expired login. `/auth/` is excluded because a 401 there
+      // is a wrong password, not a dead session.
+      if (status === 401 && !isAuthCall) {
+        auth.expire();
       }
       return throwError(() => err);
     }),

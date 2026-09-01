@@ -53,14 +53,7 @@ export class CatalogueStore {
     this.error.set(null);
     try {
       if (!this.auth.token()) {
-        // A visitor browsing the menu before they have an account. They get the
-        // treatments and nothing else: no protocol rule, no contraindication
-        // verdict, no availability. Those are judgements about a named client,
-        // and there is no client here.
-        this.anonymous.set(true);
-        this.formId.set(null);
-        this.entries.set((await this.pub.services()).map(toEntry));
-        this.loaded.set(true);
+        await this.loadPublic();
         return;
       }
 
@@ -73,11 +66,34 @@ export class CatalogueStore {
       this.entries.set(await this.api.catalogue(latest ?? undefined));
       this.loaded.set(true);
     } catch {
+      // B93: a 401 means the interceptor has just cleared an expired session,
+      // so the token is gone by the time we land here. That is not a failure —
+      // it is a visitor, and a visitor can still be shown the public menu.
+      // Telling someone the menu is down because their login lapsed was the
+      // worst version of this bug: it blamed the spa for the browser.
+      if (!this.auth.token()) {
+        try {
+          await this.loadPublic();
+          return;
+        } catch { /* the public endpoint is down too - fall through */ }
+      }
       this.entries.set([]);
       this.error.set('We could not load the service menu. Please try again.');
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /**
+   * The menu as a visitor sees it: the treatments and nothing else. No protocol
+   * rule, no contraindication verdict, no availability. Those are judgements
+   * about a named client, and there is no client here.
+   */
+  private async loadPublic(): Promise<void> {
+    this.anonymous.set(true);
+    this.formId.set(null);
+    this.entries.set((await this.pub.services()).map(toEntry));
+    this.loaded.set(true);
   }
 
   find(id: string): CatalogueEntry | undefined {
