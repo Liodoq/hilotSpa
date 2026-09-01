@@ -18,6 +18,7 @@ import com.hilotspa.backend.model.AssistantDtos.CatalogueEntry;
 import com.hilotspa.backend.model.AssistantDtos.ChatRequest;
 import com.hilotspa.backend.model.AssistantDtos.ChatResponse;
 import com.hilotspa.backend.model.AssistantDtos.ConfirmRequest;
+import com.hilotspa.backend.model.BookingDtos.Openings;
 import com.hilotspa.backend.model.AssistantDtos.RecommendResponse;
 import com.hilotspa.backend.services.AssistantService;
 
@@ -62,6 +63,18 @@ public class AssistantController {
      * client can always complete a booking even when the assistant is having a
      * bad day with the word "yes".
      */
+    /**
+     * Who and where is free at the time a tapped slotId names.
+     *
+     * Same identifier the confirm call takes, so the two cannot disagree about
+     * which instant the client is looking at.
+     */
+    @GetMapping("/openings/{formId}")
+    public ResponseEntity<Openings> openings(@PathVariable UUID formId,
+                                             @RequestParam String slotId) {
+        return ResponseEntity.ok(assistantService.openings(formId, slotId));
+    }
+
     @PostMapping("/confirm/{formId}")
     public ResponseEntity<ChatResponse> confirm(@PathVariable UUID formId,
                                                 @RequestBody ConfirmRequest body) {

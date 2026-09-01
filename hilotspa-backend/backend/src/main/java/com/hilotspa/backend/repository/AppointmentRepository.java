@@ -29,6 +29,17 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     List<Appointment> findByFormId(UUID formId);
 
     /**
+     * Has this therapist EVER been on an appointment - past, cancelled, any
+     * status at all?
+     *
+     * The question a safe delete has to ask. A cancelled visit still happened as
+     * a record, and the audit trail still points at it.
+     */
+    boolean existsByTherapistId(UUID therapistId);
+
+    boolean existsByRoomId(UUID roomId);
+
+    /**
      * Does this client already have a live booking overlapping this window?
      *
      * Rule 4 (task 2.36). The three rules the spa stated - a free therapist, a

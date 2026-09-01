@@ -34,3 +34,85 @@
   50%      { box-shadow: 0 0 0 14px rgba(45, 90, 61, 0); }
 }
 @media (prefers-reduced-motion: reduce) { .mic.live { animation: none; } }
+
+/* Backend diagnostics, when this browser has explicitly asked for them.
+   Monospace, dimmed, dashed — deliberately unlike every other bubble on the
+   screen, because the one thing it must never look like is the assistant
+   talking to a client. */
+.devline {
+  display: block;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-ink-600);
+  background: repeating-linear-gradient(
+      -45deg, transparent, transparent 7px,
+      rgba(0, 0, 0, .025) 7px, rgba(0, 0, 0, .025) 14px);
+  border: 1px dashed var(--color-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  word-break: break-word;
+}
+
+/* ---------------------------------------------------------------- open times
+   One day at a time. The previous screen printed the whole window — sixty-odd
+   identical chips — and finding a time in it was a search rather than a choice. */
+.daystrip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+  margin-top: 10px;
+  scrollbar-width: thin;
+}
+.day {
+  flex: 0 0 auto;
+  min-width: 130px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: #fff;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: border-color .14s ease, background-color .14s ease;
+}
+.day:hover:not(:disabled) { border-color: var(--color-forest-500); }
+.day.on { border-color: var(--color-forest-700); background: var(--color-sage-100); }
+.day:disabled { opacity: .5; cursor: default; }
+.day:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 3px; }
+.day .d1 {
+  display: block;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--color-forest-900);
+}
+.day .d2 {
+  display: block;
+  font-size: 15px;
+  color: var(--color-ink-600);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Morning / afternoon / evening. Nobody thinks "1:30 PM"; they think
+   "sometime after lunch". */
+.part { margin-top: 16px; }
+.part h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--color-ink-600);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.part h4::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-line);
+}
+.chip.time { font-variant-numeric: tabular-nums; }

@@ -1,0 +1,102 @@
+<app-nav />
+
+<main class="pub contact">
+
+  <header class="chead">
+    <p class="eyebrow">{{ spa()?.address || 'Bulan, Sorsogon' }}</p>
+    <h1 class="display">Come in, or call ahead.</h1>
+    <p class="lead">
+      Walk-ins are always welcome — the front desk can book you without an account. If you
+      would rather not wait, mark where it hurts before you set out.
+    </p>
+  </header>
+
+  <!-- ==================================================================
+       Hours first. It is the question people open a contact page to
+       answer, and it is the one detail we always have.
+       ================================================================== -->
+  <section class="band">
+    <div class="row2">
+      <h2 class="sec-head">When we are open</h2>
+      <div>
+        <p class="big">{{ spa()?.hours || 'Open daily' }}</p>
+        <p class="note-line">
+          The last booking of the day starts an hour before closing, so there is time for the
+          whole session.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="row2">
+      <h2 class="sec-head">Where to find us</h2>
+      <div>
+        <p class="big">{{ spa()?.address || 'Bulan, Sorsogon' }}</p>
+        @if (spa()?.mapsUrl) {
+          <a class="btn btn-ghost" [href]="spa()?.mapsUrl" target="_blank" rel="noopener">
+            Open in Maps</a>
+        } @else {
+          <p class="note-line">
+            Ask for the spa by name in town — everyone knows it. A map link will be here once
+            the branch confirms its pin.
+          </p>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="row2">
+      <h2 class="sec-head">How to reach us</h2>
+      <div>
+        @if (loading()) {
+          <div class="skel" style="max-width:360px"></div>
+        } @else if (reachable()) {
+          <ul class="ways">
+            @if (spa()?.phone) {
+              <li>
+                <span class="say">Phone</span>
+                <a class="big link" [href]="'tel:' + spa()?.phone">{{ spa()?.phone }}</a>
+                <span class="note-line">Fastest during opening hours.</span>
+              </li>
+            }
+            @if (spa()?.facebook) {
+              <li>
+                <span class="say">Facebook</span>
+                <a class="big link" [href]="spa()?.facebook" target="_blank" rel="noopener">
+                  Message the page</a>
+                <span class="note-line">We reply here most days.</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <!-- Honest rather than empty. The details are not published yet, and
+               saying so is more use than four blank cards. -->
+          <p class="big">Please visit the branch.</p>
+          <p class="note-line">
+            Our phone number and Facebook page are not published here yet. We are open during
+            the hours above, and the front desk can book you on the spot.
+          </p>
+        }
+
+        <p class="note-line no-form">
+          There is no message form on this page on purpose. We have no inbox behind it, and a
+          form that files your message where nobody reads it would leave you waiting for a
+          reply that was never coming.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="close">
+    <h2>Save yourself the explaining.</h2>
+    <p>Mark where it hurts before you come in. Three minutes, and your bone setter has read
+       it before you sit down.</p>
+    <div>
+      <a class="btn btn-primary" routerLink="/register">Start a pre-assessment</a>
+      <a class="btn btn-ghost" routerLink="/services">See the treatments</a>
+    </div>
+  </section>
+
+</main>

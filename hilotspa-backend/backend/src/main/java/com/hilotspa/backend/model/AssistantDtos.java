@@ -190,11 +190,40 @@ public final class AssistantDtos {
              * all, which is why "yes please" not parsing can no longer strand
              * a client mid-booking.
              */
-            List<ChatSlot> slots) {
+            List<ChatSlot> slots,
+            /**
+             * The time the client settled on in PROSE, waiting on the optional
+             * who-and-where question. Null on every other path.
+             *
+             * The model no longer writes a booking from a sentence. It proposes
+             * a time; the client chooses therapist and room and confirms by tap;
+             * Spring performs the write. That is the same "model proposes,
+             * Spring decides" split the tap path already had - the prose path
+             * was the one place a sentence still reached the database.
+             */
+            String pendingSlotId) {
+
+        /**
+         * The five-argument form every other path uses: nothing pending.
+         *
+         * An overload rather than a sixth argument at ten call sites - the
+         * fewer lines a change like this touches, the fewer it can break.
+         */
+        public ChatResponse(String reply, String status, Object booking, String debug,
+                            List<ChatSlot> slots) {
+            this(reply, status, booking, debug, slots, null);
+        }
     }
 
     /** Body of POST /assistant/confirm/{formId} - the tap path. */
-    public record ConfirmRequest(String slotId) {
+    /**
+     * A tapped time, plus the client's optional choice of who and where.
+     *
+     * Both ids are usually null: the client tapped a time and let the spa
+     * assign. When set they are honoured exactly - the booking fails rather
+     * than substituting somebody else. See BookingServiceImpl#assign.
+     */
+    public record ConfirmRequest(String slotId, UUID therapistId, UUID roomId) {
     }
 
     /** Raw shape returned by the n8n workflow. */

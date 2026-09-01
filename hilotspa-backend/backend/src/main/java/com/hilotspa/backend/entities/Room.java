@@ -29,6 +29,17 @@ public class Room {
     @Column(nullable = false)
     private String name;
 
+    /**
+     * The photo file in the frontend's public/rooms/ folder - a FILENAME, never
+     * an id, for the same reason as Massage.imageName: ids regenerate on every
+     * reseed and would silently orphan every picture.
+     *
+     * Null is normal and renders a neutral tile. A room the client can choose is
+     * a room the client should be able to see.
+     */
+    @Column
+    private String imageName;
+
     @ManyToOne(optional = false)
     @JoinColumn(name = "branch_id", nullable = false)
     @ToString.Exclude

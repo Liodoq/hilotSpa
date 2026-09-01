@@ -12,7 +12,7 @@
     <div class="cards">
       <section class="rev">
         <div class="rh"><b>About you</b>
-          <button type="button" class="link" (click)="editProfile()">Edit on my profile</button></div>
+          <button type="button" class="link-act" (click)="editProfile()">Edit on my profile</button></div>
         <div class="kv">
           <div><span>Why you came in</span>
             {{ draft().intent === 'LEISURE' ? 'Here to relax' : 'A specific pain or complaint' }}</div>
@@ -30,7 +30,7 @@
       @if (!store.isLeisure()) {
         <section class="rev">
           <div class="rh"><b>Where it hurts</b>
-            <button type="button" class="link" (click)="go('body-map')">Edit</button></div>
+            <button type="button" class="link-act" (click)="go('body-map')">Edit</button></div>
 
           @if (draft().points.length) {
             <div class="wh">
@@ -52,7 +52,7 @@
 
         <section class="rev">
           <div class="rh"><b>Complaints</b>
-            <button type="button" class="link" (click)="go('complaints')">Edit</button></div>
+            <button type="button" class="link-act" (click)="go('complaints')">Edit</button></div>
           <div class="kv">
             <div><span>Bothers you most</span> {{ mainLabel() || 'not chosen' }}</div>
             @if (draft().duration) { <div><span>How long</span> {{ draft().duration }}</div> }
@@ -64,7 +64,7 @@
 
         <section class="rev">
           <div class="rh"><b>History and safety</b>
-            <button type="button" class="link" (click)="go('history')">Edit</button></div>
+            <button type="button" class="link-act" (click)="go('history')">Edit</button></div>
           <div class="kv">
             <div><span>Illness / injury</span>
               {{ draft().hadIllness ? (draft().illnessDetail || 'yes') : 'none reported' }}</div>

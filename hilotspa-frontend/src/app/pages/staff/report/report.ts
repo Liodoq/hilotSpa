@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { DashShell } from '../../../shared/dash-shell/dash-shell';
 import { BodyMap } from '../../../shared/body-map/body-map';
 import { ToastService } from '../../../core/toast.service';
@@ -21,7 +21,7 @@ import { PainPoint } from '../../../core/assessment.store';
  */
 @Component({
   selector: 'app-staff-report',
-  imports: [DashShell, BodyMap],
+  imports: [DashShell, BodyMap, RouterLink],
   templateUrl: './report.html',
   styleUrl: './report.scss',
 })
@@ -65,6 +65,9 @@ export class StaffReport implements OnInit {
   /** The session this assessment belongs to, if one is booked today. */
   session = computed(() => this.today().find(s => s.formId === this.form()?.id) ?? null);
 
+  /** Today's sessions that HAVE an assessment - the list to choose from. */
+  choices = computed(() => this.today().filter(s => s.hasAssessment));
+
   excluded = computed(() => this.catalogue().filter(c => !c.suitable));
   indicated = computed(() => this.catalogue().filter(c => c.rule === 'INDICATED'));
 
@@ -91,14 +94,19 @@ export class StaffReport implements OnInit {
       const sched = await this.ops.schedule().catch(() => [] as ScheduleRow[]);
       this.today.set(sched);
 
-      // No id in the URL: fall back to the next booked session today that HAS
-      // an assessment. Guessing is better than an empty screen, and the header
-      // always names whose record is on show.
-      const id = formId ?? sched.find(s => s.hasAssessment)?.formId ?? null;
-      if (!id) {
+      // No id in the URL: show today's assessments and let staff CHOOSE.
+      //
+      // This used to guess - it opened the next booked session that had an
+      // assessment - so tapping "Pre-assessments" in the sidebar dropped you
+      // into one named client's medical record without asking. On a screen at a
+      // front desk that is the wrong default twice over: it is not the record
+      // you meant to open, and it puts somebody's pain map in front of whoever
+      // is standing there.
+      if (!formId) {
         this.form.set(null);
         return;
       }
+      const id = formId;
       const f = await this.api.form(id);
       this.form.set(f);
       this.notes.set(f.remarks ?? '');

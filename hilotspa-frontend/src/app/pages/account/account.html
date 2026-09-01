@@ -1,99 +1,228 @@
 <app-nav />
-<main class="acct">
-  <h1 class="t-l">My account</h1>
-  <p class="s">Your login and contact details. Health information lives separately.</p>
+
+<main class="me">
 
   @if (loading()) {
-    <p class="help" style="margin-top:24px">Loading…</p>
+    <!-- The shape of the answer, so the page does not jump when it lands. -->
+    <div class="pagehead">
+      <div class="skel" style="height:26px;max-width:180px"></div>
+      <div class="skel" style="height:56px;max-width:420px;margin-top:14px"></div>
+    </div>
+    <section class="sec">
+      <div class="skel" style="height:60px"></div>
+      <div class="skel" style="height:60px;margin-top:10px"></div>
+      <div class="skel" style="height:60px;margin-top:10px"></div>
+    </section>
   } @else if (me(); as m) {
 
-    <section class="card pad">
-      <h2 class="t-s">Details</h2>
+    <!-- ================================================================
+         The heading is the client's own name. "My account" is a filing
+         cabinet label; a person opening this page already knows whose
+         account it is, and seeing their name spelled correctly is the
+         first thing they came to check.
+         ================================================================ -->
+    <header class="pagehead enter">
+      <p class="eyebrow">Your account</p>
+      <h1 class="display">{{ fullName() || 'Your account' }}</h1>
+      @if (m.email) { <p class="say">{{ m.email }}</p> }
+    </header>
 
-      <div class="grid3">
+    <!-- ============================================== name and contact -->
+    <section class="sec">
+      <div class="sec-top">
         <div>
-          <label class="lab" for="fn">First name</label>
-          <input id="fn" class="input" [value]="m.firstName ?? ''"
-                 (input)="patch({ firstName: val($event) })">
+          <h2 class="sec-head">Name and contact</h2>
+          <p class="sec-why">How we address you, and how we reach you if a time has
+            to change.</p>
         </div>
-        <div>
-          <label class="lab" for="mn">Middle name</label>
-          <input id="mn" class="input" [value]="m.middleName ?? ''"
-                 (input)="patch({ middleName: val($event) })">
-        </div>
-        <div>
-          <label class="lab" for="ln">Surname</label>
-          <input id="ln" class="input" [value]="m.lastName ?? ''"
-                 (input)="patch({ lastName: val($event) })">
-        </div>
+        @if (!editing()) {
+          <button type="button" class="link-act" (click)="startEdit()">Edit</button>
+        }
       </div>
 
-      <div class="grid2">
-        <div>
-          <label class="lab" for="ct">Contact number</label>
-          <input id="ct" class="input" inputmode="tel" [value]="m.contact ?? ''"
-                 (input)="patch({ contact: val($event) })">
+      @if (!editing()) {
+        <!-- Read. Values are text, because that is what they are. -->
+        <dl class="dl">
+          <dt>Name</dt>
+          <dd>@if (fullName()) { {{ fullName() }} } @else { <span class="none">Not given</span> }</dd>
+
+          <dt>Contact number</dt>
+          <dd>@if (m.contact) { {{ m.contact }} } @else { <span class="none">Not given</span> }</dd>
+
+          <dt>Email address</dt>
+          <dd>@if (m.email) { {{ m.email }} } @else { <span class="none">Not given</span> }</dd>
+
+          <dt>Address</dt>
+          <dd>@if (m.address) { {{ m.address }} } @else { <span class="none">Not given</span> }</dd>
+        </dl>
+      } @else {
+        <!-- Edit. The SAME grid — the labels do not move, so neither does
+             the reader's eye. -->
+        <dl class="dl editing">
+          <dt><label class="lab" for="fn">Name</label></dt>
+          <dd>
+            <div class="grp">
+              <input id="fn" class="input" placeholder="First" [value]="m.firstName ?? ''"
+                     autocomplete="given-name" (input)="patch({ firstName: val($event) })">
+              <input class="input" placeholder="Middle" [value]="m.middleName ?? ''"
+                     autocomplete="additional-name" (input)="patch({ middleName: val($event) })">
+              <input class="input" placeholder="Last" [value]="m.lastName ?? ''"
+                     autocomplete="family-name" (input)="patch({ lastName: val($event) })">
+            </div>
+          </dd>
+
+          <dt><label class="lab" for="ct">Contact number</label></dt>
+          <dd>
+            <input id="ct" class="input in-md" inputmode="tel" autocomplete="tel"
+                   placeholder="09xx xxx xxxx" [value]="m.contact ?? ''"
+                   (input)="patch({ contact: val($event) })">
+          </dd>
+
+          <dt><label class="lab" for="em">Email address</label></dt>
+          <dd>
+            <div class="stack">
+              <input id="em" class="input" type="email" autocomplete="email"
+                     [value]="m.email ?? ''" (input)="patch({ email: val($event) })">
+              <span class="dd-note">This is what you sign in with.</span>
+            </div>
+          </dd>
+
+          <dt><label class="lab" for="ad">Address</label></dt>
+          <dd>
+            <input id="ad" class="input" autocomplete="street-address"
+                   [value]="m.address ?? ''" (input)="patch({ address: val($event) })">
+          </dd>
+        </dl>
+
+        @if (error()) { <p class="err">{{ error() }}</p> }
+
+        <div class="acts">
+          <button type="button" class="btn btn-quiet" [disabled]="saving()"
+                  (click)="cancelEdit()">Cancel</button>
+          <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
+            {{ saving() ? 'Saving…' : 'Save changes' }}</button>
         </div>
-        <div>
-          <label class="lab" for="em">Email address</label>
-          <input id="em" class="input" type="email" autocomplete="email"
-                 [value]="m.email ?? ''" (input)="patch({ email: val($event) })">
-        </div>
-      </div>
+      }
 
-      <div>
-        <label class="lab" for="ad">Address</label>
-        <input id="ad" class="input" [value]="m.address ?? ''"
-               (input)="patch({ address: val($event) })">
-      </div>
-
-      @if (error()) { <p class="err">{{ error() }}</p> }
-
-      <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="save()">
-        {{ saving() ? 'Saving…' : 'Save details' }}</button>
+      @if (!editing() && error()) { <p class="err">{{ error() }}</p> }
     </section>
 
-    <section class="card pad">
-      <h2 class="t-s">Password</h2>
-      <p class="help">You need your current password to set a new one.</p>
-
-      <div class="grid3">
+    <!-- ==================================================================
+         Health details — SHOWN, not described.
+         This was a card whose entire content was a sentence explaining that
+         the data was somewhere else. The client can now see it, and the
+         page that owns it is one link away.
+         ================================================================== -->
+    <section class="sec">
+      <div class="sec-top">
         <div>
-          <label class="lab" for="cp">Current password</label>
-          <input id="cp" class="input" type="password" autocomplete="current-password"
-                 [value]="current()" (input)="current.set(val($event))">
+          <h2 class="sec-head">Your details</h2>
+          <p class="sec-why">Kept with your assessments rather than your login. Your
+            practitioner reads these before a session.</p>
         </div>
-        <div>
-          <label class="lab" for="np">New password</label>
-          <input id="np" class="input" type="password" autocomplete="new-password"
-                 [value]="next()" (input)="next.set(val($event))">
-        </div>
-        <div>
-          <label class="lab" for="cf">Confirm new password</label>
-          <input id="cf" class="input" type="password" autocomplete="new-password"
-                 [value]="confirm()" (input)="confirm.set(val($event))">
-          @if (confirm() && next() !== confirm()) {
-            <div class="err sm">The two new passwords do not match.</div>
-          }
-        </div>
+        <a class="link-act" routerLink="/profile">Edit</a>
       </div>
 
-      @if (pwError()) { <p class="err">{{ pwError() }}</p> }
+      <dl class="dl">
+        <dt>Age</dt>
+        <dd>@if (profile.age() !== null) { {{ profile.age() }} years old }
+            @else { <span class="none">Not given</span> }</dd>
 
-      <button type="button" class="btn btn-quiet" [disabled]="pwSaving()"
-              (click)="changePassword()">
-        {{ pwSaving() ? 'Changing…' : 'Change password' }}</button>
+        <dt>Sex</dt>
+        <dd>@if (p().sex) { {{ p().sex }} } @else { <span class="none">Not given</span> }</dd>
+
+        <dt>Civil status</dt>
+        <dd>@if (p().civilStatus) { {{ p().civilStatus }} }
+            @else { <span class="none">Not given</span> }</dd>
+
+        <dt>Occupation</dt>
+        <dd>@if (p().occupation) { {{ p().occupation }} }
+            @else { <span class="none">Not given</span> }</dd>
+
+        <dt>Height and weight</dt>
+        <dd>
+          @if (p().height || p().weight) {
+            {{ p().height ? p().height + ' cm' : '—' }} · {{ p().weight ? p().weight + ' kg' : '—' }}
+          } @else { <span class="none">Not given — these are optional</span> }
+        </dd>
+      </dl>
+
+      @if (!profile.isComplete()) {
+        <div class="note" style="margin-top:22px"><span class="b"></span>
+          <span>A few of these are needed before a pre-assessment.
+            <a class="link" routerLink="/profile">Fill them in now</a>.</span>
+        </div>
+      }
     </section>
 
-    <section class="card pad">
-      <h2 class="t-s">Health details</h2>
-      <p class="help">Your age, sex, civil status, occupation, height and weight are kept
-        with your assessments, not with your login.</p>
-      <button type="button" class="btn btn-quiet" (click)="demographics()">
-        Open my health details</button>
+    <!-- ========================================================= password -->
+    <section class="sec">
+      <div class="sec-top">
+        <div>
+          <h2 class="sec-head">Password</h2>
+          <p class="sec-why">You need your current password to set a new one.</p>
+        </div>
+        @if (!showPw()) {
+          <button type="button" class="link-act" (click)="showPw.set(true)">Change</button>
+        }
+      </div>
+
+      @if (showPw()) {
+        <dl class="dl editing">
+          <dt><label class="lab" for="cp">Current password</label></dt>
+          <dd>
+            <input id="cp" class="input in-md" type="password" autocomplete="current-password"
+                   [value]="current()" (input)="current.set(val($event))">
+          </dd>
+
+          <dt><label class="lab" for="np">New password</label></dt>
+          <dd>
+            <div class="stack">
+              <input id="np" class="input in-md" type="password" autocomplete="new-password"
+                     [value]="next()" (input)="next.set(val($event))">
+              <span class="dd-note">At least 8 characters.</span>
+            </div>
+          </dd>
+
+          <dt><label class="lab" for="cf">Confirm new password</label></dt>
+          <dd>
+            <div class="stack">
+              <input id="cf" class="input in-md" type="password" autocomplete="new-password"
+                     [value]="confirm()" (input)="confirm.set(val($event))">
+              @if (confirm() && next() !== confirm()) {
+                <span class="err" style="font-size:15px">The two new passwords do not match.</span>
+              }
+            </div>
+          </dd>
+        </dl>
+
+        @if (pwError()) { <p class="err">{{ pwError() }}</p> }
+
+        <div class="acts">
+          <button type="button" class="btn btn-quiet" [disabled]="pwSaving()"
+                  (click)="closePw()">Cancel</button>
+          <button type="button" class="btn btn-primary" [disabled]="pwSaving()"
+                  (click)="changePassword()">
+            {{ pwSaving() ? 'Changing…' : 'Change password' }}</button>
+        </div>
+      }
     </section>
 
-    <button type="button" class="link danger" (click)="signOut()">Sign out</button>
+    <div class="out">
+      <button type="button" class="link-act danger" (click)="signOut()">Sign out</button>
+    </div>
+
+  } @else {
+    <!-- /me never came back. Say so, rather than leaving an empty page with a
+         sign-out button on it. -->
+    <header class="pagehead">
+      <p class="eyebrow">Your account</p>
+      <h1 class="display">We could not load your account</h1>
+      <p class="lead">{{ error() || 'Please check your connection and try again.' }}</p>
+      <div class="acts">
+        <button type="button" class="btn btn-quiet" (click)="signOut()">Sign out</button>
+      </div>
+    </header>
   }
 </main>
 <app-toast />

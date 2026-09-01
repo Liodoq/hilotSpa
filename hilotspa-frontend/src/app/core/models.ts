@@ -99,7 +99,8 @@ export interface PatientIntakeModel {
   coordinateY: number;
   /** recorded by the client at the start */
   painScoreBefore: number;
-  /** written by staff at the end of the session — never sent from here */
+  /** Recorded by the CLIENT after a completed visit, through the outcome
+   *  route. Never sent with the assessment - at intake it does not exist. */
   painScoreAfter?: number | null;
   complaintType: ComplaintType | null;
 }
@@ -221,6 +222,35 @@ export interface AssistantRecommendation {
 }
 
 /** One bookable time the assistant was allowed to name. Tapping one books it. */
+/** A therapist the client may choose, at one start time. GET /appointments/openings. */
+export interface OpenTherapist {
+  id: string;
+  firstName: string;
+  /** Display text ("Female"), or null when the spa has not recorded it. */
+  sex: string | null;
+}
+
+/** A room the client may choose, at one start time. */
+export interface OpenRoom {
+  id: string;
+  name: string;
+  imageName: string | null;
+}
+
+/**
+ * Who and where is free at ONE time — the second, optional half of booking.
+ *
+ * Empty lists mean the time went while the client was deciding. That is not an
+ * error state, it is a fact about the calendar, and the caller sends them back
+ * to the times rather than showing an empty picker.
+ */
+export interface Openings {
+  start: string;
+  label: string;
+  therapists: OpenTherapist[];
+  rooms: OpenRoom[];
+}
+
 export interface AssistantSlot {
   slotId: string;
   serviceId: string;
@@ -281,6 +311,11 @@ export interface AssistantChatResponse {
   /** Every time the assistant could have named, so the client can tap one
    *  instead of having to word a confirmation the model will parse. */
   slots?: AssistantSlot[] | null;
+  /**
+   * Set when the assistant has settled a TIME in prose and the client still has
+   * to answer who and where. The write has NOT happened.
+   */
+  pendingSlotId?: string | null;
 }
 
 export interface AccountMe {

@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE } from './api.config';
-import { AccountMe, AssistantChatResponse, AssistantResponse, BookingModel, Branch, DemographicsModel, FormsModel, PatientIntakeModel } from './models';
+import { AccountMe, AssistantChatResponse, AssistantResponse, BookingModel, Branch, DemographicsModel, FormsModel, Openings, PatientIntakeModel } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class FormsApi {
@@ -36,9 +36,48 @@ export class FormsApi {
 
   /** Book a time the client tapped. Does not go near the model — the slotId is
    *  revalidated server-side against freshly computed availability. */
-  confirmSlot(formId: string, slotId: string): Promise<AssistantChatResponse> {
+  confirmSlot(formId: string, slotId: string,
+              therapistId?: string | null, roomId?: string | null,
+  ): Promise<AssistantChatResponse> {
     return firstValueFrom(this.http.post<AssistantChatResponse>(
-      `${API_BASE}/assistant/confirm/${formId}`, { slotId }));
+      `${API_BASE}/assistant/confirm/${formId}`,
+      { slotId, therapistId: therapistId ?? null, roomId: roomId ?? null }));
+  }
+
+  /**
+   * Who and where is free at one specific start time.
+   *
+   * Asked only once a time is settled. Asking it for every slot in a week would
+   * be a query per slot to answer a question most clients never ask.
+   */
+  openings(formId: string, slotId: string): Promise<Openings> {
+    const q = new URLSearchParams({ slotId }).toString();
+    return firstValueFrom(this.http.get<Openings>(
+      `${API_BASE}/assistant/openings/${formId}?${q}`));
+  }
+
+  /**
+   * Staff record what happened. Two calls, not one with a flag: "they came" and
+   * "they never came" are different facts about a person.
+   */
+  completeBooking(id: string): Promise<BookingModel> {
+    return firstValueFrom(this.http.post<BookingModel>(
+      `${API_BASE}/appointments/${id}/complete`, {}));
+  }
+
+  noShowBooking(id: string): Promise<BookingModel> {
+    return firstValueFrom(this.http.post<BookingModel>(
+      `${API_BASE}/appointments/${id}/no-show`, {}));
+  }
+
+  /**
+   * The client's pain scores after a completed visit — the second half of the
+   * paper's before/after, and until now a column nothing ever wrote.
+   */
+  recordOutcome(id: string, scores: { painPointId: string; score: number }[],
+  ): Promise<BookingModel> {
+    return firstValueFrom(this.http.post<BookingModel>(
+      `${API_BASE}/appointments/${id}/outcome`, { scores }));
   }
 
   /**

@@ -1,5 +1,5 @@
 <app-nav />
-<main class="wrap">
+<main class="wrap enter">
   <div class="cols">
     <div class="left">
       @if (!profileStore.isComplete()) {
@@ -78,35 +78,102 @@
       <section>
         <h2 class="t-s" style="margin-bottom:14px">Past sessions</h2>
         @if (!booking.loaded()) {
-          <div class="card" style="padding:22px"><p class="help" style="margin:0">Loading…</p></div>
+          <!-- The shape of what is coming, so the page stops resizing under the
+               reader when it lands. -->
+          <div class="card" style="padding:22px;display:flex;flex-direction:column;gap:12px">
+            <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+          </div>
         } @else {
         <div class="card" style="padding:6px 22px">
-          <table class="tbl">
+          <table class="tbl stagger">
             @for (v of past(); track v.id) {
               <tr>
-                <td class="tnum" style="width:150px">{{ v.date }}</td>
-                <td><b>{{ v.service }}</b></td>
-                <td>{{ v.complaint }}</td>
-                <td>
-                  @if (v.before !== null) { <span class="pill ok">Pain {{ v.before }} → {{ v.after }}</span> }
-                  @else { <span class="pill mute">no pain recorded</span> }
+                <td class="tnum" style="width:132px">{{ v.date }}</td>
+                <td><b>{{ v.service }}</b><div class="help">{{ v.complaint }}</div></td>
+                <!-- The before/after is the most valuable thing this system
+                     produces - for the client and for the study. It sits on the
+                     right, where the eye lands at the end of the row, rather
+                     than leading it: the treatment is what the row IS, and the
+                     change is what came of it. -->
+                <td style="width:132px;text-align:right">
+                  @if (v.before !== null && v.after !== null) {
+                    <span class="drop">
+                      <b>{{ v.before }}</b><span class="arrow">→</span><b>{{ v.after }}</b>
+                      <span class="drop-label">pain</span>
+                    </span>
+                  } @else if (v.before !== null) {
+                    <span class="drop pending">
+                      <b>{{ v.before }}</b><span class="drop-label">not yet scored</span>
+                    </span>
+                  } @else {
+                    <span class="quiet-note">Leisure visit</span>
+                  }
                 </td>
                 <td style="text-align:right">
-                  <button type="button" class="link" (click)="viewReport(v.id)">View report</button>
+                  @if (canRate(v)) {
+                    <button type="button" class="link-act" (click)="openRating(v)">Rate your visit</button>
+                  }
+                  <button type="button" class="link-act" (click)="viewReport(v.id)">View report</button>
                 </td>
               </tr>
+              <!-- How it feels AFTERWARDS. painScoreAfter has been a column since
+                   Sprint 0 with nothing to write it, which left the paper's
+                   before/after with only a before. -->
+              @if (rating() === v.id) {
+                <tr>
+                  <td colspan="5" style="padding:14px 0 20px">
+                    <div class="card" style="padding:18px">
+                      <b>How does each area feel now?</b>
+                      <p class="help" style="margin:4px 0 14px">
+                        0 is no pain at all, 10 is the worst it has been.
+                      </p>
+                      @for (s of v.scores; track s.id) {
+                        <div style="margin-bottom:12px">
+                          <div style="font-size:15px;margin-bottom:4px">
+                            {{ s.region }}
+                            @if (s.before !== null) {
+                              <span style="opacity:.65">&nbsp;· came in at {{ s.before }}</span>
+                            }
+                          </div>
+                          <div class="chips">
+                            @for (n of [0,1,2,3,4,5,6,7,8,9,10]; track n) {
+                              <button type="button" class="chip"
+                                      [class.on]="draftScores()[s.id] === n"
+                                      [disabled]="saving()"
+                                      [attr.aria-label]="s.region + ' now ' + n"
+                                      (click)="setScore(s.id, n)">{{ n }}</button>
+                            }
+                          </div>
+                        </div>
+                      }
+                      <button type="button" class="btn btn-primary" style="margin-top:8px"
+                              [disabled]="saving()" (click)="submitRating(v)">
+                        {{ saving() ? 'Saving…' : 'Save' }}
+                      </button>
+                      <button type="button" class="link-act" style="margin-left:8px"
+                              [disabled]="saving()" (click)="closeRating()">Not now</button>
+                    </div>
+                  </td>
+                </tr>
+              }
             } @empty {
-              <tr><td colspan="5" style="padding:18px 0">
+              <tr><td colspan="4" style="padding:18px 0">
                 <span class="help">
                   @if (booking.unreachable()) {
                     We cannot reach the spa right now, so your past sessions are not showing.
                   } @else {
-                    No sessions yet. Your record fills in after your first visit.
+                    No completed visits yet. Your record fills in after your first one.
                   }
                 </span>
               </td></tr>
             }
           </table>
+          @if (unbooked() > 0) {
+            <p class="help" style="padding:0 0 14px">
+              You also have {{ unbooked() }} pre-assessment{{ unbooked() === 1 ? '' : 's' }}
+              that did not become a visit. They are kept on your record.
+            </p>
+          }
         </div>
         }
       </section>

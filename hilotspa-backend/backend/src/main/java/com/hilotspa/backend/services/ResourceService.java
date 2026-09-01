@@ -32,5 +32,17 @@ public interface ResourceService {
     RoomDto saveRoom(UUID id, RoomWrite body);
 
     /** Read-only. ADMIN sees every branch; STAFF sees their own. */
+    /**
+     * Permanently remove a therapist who has never been used.
+     *
+     * Only ever a correction - a name typed twice, a room created by mistake.
+     * The moment a single appointment names them, this refuses and the honest
+     * operation is active=false: they leave the rota, and every visit they gave
+     * still says who gave it.
+     */
+    void deleteTherapist(UUID id);
+
+    void deleteRoom(UUID id);
+
     List<AuditRow> auditLog(String action, int limit);
 }

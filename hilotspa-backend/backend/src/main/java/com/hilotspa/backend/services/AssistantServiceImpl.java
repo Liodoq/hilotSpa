@@ -45,6 +45,7 @@ import com.hilotspa.backend.model.AssistantDtos.ChatResponse;
 import com.hilotspa.backend.model.AssistantDtos.ChatSlot;
 import com.hilotspa.backend.model.AssistantDtos.ChatToN8n;
 import com.hilotspa.backend.model.AssistantDtos.ConfirmRequest;
+import com.hilotspa.backend.model.BookingDtos.Openings;
 import com.hilotspa.backend.model.AssistantDtos.N8nChatResponse;
 import com.hilotspa.backend.model.AssistantDtos.N8nRecommendation;
 import com.hilotspa.backend.model.AssistantDtos.N8nResponse;
@@ -399,7 +400,21 @@ public class AssistantServiceImpl implements AssistantService {
                     devOnly("slotId not in the list Spring sent: " + raw.slotId()),
                     List.copyOf(slotsById.values()));
         }
-        return commit(form, slot, reply, raw.reply(), slotsById);
+        // The prose path no longer writes. It has settled a TIME; who and where
+        // is a separate question, and a client who says "I confirm" has not
+        // answered it. Hand the slot back and let them choose - the write still
+        // happens through confirm(), which is the one path that books.
+        //
+        // The model's own sentence is DISCARDED here, deliberately. It was
+        // written believing this path books, so it says "na-book na po" - and
+        // nothing has been booked. A reply that announces a booking above a
+        // picker asking who should give it is the assistant lying, which is the
+        // one thing this system cannot afford to do. The client-facing sentence
+        // comes from the UI instead, which is also the only place that knows
+        // what language the screen is in.
+        return new ChatResponse("", "CHOOSE", null,
+                devOnly("model said: " + reply),
+                List.copyOf(slotsById.values()), slot.slotId());
     }
 
     /**
@@ -412,6 +427,29 @@ public class AssistantServiceImpl implements AssistantService {
      * and is written by the same transaction - the model is not on this path at
      * all.
      */
+    @Override
+    public Openings openings(UUID formId, String slotId) {
+        if (slotId == null || slotId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "slotId is required");
+        }
+        Forms form = formsRepository.findById(formId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Form not found"));
+        assertCanAccess(form);
+
+        UUID serviceId = serviceIdIn(slotId);
+        LocalDateTime start;
+        try {
+            start = LocalDateTime.parse(slotId.substring(slotId.indexOf('@') + 1));
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unreadable slotId");
+        }
+        if (serviceId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unreadable slotId");
+        }
+        return bookingService.openings(formId, serviceId, start);
+    }
+
     @Override
     public ChatResponse confirm(UUID formId, ConfirmRequest request) {
         if (request == null || request.slotId() == null || request.slotId().isBlank()) {
@@ -442,7 +480,8 @@ public class AssistantServiceImpl implements AssistantService {
 
         String said = "Confirmed by tapping " + slot.serviceName() + ", " + slot.label();
         return commit(form, slot, "Booked. " + slot.serviceName() + ", " + slot.label()
-                + ". We will see you then.", said, slotsById);
+                + ". We will see you then.", said, slotsById,
+                request.therapistId(), request.roomId());
     }
 
     /**
@@ -454,7 +493,9 @@ public class AssistantServiceImpl implements AssistantService {
      * assertion.
      */
     private ChatResponse commit(Forms form, ChatSlot slot, String reply, String consent,
-                                Map<String, ChatSlot> slotsById) {
+                                Map<String, ChatSlot> slotsById,
+                                /** The client's pick, or null for "any available". */
+                                UUID wantTherapist, UUID wantRoom) {
         LocalDateTime start;
         try {
             start = LocalDateTime.parse(slot.slotId().substring(slot.slotId().indexOf('@') + 1));
@@ -465,9 +506,15 @@ public class AssistantServiceImpl implements AssistantService {
         }
 
         try {
+            // The idempotency key includes the pick: a client who is told
+            // "Ana has just been booked", chooses Ben and taps again is making a
+            // DIFFERENT request, and must not be handed the first one's answer.
             Object booking = bookingService.book(new BookRequest(
                     form.getId(), slot.serviceId(), start,
-                    "chat-" + form.getId() + "-" + slot.slotId(),
+                    wantTherapist, wantRoom,
+                    "chat-" + form.getId() + "-" + slot.slotId()
+                            + (wantTherapist == null ? "" : "-t" + wantTherapist)
+                            + (wantRoom == null ? "" : "-r" + wantRoom),
                     consent));
             // The times just changed - hand back the fresh set, not the stale one.
             // Still focused on the treatment just booked: a client who books one

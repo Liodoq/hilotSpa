@@ -1,138 +1,180 @@
 <app-nav />
 
-<section class="hero">
-  <div class="heroIn">
-    <span class="eyebrow">{{ spa()?.name || 'Knead Wellness Spa' }}</span>
-    <h1>We ask what hurts before we decide what helps</h1>
-    <p class="sub">
-      {{ spa()?.tagline || 'Traditional hilot and bone setting in Bulan, Sorsogon.' }}
-      Tell us where it hurts on a body map, and our assistant suggests only the treatments
-      our own bone setter has approved for it.
-    </p>
-    <div class="heroActions">
-      <button type="button" class="btn btn-primary" (click)="start()">
-        {{ auth.token() ? 'Start a pre-assessment' : 'Book a visit' }}</button>
-      <a class="btn btn-quiet" routerLink="/services">See our treatments</a>
-    </div>
-    <p class="help" style="margin:0">
-      Nothing is paid online. You settle at the counter, as always.</p>
-  </div>
-</section>
+<main class="pub landing">
 
-<!-- ============================================================ -->
-<section class="band alt">
-  <div class="bandIn">
-    <div class="bandHead">
-      <h2>Our treatments</h2>
-      <a class="link bandHead" routerLink="/services" style="margin-left:auto">
-        See all{{ more() ? ' ' + more() + ' more' : '' }} &rarr;</a>
+  <!-- ==================================================================
+       The hero is the body map, not a photograph.
+       The map is the one thing that makes this spa different from every
+       other spa in Sorsogon, and a stranger who taps it has already used
+       the product. It promises nothing clinical — tapping names the area
+       and says what happens with it, which is what the real assessment
+       does too.
+       ================================================================== -->
+  <header class="hero">
+    <div class="hero-say">
+      <p class="eyebrow">Bulan, Sorsogon</p>
+      <h1 class="display">We ask what hurts before we decide what helps.</h1>
+      <p class="lead">
+        Traditional hilot and bone setting. Tell us where it hurts before you arrive, and your
+        bone setter has read it by the time you sit down.
+      </p>
+      <p class="say hero-hint">Try it — tap the body where you feel it.</p>
+    </div>
+
+    <div class="hero-map">
+      <div class="viewtabs" role="tablist" aria-label="Which side of the body">
+        <button type="button" role="tab" [attr.aria-selected]="view() === 'BACK'"
+                [class.on]="view() === 'BACK'" (click)="showView('BACK')">Back</button>
+        <button type="button" role="tab" [attr.aria-selected]="view() === 'FRONT'"
+                [class.on]="view() === 'FRONT'" (click)="showView('FRONT')">Front</button>
+      </div>
+      <app-body-map [view]="view()" [points]="marks()" (place)="place($event)" />
+    </div>
+
+    <aside class="hero-answer" aria-live="polite">
+      @if (picked()) {
+        <p class="eyebrow">You marked</p>
+        <p class="answer-name">{{ pickedLabel() }}</p>
+        <p class="answer-what">
+          In a real pre-assessment we would also ask how bad it is and what it feels like —
+          then your bone setter reads all of it before you sit down.
+        </p>
+        <button type="button" class="btn btn-primary btn-block" (click)="start()">
+          Start a pre-assessment</button>
+        <p class="say answer-note">About three minutes. Nothing is paid online.</p>
+      } @else {
+        <p class="answer-idle">
+          This is the first thing we ask, and it is the whole difference: your practitioner
+          starts from what you marked instead of from an empty room.
+        </p>
+        <button type="button" class="btn btn-ghost btn-block" (click)="start()">
+          Start a pre-assessment</button>
+        <a class="link-go answer-link" routerLink="/services">Or just see the treatments</a>
+      }
+    </aside>
+  </header>
+
+  <!-- ==================================================== the live menu -->
+  <section class="band">
+    <div class="band-head">
+      <div>
+        <h2 class="sec-head">Our treatments</h2>
+        <p class="say">Prices are what you pay at the counter.</p>
+      </div>
+      <a class="link-go" routerLink="/services">
+        See all{{ more() ? ' — ' + more() + ' more' : '' }}</a>
     </div>
 
     @if (loading()) {
-      <p class="help">Loading our menu…</p>
+      <div class="menu">
+        <div class="skel" style="margin:8px 0"></div>
+        <div class="skel" style="margin:8px 0"></div>
+        <div class="skel" style="margin:8px 0"></div>
+      </div>
     } @else if (failed()) {
-      <p class="s">Our menu is not loading just now. Please call the branch — the details are
-        below and the spa is open as usual.</p>
+      <p class="answer-what">
+        Our menu is not loading just now. The spa is open as usual — the details are at the
+        bottom of this page.
+      </p>
     } @else {
-      <div class="grid">
+      <div class="menu stagger">
         @for (s of featured(); track s.id) {
-          <a class="svc" [routerLink]="['/services', s.id]">
-            <!-- A missing photograph is a tinted block, never a broken image.
-                 The spa supplies these one at a time. -->
-            <div class="shot" [style.background-image]="photo(s.imageName)"></div>
-            <div class="body">
-              <div class="nm">{{ s.name }}</div>
-              <div class="meta">{{ s.durationMinutes }} minutes · {{ priceLabel(s.price) }}</div>
-            </div>
+          <a class="mrow" [routerLink]="['/services', s.id]">
+            @if (s.imageName) {
+              <span class="mthumb" [style.background-image]="photo(s.imageName)"></span>
+            }
+            <span>
+              <span class="mname">{{ s.name }}</span>
+              <span class="mwhat">{{ s.durationMinutes }} minutes</span>
+            </span>
+            <span class="mprice">
+              <b>{{ priceLabel(s.price) }}</b>
+            </span>
           </a>
         }
       </div>
     }
-  </div>
-</section>
+  </section>
 
-<!-- ============================================================ -->
-<section class="band">
-  <div class="bandIn">
-    <h2 style="margin:0;font-size:30px;color:var(--color-forest-900)">How a visit works</h2>
-    <div class="three">
-      <div class="it">
-        <div class="n">01</div>
-        <h3>Show us where it hurts</h3>
-        <p>Tap the sore spots on a body map and tell us how bad each one is. It takes about a
-          minute, and you only do it once — we reuse your answers next time.</p>
-      </div>
-      <div class="it">
-        <div class="n">02</div>
-        <h3>We suggest, you decide</h3>
-        <p>Our assistant reads your assessment and offers treatments our bone setter has
-          approved for your condition. Anything he has ruled out never appears.</p>
-      </div>
-      <div class="it">
-        <div class="n">03</div>
-        <h3>Pick a time that is really free</h3>
-        <p>You only ever see times when a therapist and a room are both available. Tap one and
-          it is booked. Pay at the counter when you come in.</p>
-      </div>
-    </div>
-  </div>
-</section>
+  <!-- =================================================== a visit, in order
+       Numbered because a visit genuinely is a sequence — the order is the
+       information, and doing the second before the first is the thing this
+       whole system exists to prevent. -->
+  <section class="band">
+    <h2 class="sec-head">A visit, in order</h2>
+    <ol class="steps">
+      <li>
+        <span class="sn">1</span>
+        <div>
+          <b>You mark where it hurts.</b>
+          On a body diagram, before you leave the house. Three minutes.
+        </div>
+      </li>
+      <li>
+        <span class="sn">2</span>
+        <div>
+          <b>We check it against our own rules.</b>
+          Anything our bone setter has ruled out for your condition is filtered out before
+          a treatment is ever suggested to you.
+        </div>
+      </li>
+      <li>
+        <span class="sn">3</span>
+        <div>
+          <b>You pick a time, and who you would like.</b>
+          A therapist and a room are held for you. You settle at the counter.
+        </div>
+      </li>
+    </ol>
+  </section>
 
-<!-- ============================================================ -->
-@if (team().length) {
-  <section class="band alt">
-    <div class="bandIn">
-      <h2 style="margin:0;font-size:30px;color:var(--color-forest-900)">Our therapists</h2>
-      <p class="s" style="margin:0;max-width:58ch">
-        Hilot is close, hands-on work. You can ask to be treated by a woman or a man when you
-        book, and we only offer you times when someone you are comfortable with is genuinely
-        free.</p>
-      <!-- First names and sex only. Nothing here is published about a member of
-           staff that they have not effectively consented to by working at the
-           counter: no surname, no photograph, no working pattern. -->
-      <div class="team">
+  <!-- ====================================================== the people -->
+  @if (team().length) {
+    <section class="band">
+      <h2 class="sec-head">Who you will meet</h2>
+      <p class="say" style="margin-top:8px">
+        First names only. You can ask for someone in particular when you book.</p>
+      <ul class="team stagger">
         @for (t of team(); track t.firstName) {
-          <div class="member">
-            <span class="disc" aria-hidden="true">{{ initial(t.firstName) }}</span>
-            <div>
-              <div class="nm">{{ t.firstName }}</div>
-              <div class="meta">{{ t.sex ? t.sex + ' therapist' : 'Therapist' }}</div>
-            </div>
-          </div>
+          <li>
+            <span class="disc">{{ initial(t.firstName) }}</span>
+            <b>{{ t.firstName }}</b>
+            @if (t.sex) { <span class="say">{{ t.sex }}</span> }
+          </li>
         }
+      </ul>
+    </section>
+  }
+
+  <!-- ======================================================== find us -->
+  <section class="band">
+    <div class="find">
+      <div>
+        <h2 class="sec-head">Find us</h2>
+        <p class="findline">{{ spa()?.address || 'Bulan, Sorsogon' }}</p>
+        <p class="findline">{{ spa()?.hours || 'Open daily' }}</p>
+        @if (spa()?.phone) {
+          <p class="findline"><a class="link" [href]="'tel:' + spa()?.phone">{{ spa()?.phone }}</a></p>
+        }
+      </div>
+      <div class="find-do">
+        @if (spa()?.mapsUrl) {
+          <a class="btn btn-ghost" [href]="spa()?.mapsUrl" target="_blank" rel="noopener">
+            Open in Maps</a>
+        }
+        <a class="btn btn-quiet" routerLink="/contact">All the details</a>
       </div>
     </div>
   </section>
-}
 
-<!-- ============================================================ -->
-<section class="band">
-  <div class="bandIn">
-    <h2 style="margin:0;font-size:30px;color:var(--color-forest-900)">Find us</h2>
-    <div class="contact">
-      @if (spa()?.address) {
-        <div><div class="k">Where</div><div class="v">{{ spa()?.address }}</div></div>
-      }
-      @if (spa()?.hours) {
-        <div><div class="k">Open</div><div class="v">{{ spa()?.hours }}</div></div>
-      }
-      @if (spa()?.phone) {
-        <div><div class="k">Phone</div>
-          <div class="v"><a class="link" [href]="'tel:' + spa()?.phone">{{ spa()?.phone }}</a></div></div>
-      }
-      @if (spa()?.facebook) {
-        <div><div class="k">Message us</div>
-          <div class="v"><a class="link" [href]="spa()?.facebook" target="_blank"
-            rel="noopener">On Facebook</a></div></div>
-      }
+  <section class="close">
+    <h2>Walk in, or tell us first.</h2>
+    <p>Walk-ins are always welcome. Marking where it hurts beforehand just saves you
+       explaining it twice.</p>
+    <div>
+      <button type="button" class="btn btn-primary" (click)="start()">Start a pre-assessment</button>
+      <a class="btn btn-ghost" routerLink="/about">What is hilot?</a>
     </div>
-    <p class="help" style="margin:0">
-      Prefer to talk to someone? Call or message the branch — walk-ins are always welcome, and
-      the front desk can book you in without an account.</p>
-    <div><a class="btn btn-quiet" routerLink="/contact">All contact details</a></div>
-  </div>
-</section>
+  </section>
 
-<footer class="foot">
-  {{ spa()?.name || 'Knead Wellness Spa' }} · {{ spa()?.address || 'Bulan, Sorsogon' }}
-</footer>
+</main>

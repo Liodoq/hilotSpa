@@ -4,6 +4,13 @@
     @if (form(); as f) { Assessment {{ f.id?.slice(0, 8)?.toUpperCase() }} } @else { No assessment open }
   </span>
 
+  <!-- A detail page opened from a list needs a way back to that list. The
+       sidebar re-enters the section from the top, which is not the same thing. -->
+  @if (form()) {
+    <button type="button" class="link-go back" (click)="load(null)">All pre-assessments</button>
+    <a class="link-go" style="margin-left:20px" [routerLink]="['/staff/queue']">Back to the queue</a>
+  }
+
   @if (error(); as e) {
     <div class="note bad"><span class="b"></span>
       <span>{{ e }} <button type="button" class="link" (click)="load(null)">Try again</button></span></div>
@@ -11,10 +18,29 @@
 
   @if (loading()) { <p class="s">Loading…</p> }
 
+  <!-- Choose whose record to open. A medical record is not something a screen
+       should pick on your behalf. -->
   @if (!loading() && !form()) {
-    <div class="note"><span class="b"></span>
-      <span>Nothing to show. Open a session from the dashboard, or add
-        <span class="mono">?formId=…</span> to this address.</span></div>
+    <h2 class="t-s" style="margin-bottom:6px">Today's pre-assessments</h2>
+    <p class="help" style="margin:0 0 14px">
+      Open the one you need. Nothing is shown until you choose.
+    </p>
+    <div class="grid3 stagger">
+      @for (s of choices(); track s.id) {
+        <button type="button" class="card"
+                style="text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:6px"
+                (click)="load(s.formId)">
+          <div style="font-size:21px;font-weight:600;color:var(--color-forest-900)">{{ s.client }}</div>
+          <div class="help">{{ s.time }} · {{ s.serviceName }} · {{ s.durationMinutes }} min</div>
+          <div class="help">{{ s.therapist }} · {{ s.room }}</div>
+          <span class="pill mute" style="align-self:flex-start">{{ s.status }}</span>
+        </button>
+      } @empty {
+        <div class="note"><span class="b"></span>
+          <span>No session booked today at this branch has a pre-assessment attached.
+            Assessments taken at the counter appear here once the visit is recorded.</span></div>
+      }
+    </div>
   }
 
   @if (form(); as f) {
@@ -55,7 +81,7 @@
         <div class="card" style="padding:20px 22px;overflow-x:auto">
           <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:12px">
             <h2 class="t-s" style="font-size:22px">Findings</h2>
-            <span class="help">From the client's own marks · enter AFTER at the end of the session</span>
+            <span class="help">From the client's own marks · AFTER comes from the client after the visit</span>
           </div>
           <table class="tbl findings">
             <tr><th style="width:200px">REGION</th><th style="width:90px">SIDE</th>
@@ -85,14 +111,19 @@
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="6" style="text-align:center;color:var(--color-ink-600)">
-                No areas were marked — this was a leisure visit.</td></tr>
+              <!-- Not an error and not a gap: this client came in to relax. Said
+                   in one line so the screen stops reserving room for a table
+                   that was never going to have rows. -->
+              <tr><td colspan="6" style="color:var(--color-ink-600);padding:10px 0">
+                No areas were marked — this was a leisure visit, so there is no
+                before-and-after to record.</td></tr>
             }
           </table>
           <div class="note warm" style="margin-top:14px;padding:12px 16px;font-size:17px"><span class="b"></span>
-            <span><b>AFTER</b> is filled in at the end of the session, by staff. Before-and-after on the
-            same client is the only outcome measure the spa already collects, and the route that writes
-            it is closed to clients.</span></div>
+            <span><b>AFTER</b> is recorded by the CLIENT, once the front desk has marked the visit
+            completed on the queue. Before-and-after on the same client is the only outcome measure
+            the spa collects, and how a massage feels afterwards is a thing only the person on the
+            table can report.</span></div>
           @if (complete()) {
             <div class="note ok" style="margin-top:10px;padding:12px 16px;font-size:17px"><span class="b"></span>
               <span>Every marked area has an AFTER score. This sheet is complete.</span></div>

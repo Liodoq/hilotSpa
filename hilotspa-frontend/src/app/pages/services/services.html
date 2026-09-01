@@ -1,5 +1,5 @@
 <app-nav />
-<main class="wrap">
+<main class="wrap enter">
   <div class="col">
     <div class="top">
       <div class="head">
@@ -49,38 +49,39 @@
       </div>
     }
 
-    <div class="grid">
+    <div class="menu stagger">
       @for (s of shown(); track s.serviceId) {
-        <article class="card click svc" [class.best]="best(s)" [class.out]="!s.suitable"
-                 (click)="open(s)" [attr.tabindex]="s.suitable ? 0 : -1"
-                 [attr.role]="s.suitable ? 'button' : null">
-          @if (s.suitable) {
-            <span class="pill ok" style="align-self:flex-start"><i class="dotx"></i>
-              {{ best(s) ? 'RECOMMENDED FOR YOUR ASSESSMENT' : 'AVAILABLE' }}</span>
-          } @else {
-            <span class="pill bad" style="align-self:flex-start">NOT ADVISED FOR YOU</span>
+        <!-- A menu row, not a card. Cards need photographs to justify their
+             frame and the photographs have not arrived; a typeset price list is
+             what a spa actually hands you, and it reads as deliberate rather
+             than as eight empty rectangles. A row still carries everything a
+             card did: the recommendation, the exclusion, and its reason. -->
+        <div class="mrow srow" [class.best]="best(s)" [class.out]="!s.suitable">
+          @if (s.imageName) {
+            <span class="mthumb" [style.background-image]="photo(s.imageName)"></span>
           }
-          <!-- A filename the admin set, not the service id: ids are regenerated
-               on every reseed and the photographs would break. Missing photo =
-               a tinted block, never a broken image. -->
-          <div class="thumb" [style.background-image]="photo(s.imageName)"></div>
-          <h2 class="svcName">{{ s.name }}</h2>
-          <p class="s" style="font-size:19px">{{ s.reason || 'Ask the assistant how this one would
-            suit you.' }}</p>
-          @if (s.suitable) {
-            <div style="display:flex;gap:10px;flex-wrap:wrap">
-              <span class="pill mute">{{ s.durationMinutes }} min</span>
-            </div>
-          }
-          <div class="foot">
-            <div class="price">{{ priceLabel(s.price) }}</div>
-            @if (s.suitable) {
-              <button type="button" class="btn btn-sm" [class.btn-primary]="best(s)"
-                      [class.btn-ghost]="!best(s)" (click)="open(s); $event.stopPropagation()">
-                View &amp; book</button>
+          <span class="sname">
+            <span class="mname">{{ s.name }}</span>
+            <span class="mwhat">
+              {{ s.durationMinutes }} minutes
+              @if (best(s)) { <b class="tag good">Suits your assessment</b> }
+              @if (!s.suitable) { <b class="tag no">Not advised for you</b> }
+            </span>
+            @if (!s.suitable && s.reason) {
+              <span class="why">Ruled out by {{ s.reason }} — our bone setter's rule, not
+                the app's.</span>
+            } @else if (s.reason) {
+              <span class="why quiet">{{ s.reason }}</span>
             }
-          </div>
-        </article>
+          </span>
+          <span class="mprice">
+            <b>{{ priceLabel(s.price) }}</b>
+            @if (s.suitable) {
+              <button type="button" class="btn btn-sm btn-ghost"
+                      (click)="open(s)">View &amp; book</button>
+            }
+          </span>
+        </div>
       }
 
       @if (!cat.loading() && !cat.entries().length && !cat.error()) {
@@ -88,13 +89,18 @@
           <span>The service menu is empty. Ask the front desk to add treatments.</span></div>
       }
 
-      <article class="card ask">
-        <h2 class="svcName" style="font-size:22px">Not sure which one?</h2>
-        <p class="s" style="font-size:19px;text-align:center">Ask the booking assistant.
-          It can only offer what is on this page.</p>
-        <button type="button" class="btn btn-primary btn-sm" routerLink="/book">Ask the assistant</button>
-      </article>
     </div>
+
+    <!-- Out of the list, because it is not one of the treatments. Inside the
+         menu it read as a ninth thing you could book. -->
+    <section class="ask">
+      <div>
+        <h2 class="sec-head">Not sure which one?</h2>
+        <p>Ask the booking assistant. It can only offer what is on this page, and only what
+          our bone setter has cleared for your record.</p>
+      </div>
+      <button type="button" class="btn btn-primary" routerLink="/book">Ask the assistant</button>
+    </section>
   </div>
 </main>
 <app-toast />

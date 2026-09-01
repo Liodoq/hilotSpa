@@ -50,6 +50,20 @@ export interface SessionLog {
   duration: string;
   notes: string;
   points: PainPoint[];
+
+  /**
+   * The visit this assessment produced, when there is one.
+   *
+   * Null means the client filled the form and never booked. That row is real
+   * data - it is a person who assessed and did not come - but it is not a
+   * SESSION, and listing it under "past sessions" was the screen calling an
+   * intention a visit.
+   */
+  appointmentId: string | null;
+  /** CONFIRMED / COMPLETED / NO_SHOW / CANCELLED, or null with no visit. */
+  status: string | null;
+  /** Each pain point, so the client can score how it feels afterwards. */
+  scores: { id: string; region: string; before: number | null; after: number | null }[];
 }
 
 const KEY = 'hilotspa.booking';
@@ -202,6 +216,16 @@ function toLog(f: FormsModel): SessionLog {
   const v = f.visit ?? null;
 
   return {
+    appointmentId: v ? v.appointmentId : null,
+    status: v ? v.status : null,
+    scores: (f.painPoints ?? [])
+      .filter(p => p.id)
+      .map(p => ({
+        id: p.id as string,
+        region: p.anatomicalRegion,
+        before: p.painScoreBefore ?? null,
+        after: p.painScoreAfter ?? null,
+      })),
     id: f.id ?? '',
     flags: (f.safetyFlags ?? []).map(safetyFlagLabel),
     pressure: f.pressurePreference

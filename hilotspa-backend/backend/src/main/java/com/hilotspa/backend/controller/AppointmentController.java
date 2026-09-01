@@ -1,6 +1,7 @@
 package com.hilotspa.backend.controller;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,6 +22,8 @@ import org.springframework.web.server.ResponseStatusException;
 import com.hilotspa.backend.model.BookingDtos.Availability;
 import com.hilotspa.backend.model.BookingDtos.BookRequest;
 import com.hilotspa.backend.model.BookingDtos.Booking;
+import com.hilotspa.backend.model.BookingDtos.DayLoad;
+import com.hilotspa.backend.model.BookingDtos.OutcomeRequest;
 import com.hilotspa.backend.model.BookingDtos.ScheduleRow;
 import com.hilotspa.backend.model.BookingDtos.SlotTaken;
 import com.hilotspa.backend.model.BookingDtos.WalkInRequest;
@@ -79,12 +82,55 @@ public class AppointmentController {
      * The branch day sheet. STAFF and ADMIN only - the branch comes from the
      * token, so there is no way to ask for someone else's.
      */
+    /**
+     * Staff record what actually happened. Two endpoints rather than one with a
+     * boolean, because "this happened" and "they never came" are different
+     * facts and a URL that says which is harder to get wrong than a flag.
+     */
+    @PostMapping("/{id}/complete")
+    public ResponseEntity<Booking> complete(@PathVariable UUID id) {
+        return ResponseEntity.ok(bookingService.complete(id, true));
+    }
+
+    @PostMapping("/{id}/no-show")
+    public ResponseEntity<Booking> noShow(@PathVariable UUID id) {
+        return ResponseEntity.ok(bookingService.complete(id, false));
+    }
+
+    /** The client's pain scores after a completed visit. */
+    @PostMapping("/{id}/outcome")
+    public ResponseEntity<Booking> outcome(@PathVariable UUID id,
+                                           @RequestBody OutcomeRequest body) {
+        return ResponseEntity.ok(bookingService.recordOutcome(id, body));
+    }
+
     @GetMapping("/schedule")
     public ResponseEntity<List<ScheduleRow>> schedule(
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) UUID branchId) {
         return ResponseEntity.ok(bookingService.schedule(date, branchId));
+    }
+
+    /**
+     * How loaded each day of one month is - the day-sheet calendar.
+     *
+     * `month` is yyyy-MM. Parsed here rather than bound, so a malformed value
+     * comes back as a 400 that says which parameter was wrong instead of a
+     * converter's stack trace.
+     */
+    @GetMapping("/schedule/month")
+    public ResponseEntity<List<DayLoad>> scheduleMonth(
+            @RequestParam(required = false) String month,
+            @RequestParam(required = false) UUID branchId) {
+        YearMonth ym;
+        try {
+            ym = month == null || month.isBlank() ? null : YearMonth.parse(month);
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "month must be yyyy-MM, for example 2026-09");
+        }
+        return ResponseEntity.ok(bookingService.month(ym, branchId));
     }
 
     /** Open start times for a service, scoped to the assessment's branch. */

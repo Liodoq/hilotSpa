@@ -71,7 +71,9 @@
           </div>
         </div>
       </div>
-      <main class="pane"><ng-content /></main>
+      <!-- dense: staff and admin are people at a desk all day, not a client
+           in pain at a counter. enter: the panel rises once on arrival. -->
+      <main class="pane dense enter"><ng-content /></main>
     </div>
   </div>
   <app-toast />

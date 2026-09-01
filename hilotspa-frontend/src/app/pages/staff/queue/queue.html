@@ -21,7 +21,45 @@
 
     @if (loading()) { <p class="s">Loading…</p> }
 
+    <!-- Did they come? Only a person who was here can say, and until somebody
+         does, painScoreAfter can never be collected for this visit. -->
+    @if (awaitingOutcome().length) {
+      <!-- The one section with work in it. Everything else on this screen is
+           information; this is the part that needs somebody. Given a rule and a
+           count so it reads first, rather than the same weight as the rest. -->
+      <div class="needs-you">
+        <h2 class="t-s" style="margin:0">
+          Waiting to be closed off
+          <span class="count">{{ awaitingOutcome().length }}</span>
+        </h2>
+      </div>
+      <div class="stagger">
+      @for (s of awaitingOutcome(); track s.id) {
+        <div class="slot">
+          <span class="bar"></span>
+          <span class="time">{{ s.time }}</span>
+          <div style="flex:1;min-width:0">
+            <b>{{ s.serviceName }}</b> · {{ s.durationMinutes }} min
+            <div class="help">{{ s.client }} · {{ s.therapist }} · {{ s.room }}</div>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm"
+                  [disabled]="closing()" (click)="close(s, true)">
+            {{ closing() === s.id ? 'Saving…' : 'Completed' }}
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" style="margin-left:8px"
+                  [disabled]="closing()" (click)="close(s, false)">No show</button>
+        </div>
+      }
+      </div>
+      <p class="help" style="margin:6px 0 22px">
+        Marking a visit completed lets the client record how they feel afterwards.
+        A no-show is kept as a no-show — it is not a visit, and counting it as one
+        would put a session that never happened into the spa's own figures.
+      </p>
+    }
+
     <h2 class="t-s">Still to come today</h2>
+    <div class="stagger">
     @for (s of upcoming(); track s.id) {
       <div class="slot">
         <span class="bar"></span>
@@ -36,6 +74,10 @@
         } @else {
           <span class="pill bad">No assessment</span>
         }
+        <button type="button" class="btn btn-ghost btn-sm" style="margin-left:8px"
+                [disabled]="closing()" (click)="cancelBooking(s)">
+          {{ confirmCancel() === s.id ? 'Tap again to cancel' : 'Cancel' }}
+        </button>
       </div>
     } @empty {
       @if (!loading()) {
@@ -43,6 +85,7 @@
           <span>Nothing further is booked today at this branch.</span></div>
       }
     }
+    </div>
 
     <h2 class="t-s" style="margin-top:4px">Free right now</h2>
     <div class="chips">
@@ -53,5 +96,133 @@
           <a class="link" routerLink="/staff/resources">Set statuses</a></span>
       }
     </div>
+
+    <!-- ==================================================================
+         THE OTHER DAYS.
+
+         Everything above is today. This is the only way to reach a Tuesday
+         nobody closed off - and an unanswered visit never produces an
+         outcome score, so those days are marked in gold and nothing else on
+         this grid is.
+         ================================================================== -->
+    <section class="cal">
+      <div class="calhead">
+        <div>
+          <h2 class="t-s" style="margin:0">{{ monthLabel() }}</h2>
+          <p class="help" style="margin:2px 0 0">
+            @if (monthLoading()) { Loading… }
+            @else if (monthTotal()) {
+              {{ monthTotal() }} session{{ monthTotal() === 1 ? '' : 's' }} booked
+              @if (monthOwedDays()) {
+                · {{ monthOwedDays() }} day{{ monthOwedDays() === 1 ? '' : 's' }} still owe an answer
+              }
+            } @else { Nothing booked this month. }
+          </p>
+        </div>
+        <div class="nav">
+          <button type="button" class="navbtn" aria-label="Previous month"
+                  (click)="step(-1)">&lsaquo;</button>
+          <button type="button" class="navbtn" (click)="goToday()">Today</button>
+          <button type="button" class="navbtn" aria-label="Next month"
+                  (click)="step(1)">&rsaquo;</button>
+        </div>
+      </div>
+
+      <div class="dow" aria-hidden="true">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+        <span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+
+      <div class="grid" role="group" [attr.aria-label]="monthLabel()" (keydown)="gridKey($event)">
+        @for (c of cells(); track $index) {
+          @if (!c.key) {
+            <div class="day blank" aria-hidden="true"></div>
+          } @else {
+            <button type="button" class="day"
+                    [class.past]="c.past"
+                    [class.today]="c.today"
+                    [class.sel]="picked() === c.key"
+                    [class.quiet]="!c.total"
+                    [attr.aria-pressed]="picked() === c.key"
+                    [attr.aria-label]="cellLabel(c)"
+                    (click)="openDay(c.key)">
+              <span class="n">{{ c.day }}</span>
+              @if (c.owed) { <span class="owed"></span> }
+              @if (c.total) {
+                <span class="cnt">{{ c.total }}</span>
+                <span class="load"><i [style.width]="barWidth(c)"></i></span>
+              }
+            </button>
+          }
+        }
+      </div>
+
+      <div class="calkey">
+        <span><i class="kbar"></i> how full the day is, against the busiest day this month</span>
+        <span><i class="kdot"></i> a visit nobody has closed off</span>
+        <span><i class="kring"></i> today</span>
+      </div>
+
+      <!-- ------------------------------------------------- the chosen day -->
+      @if (picked()) {
+        <div class="sheet">
+          <div class="sheethead">
+            <h3 style="margin:0">{{ pickedHeading() }}</h3>
+            <span class="help">
+              {{ pickedIsToday() ? 'Today' : pickedIsPast() ? 'Already been' : 'Still to come' }}
+              @if (pickedOwed().length) { · {{ pickedOwed().length }} not closed off }
+            </span>
+          </div>
+
+          @if (pickedLoading()) {
+            <div class="skel" style="margin-top:10px"></div>
+            <div class="skel" style="margin-top:10px"></div>
+          } @else {
+            @for (s of pickedRows(); track s.id) {
+              <div class="slot dayrow"
+                   [class.owes]="needsAnswer(s)"
+                   [class.off]="s.status === 'NO_SHOW' || s.status === 'CANCELLED'">
+                <span class="bar"></span>
+                <span class="time">{{ s.time }}</span>
+                <div style="flex:1;min-width:0">
+                  <b>{{ s.serviceName }}</b> · {{ s.durationMinutes }} min
+                  <div class="help">{{ s.client }} · {{ s.therapist }} · {{ s.room }}</div>
+                </div>
+
+                <div class="acts">
+                  @if (needsAnswer(s)) {
+                    <button type="button" class="btn btn-primary btn-sm"
+                            [disabled]="closing()" (click)="close(s, true)">
+                      {{ closing() === s.id ? 'Saving…' : 'Completed' }}</button>
+                    <button type="button" class="btn btn-ghost btn-sm"
+                            [disabled]="closing()" (click)="close(s, false)">No show</button>
+                  } @else if (stillToCome(s)) {
+                    <span class="pill mute">Booked</span>
+                    <button type="button" class="btn btn-ghost btn-sm"
+                            [disabled]="closing()" (click)="cancelBooking(s)">
+                      {{ confirmCancel() === s.id ? 'Tap again to cancel' : 'Cancel' }}</button>
+                  } @else if (s.status === 'COMPLETED') {
+                    <span class="pill ok">Completed</span>
+                  } @else if (s.status === 'NO_SHOW') {
+                    <span class="pill bad">No show</span>
+                  } @else {
+                    <span class="pill mute">{{ s.status }}</span>
+                  }
+                </div>
+              </div>
+            } @empty {
+              <div class="empty" style="margin-top:10px">Nothing booked on this day.</div>
+            }
+
+            @if (pickedOwed().length) {
+              <p class="help" style="margin:10px 0 0">
+                Until somebody says whether these clients came, they cannot be asked how
+                they feel afterwards — so the visit produces no outcome score at all.
+              </p>
+            }
+          }
+        </div>
+      }
+    </section>
   </div>
 </app-dash-shell>

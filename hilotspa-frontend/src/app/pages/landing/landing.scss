@@ -1,58 +1,153 @@
-:host { display: block; min-height: 100dvh; background: var(--color-cream); }
+/* ===========================================================================
+   Landing — the front door
+   ---------------------------------------------------------------------------
+   The hero is the body map. Boldness is spent there and nowhere else: every
+   section below it is a rule, a heading and some air.
+   =========================================================================== */
 
-/* The hero carries the one idea the rest of the page explains: this spa asks
-   what hurts before it sells you anything. */
-.hero { padding: 76px 24px 64px; display: flex; justify-content: center; }
-.heroIn { width: 100%; max-width: 1080px; display: flex; flex-direction: column;
-  align-items: center; text-align: center; gap: 20px; }
-.eyebrow { font-size: 15px; letter-spacing: 2.4px; text-transform: uppercase;
-  color: var(--color-forest-700); font-weight: 600; }
-.hero h1 { font-size: clamp(34px, 6vw, 62px); line-height: 1.04; margin: 0;
-  color: var(--color-forest-900); text-wrap: balance; max-width: 16ch; }
-.hero .sub { font-size: 21px; color: var(--color-ink-600); max-width: 56ch; margin: 0; }
-.heroActions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+.landing .hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px 320px;
+  gap: 34px;
+  align-items: start;
+  padding: 60px 0 54px;
+}
+.landing .hero-say { padding-top: 8px; }
+.landing .hero-hint { margin: 22px 0 0; }
 
-.band { padding: 56px 24px; display: flex; justify-content: center; }
-.band.alt { background: #fff; border-top: 1.5px solid var(--color-line);
-  border-bottom: 1.5px solid var(--color-line); }
-.bandIn { width: 100%; max-width: 1080px; display: flex; flex-direction: column; gap: 22px; }
-.bandHead { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
-.bandHead h2 { margin: 0; font-size: 30px; color: var(--color-forest-900); }
-.bandHead .link { margin-left: auto; }
+/* The map itself. Sized so a thumb can reach every position on a phone. */
+.landing .hero-map { display: flex; flex-direction: column; gap: 12px; }
+.landing .viewtabs {
+  display: inline-flex;
+  border: 1.5px solid var(--color-line);
+  border-radius: 999px;
+  overflow: hidden;
+  align-self: center;
+}
+.landing .viewtabs button {
+  font: 500 17px/1 var(--font-sans);
+  border: 0;
+  background: transparent;
+  color: var(--color-ink-600);
+  padding: 11px 20px;
+  cursor: pointer;
+  transition: background-color .14s ease, color .14s ease;
+}
+.landing .viewtabs button:hover { background: var(--color-sage-100); }
+.landing .viewtabs button.on { background: var(--color-forest-700); color: #fff; }
+.landing .viewtabs button:focus-visible {
+  outline: 3px solid var(--color-forest-500); outline-offset: -3px;
+}
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
-.svc { background: #fff; border: 1.5px solid var(--color-line); border-radius: var(--radius-lg);
-  overflow: hidden; display: flex; flex-direction: column; text-align: left; padding: 0; }
-.svc .shot { height: 172px; background-color: var(--color-sage-100);
-  background-size: cover; background-position: center; }
-.svc .body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 5px; }
-.svc .nm { font-size: 21px; font-weight: 600; color: var(--color-forest-900); }
-.svc .meta { font-size: 17px; color: var(--color-ink-600); }
+/* The answer panel. It changes rather than appears, so the layout never jumps
+   under someone who has just tapped. */
+.landing .hero-answer {
+  background: #fff;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.landing .answer-name {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: 34px;
+  line-height: 1.1;
+  color: var(--color-forest-900);
+  margin: 6px 0 0;
+}
+.landing .answer-what,
+.landing .answer-idle { margin: 0; font-size: 18px; line-height: 1.55; color: var(--color-ink-600); }
+.landing .answer-idle { flex: 1; }
+.landing .answer-note { margin: 0; text-align: center; }
+.landing .answer-link { align-self: center; }
+.landing .hero-answer .btn { margin-top: auto; }
 
-/* Three claims, and each is true of the running system rather than a slogan. */
-.three { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 22px; }
-.three .it h3 { margin: 0 0 6px; font-size: 21px; color: var(--color-forest-900); }
-.three .it p { margin: 0; font-size: 17.5px; color: var(--color-ink-600); }
-.three .n { font-size: 14px; letter-spacing: 2px; color: var(--color-gold-700);
-  font-weight: 700; margin-bottom: 8px; }
+/* ------------------------------------------------------- a visit, in order */
+.landing .steps { list-style: none; margin: 26px 0 0; padding: 0; display: grid; gap: 22px; }
+.landing .steps li {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  max-width: 72ch;
+}
+.landing .sn {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--color-gold-700);
+  line-height: 1;
+}
+.landing .steps b { display: block; color: var(--color-forest-900); font-size: 20px; }
+.landing .steps div { font-size: 19px; line-height: 1.55; color: var(--color-ink-600); }
 
-.contact { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; }
-.contact .k { font-size: 14px; letter-spacing: 1.8px; text-transform: uppercase;
-  color: var(--color-ink-600); margin-bottom: 5px; }
-.contact .v { font-size: 19px; color: var(--color-forest-900); }
+/* ----------------------------------------------------------------- people */
+.landing .team {
+  list-style: none; margin: 22px 0 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 12px;
+}
+.landing .team li {
+  display: flex; align-items: center; gap: 12px;
+  border: 1.5px solid var(--color-line);
+  border-radius: 999px;
+  padding: 10px 20px 10px 10px;
+  background: #fff;
+}
+.landing .team b { font-size: 19px; color: var(--color-forest-900); }
+.landing .disc {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--color-sage-100); color: var(--color-forest-900);
+  display: grid; place-items: center; font-weight: 600; font-size: 18px;
+}
 
-footer.foot { padding: 30px 24px 46px; text-align: center; font-size: 16px;
-  color: var(--color-ink-600); }
+/* ---------------------------------------------------------------- find us */
+.landing .find {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  gap: 26px; flex-wrap: wrap;
+}
+.landing .findline { margin: 10px 0 0; font-size: 20px; color: var(--color-ink-900); }
+.landing .find-do { display: flex; gap: 12px; flex-wrap: wrap; }
 
-@media (max-width: 700px) { .hero { padding: 46px 18px 40px; } .band { padding: 40px 18px; } }
+/* ------------------------------------------------------------------ close */
+.landing .close {
+  margin-top: 54px;
+  background: var(--color-forest-900);
+  border-radius: var(--radius-lg);
+  padding: 46px 40px;
+  color: #fff;
+}
+.landing .close h2 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: clamp(32px, 4.6vw, 44px);
+  margin: 0; line-height: 1.1;
+}
+.landing .close p {
+  margin: 12px 0 26px; font-size: 20px; color: var(--color-sage-100); max-width: 48ch;
+}
+.landing .close .btn { margin: 0 12px 0 0; }
+.landing .close .btn-ghost {
+  background: transparent; border-color: var(--color-sage-300); color: #fff;
+}
+.landing .close .btn-ghost:hover { background: rgba(255, 255, 255, .1); }
+.landing .close .btn-primary { background: #fff; color: var(--color-forest-900); }
 
-/* First names and an initial disc — no photographs. A therapist's face on a
-   public URL needs their consent on paper, not a design decision. */
-.team { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
-.member { display: flex; align-items: center; gap: 14px; background: var(--color-cream);
-  border: 1.5px solid var(--color-line); border-radius: var(--radius-lg); padding: 14px 16px; }
-.member .disc { width: 46px; height: 46px; border-radius: 50%; flex: 0 0 auto;
-  background: var(--color-forest-700); color: #fff; display: flex; align-items: center;
-  justify-content: center; font-size: 20px; font-weight: 600; }
-.member .nm { font-size: 20px; font-weight: 600; color: var(--color-forest-900); }
-.member .meta { font-size: 16px; color: var(--color-ink-600); }
+/* ----------------------------------------------------------------- narrow */
+@media (max-width: 1080px) {
+  .landing .hero { grid-template-columns: minmax(0, 1fr) 280px; }
+  .landing .hero-answer { grid-column: 1 / -1; min-height: 0; }
+}
+@media (max-width: 760px) {
+  .landing .hero { grid-template-columns: 1fr; gap: 26px; padding: 40px 0; }
+  .landing .hero-map { align-items: center; }
+  .landing .close { padding: 34px 24px; }
+  .landing .close .btn { display: flex; width: 100%; margin: 12px 0 0; }
+  .landing .find-do .btn { flex: 1; }
+}

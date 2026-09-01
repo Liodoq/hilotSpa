@@ -1,0 +1,75 @@
+/* ===========================================================================
+   Contact
+   ---------------------------------------------------------------------------
+   Three questions in the order people ask them: when are you open, where are
+   you, how do I reach you. Not four equal cards — they are not equal, and the
+   first one is why most people opened the page.
+   =========================================================================== */
+
+.contact .chead { padding: 60px 0 46px; }
+
+.contact .row2 {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 34px;
+  align-items: start;
+}
+.contact .big {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.35;
+  color: var(--color-forest-900);
+  font-weight: 600;
+}
+a.big { text-decoration: underline; }
+.contact .note-line {
+  display: block;
+  margin: 10px 0 0;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--color-ink-600);
+  max-width: 60ch;
+}
+.contact .btn { margin-top: 16px; }
+
+.contact .ways { list-style: none; margin: 0; padding: 0; display: grid; gap: 24px; }
+.contact .ways li { display: flex; flex-direction: column; gap: 4px; }
+.contact .ways .say { letter-spacing: .14em; text-transform: uppercase; }
+
+.contact .no-form {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-line);
+}
+
+.contact .close {
+  margin-top: 54px;
+  background: var(--color-forest-900);
+  border-radius: var(--radius-lg);
+  padding: 46px 40px;
+  color: #fff;
+}
+.contact .close h2 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: clamp(32px, 4.6vw, 44px);
+  margin: 0;
+  line-height: 1.1;
+}
+.contact .close p {
+  margin: 12px 0 26px; font-size: 20px; color: var(--color-sage-100); max-width: 48ch;
+}
+.contact .close .btn { margin: 0 12px 0 0; }
+.contact .close .btn-ghost {
+  background: transparent; border-color: var(--color-sage-300); color: #fff;
+}
+.contact .close .btn-ghost:hover { background: rgba(255, 255, 255, .1); }
+.contact .close .btn-primary { background: #fff; color: var(--color-forest-900); }
+
+@media (max-width: 860px) {
+  .contact .row2 { grid-template-columns: 1fr; gap: 14px; }
+  .contact .chead { padding: 40px 0 32px; }
+  .contact .close { padding: 34px 24px; }
+  .contact .close .btn { display: flex; width: 100%; margin: 12px 0 0; }
+}

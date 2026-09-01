@@ -1,5 +1,5 @@
 <app-nav />
-<main class="split">
+<main class="split enter">
   <section class="chatcol">
     <div class="thread" #thread>
       @for (m of messages(); track $index) {
@@ -75,25 +75,95 @@
         <div class="offer">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
             <div class="help">OPEN TIMES · {{ focusName() }} · {{ focusMinutes() }} MIN</div>
-            <button type="button" class="link" (click)="clearFocus()">Choose a different treatment</button>
+            <button type="button" class="link-go" (click)="clearFocus()">Choose a different treatment</button>
           </div>
-          @for (d of days(); track d.day) {
-            <div style="margin-top:10px">
-              <div style="font-size:18px;font-weight:600;color:var(--color-forest-900)">{{ d.day }}</div>
-              <div class="chips" style="margin-top:6px">
-                @for (s of d.slots; track s.slotId) {
-                  <button type="button" class="chip" [disabled]="confirming() || thinking()"
+          <!-- Which day. The count is the point: a day with two times left says
+               so before you open it. -->
+          <div class="daystrip" role="tablist" aria-label="Days with open times">
+            @for (d of days(); track d.day) {
+              <button type="button" class="day" role="tab"
+                      [attr.aria-selected]="activeDay() === d.day"
+                      [class.on]="activeDay() === d.day"
+                      [disabled]="confirming() || thinking()"
+                      (click)="chooseDay(d.day)">
+                <span class="d1">{{ d.day }}</span>
+                <span class="d2">{{ d.count }} {{ d.count === 1 ? 'time' : 'times' }}</span>
+              </button>
+            }
+          </div>
+
+          <!-- Then which time, inside the part of day people actually name. -->
+          @for (part of parts(); track part.label) {
+            <div class="part">
+              <h4>{{ part.label }}</h4>
+              <div class="chips">
+                @for (s of part.slots; track s.slotId) {
+                  <button type="button" class="chip time" [disabled]="confirming() || thinking()"
                           [class.on]="confirming() === s.slotId"
-                          [attr.aria-label]="'Book ' + focusName() + ' on ' + d.day + ' at ' + s.timeLabel"
+                          [attr.aria-label]="'Choose ' + focusName() + ' on ' + s.dayLabel + ' at ' + s.timeLabel"
                           (click)="confirmSlot(s)">
-                    {{ confirming() === s.slotId ? 'Booking…' : s.timeLabel }}</button>
+                    {{ confirming() === s.slotId ? 'Checking…' : s.timeLabel }}</button>
                 }
               </div>
             </div>
           }
-          <!-- Tapping books by id. It never depends on the assistant parsing a
+          <!-- Tapping picks by id. It never depends on the assistant parsing a
                particular wording, which is why a client can always finish. -->
-          <p class="help">Tap a time to book it. Nothing is charged online — you settle at the counter.</p>
+          <p class="help">Tap a time. You can choose your therapist and room next.</p>
+        </div>
+      }
+
+      <!-- Who and where. Optional by design: "Any available" is selected from the
+           start, so a client with no opinion is one tap from booked, exactly as
+           before. A client who cares gets to say so at the moment it matters. -->
+      @if (stage() === 'who' && picked(); as p) {
+        <div class="offer">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+            <div class="help">{{ p.serviceName }} · {{ p.dayLabel }} {{ p.timeLabel }}</div>
+            <button type="button" class="link-go" (click)="cancelPick()">Choose a different time</button>
+          </div>
+
+          @if (loadingOpenings()) {
+            <p class="help" style="margin-top:10px">Checking who is free then…</p>
+          } @else if (openings(); as o) {
+            <div style="margin-top:12px">
+              <div style="font-size:18px;font-weight:600;color:var(--color-forest-900)">Therapist</div>
+              <div class="chips" style="margin-top:6px">
+                <button type="button" class="chip" [class.on]="pickedTherapist() === null"
+                        [disabled]="confirming()"
+                        (click)="pickedTherapist.set(null)">Any available</button>
+                @for (t of o.therapists; track t.id) {
+                  <button type="button" class="chip" [class.on]="pickedTherapist() === t.id"
+                          [disabled]="confirming()"
+                          [attr.aria-label]="'Choose ' + t.firstName"
+                          (click)="pickedTherapist.set(t.id)">
+                    {{ t.firstName }}@if (t.sex) { <span style="opacity:.65">&nbsp;· {{ t.sex }}</span> }
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div style="margin-top:14px">
+              <div style="font-size:18px;font-weight:600;color:var(--color-forest-900)">Room</div>
+              <div class="chips" style="margin-top:6px">
+                <button type="button" class="chip" [class.on]="pickedRoom() === null"
+                        [disabled]="confirming()"
+                        (click)="pickedRoom.set(null)">Any available</button>
+                @for (r of o.rooms; track r.id) {
+                  <button type="button" class="chip" [class.on]="pickedRoom() === r.id"
+                          [disabled]="confirming()"
+                          [attr.aria-label]="'Choose ' + r.name"
+                          (click)="pickedRoom.set(r.id)">{{ r.name }}</button>
+                }
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-primary" style="margin-top:16px"
+                    [disabled]="confirming()" (click)="commitPick()">
+              {{ confirming() ? 'Booking…' : 'Book this time' }}
+            </button>
+            <p class="help">Nothing is charged online — you settle at the counter.</p>
+          }
         </div>
       }
 

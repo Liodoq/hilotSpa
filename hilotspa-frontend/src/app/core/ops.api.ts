@@ -38,6 +38,21 @@ export interface ScheduleRow {
   hasAssessment: boolean; formId: string | null;
 }
 
+/**
+ * One square of the month grid.
+ *
+ * Two numbers, never the rows — drawing thirty bars does not need thirty client
+ * names. `owed` counts visits on that day whose time has passed and which
+ * nobody has closed off, which is the only reason the endpoint exists: those
+ * rows are otherwise unreachable from every screen we ship.
+ */
+export interface DayLoad {
+  /** yyyy-MM-dd */
+  date: string;
+  total: number;
+  owed: number;
+}
+
 /** A treatment on the menu. `active` false means withdrawn, never deleted. */
 export interface MassageDto {
   id: string;
@@ -104,6 +119,20 @@ export class OpsApi {
       : firstValueFrom(this.http.post<RoomDto>(`${API_BASE}/rooms`, body));
   }
 
+  /**
+   * Permanently remove a therapist or room that has NEVER been used.
+   *
+   * The server refuses with 409 the moment one appointment names them. This is
+   * for correcting a mistake - a name typed twice - not for retiring anybody.
+   */
+  deleteTherapist(id: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${API_BASE}/therapists/${id}`));
+  }
+
+  deleteRoom(id: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${API_BASE}/rooms/${id}`));
+  }
+
   /** Read-only by design: there is no write route and no delete route. */
   auditLog(action?: string, limit = 100): Promise<AuditRow[]> {
     const q = new URLSearchParams();
@@ -123,6 +152,19 @@ export class OpsApi {
       .filter(Boolean).join('&');
     return firstValueFrom(this.http.get<ScheduleRow[]>(
       `${API_BASE}/appointments/schedule${q ? '?' + q : ''}`));
+  }
+
+  /**
+   * How loaded each day of one month is. `month` is yyyy-MM.
+   *
+   * Every day of the month comes back, including the empty ones, so the grid
+   * never has to decide whether a missing date means "quiet" or "not fetched".
+   */
+  monthLoad(month: string, branchId?: string | null): Promise<DayLoad[]> {
+    const q = [`month=${month}`, branchId ? `branchId=${branchId}` : '']
+      .filter(Boolean).join('&');
+    return firstValueFrom(this.http.get<DayLoad[]>(
+      `${API_BASE}/appointments/schedule/month?${q}`));
   }
 
   /** The whole service menu, including withdrawn rows. ADMIN maintains it. */

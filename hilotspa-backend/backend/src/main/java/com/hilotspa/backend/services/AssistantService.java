@@ -7,6 +7,7 @@ import java.util.List;
 import com.hilotspa.backend.model.AssistantDtos.CatalogueEntry;
 import com.hilotspa.backend.model.AssistantDtos.ChatResponse;
 import com.hilotspa.backend.model.AssistantDtos.ConfirmRequest;
+import com.hilotspa.backend.model.BookingDtos.Openings;
 import com.hilotspa.backend.model.AssistantDtos.RecommendResponse;
 
 public interface AssistantService {
@@ -48,4 +49,15 @@ public interface AssistantService {
      * the conversational path uses.
      */
     ChatResponse confirm(UUID formId, ConfirmRequest request);
+
+    /**
+     * Who and where is free at the time this slotId names.
+     *
+     * Takes the slotId rather than a service and a formatted date, because the
+     * slotId already carries both and confirm() already parses it exactly this
+     * way. Two endpoints deriving the same instant from two different wire
+     * formats is a disagreement waiting to happen - and a date on a query
+     * string is a parsing question nobody needs to answer twice.
+     */
+    Openings openings(UUID formId, String slotId);
 }

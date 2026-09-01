@@ -23,6 +23,7 @@ import com.hilotspa.backend.model.ResourceDtos.RoomDto;
 import com.hilotspa.backend.model.ResourceDtos.RoomWrite;
 import com.hilotspa.backend.model.ResourceDtos.TherapistDto;
 import com.hilotspa.backend.model.ResourceDtos.TherapistWrite;
+import com.hilotspa.backend.repository.AppointmentRepository;
 import com.hilotspa.backend.repository.AuditLogRepository;
 import com.hilotspa.backend.repository.BranchRepository;
 import com.hilotspa.backend.repository.RoomRepository;
@@ -47,6 +48,7 @@ public class ResourceServiceImpl implements ResourceService {
     @Autowired private BranchRepository branchRepository;
     @Autowired private AuditLogRepository auditLogRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private AppointmentRepository appointmentRepository;
 
     @Value("${hilotspa.node.id:local-dev}") private String nodeId;
 
@@ -241,6 +243,86 @@ public class ResourceServiceImpl implements ResourceService {
     private RoomDto toDto(Room r) {
         return new RoomDto(r.getId(), r.getName(), r.isActive(),
                 r.getBranch().getId(), r.getBranch().getName());
+    }
+
+    // -------------------------------------------------------- safe deletion
+    //
+    // "Remove" means two different things and only one of them is ever safe.
+    //
+    // A row created by mistake - a name typed twice, a room added to the wrong
+    // branch - should just go. A therapist who worked here for a year should
+    // NOT: every appointment names a therapist and a room, so deleting one
+    // either fails on the foreign key or takes those visits with it, and the
+    // spa's own history is the thing the paper's outcome data is made of.
+    //
+    // So the rule is the record itself: never used, delete it; used once,
+    // refuse and say why. active=false remains the answer for everyone else.
+
+    @Override
+    @Transactional
+    public void deleteTherapist(UUID id) {
+        Therapist t = therapistRepository.findById(id).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Therapist not found"));
+        assertSameBranch(t.getBranch());
+
+        if (appointmentRepository.existsByTherapistId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    t.getFirstName() + " has appointments on record and cannot be deleted. "
+                    + "Mark them as no longer working here instead - they leave the rota, and "
+                    + "the sessions they gave still say who gave them.");
+        }
+        therapistRepository.delete(t);
+        auditRow("THERAPIST_DELETED", "Therapist", id, t.getBranch(),
+                "name=" + t.getFirstName() + " " + t.getLastName() + " (never used)");
+    }
+
+    @Override
+    @Transactional
+    public void deleteRoom(UUID id) {
+        Room r = roomRepository.findById(id).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found"));
+        assertSameBranch(r.getBranch());
+
+        if (appointmentRepository.existsByRoomId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    r.getName() + " has appointments on record and cannot be deleted. "
+                    + "Close it instead - it stops being offered, and past bookings still "
+                    + "name it.");
+        }
+        roomRepository.delete(r);
+        auditRow("ROOM_DELETED", "Room", id, r.getBranch(), "name=" + r.getName() + " (never used)");
+    }
+
+    /** Staff delete only at their own branch; an administrator anywhere. */
+    private void assertSameBranch(Branch branch) {
+        if (CurrentUser.isAdmin()) {
+            return;
+        }
+        boolean same = branch != null && CurrentUser.branchId()
+                .map(b -> b.equals(branch.getId())).orElse(false);
+        if (!same) {
+            // 404, not 403 - confirming the id exists is itself a leak.
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Not found");
+        }
+    }
+
+    /**
+     * A deletion is exactly the kind of thing the audit log exists for: the row
+     * it describes will not be there to ask afterwards.
+     */
+    private void auditRow(String action, String type, UUID entityId, Branch branch, String details) {
+        try {
+            AuditLog row = new AuditLog();
+            row.setAction(action);
+            row.setEntityType(type);
+            row.setEntityId(entityId);
+            row.setBranch(branch);
+            row.setOriginNodeId(nodeId);
+            row.setDetails(details + " by=" + CurrentUser.email().orElse("unknown"));
+            auditLogRepository.save(row);
+        } catch (Exception ignored) {
+            // Never let the record of a deletion undo the deletion itself.
+        }
     }
 
     // ------------------------------------------------------------ audit log

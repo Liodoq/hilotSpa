@@ -1,18 +1,12 @@
-/* One column on anything narrower than a wide laptop. The three-across rows
-   were the ones collapsing badly at 1366px and below. */
-.acct { max-width: 860px; margin: 0 auto; padding: 32px 20px 80px; }
-.acct .card.pad { padding: 24px; margin-top: 22px; display: flex; flex-direction: column; gap: 16px; }
-.acct .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.acct .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.acct .btn { align-self: flex-start; }
-.acct .err { color: var(--color-danger-600); font-size: 17px; }
-.acct .err.sm { font-size: 15px; margin-top: 6px; }
-.acct .link.danger { margin-top: 28px; color: var(--color-danger-600); }
+/* Almost nothing lives here on purpose.
 
-@media (max-width: 1100px) {
-  .acct .grid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 700px) {
-  .acct .grid3, .acct .grid2 { grid-template-columns: 1fr; }
-  .acct .btn { align-self: stretch; }
-}
+   /account and /profile are one surface with two routes, and the surface is
+   defined once in styles.scss under `.me`. Component styles are scoped, so a
+   rule written here could never reach /profile — which is exactly how the two
+   pages drifted apart in the first place.
+
+   Only genuinely page-local things below. */
+
+/* The skeletons stand in for the two grids while /me is in flight. Without a
+   height they collapse and the page still jumps, which defeats them. */
+.me .skel + .skel { margin-top: 10px; }

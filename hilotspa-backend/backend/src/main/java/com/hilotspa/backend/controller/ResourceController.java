@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -82,6 +83,24 @@ public class ResourceController {
      * Read-only. This is the evidence trail §D3 and the reliability metric are
      * both read out of, so there is no write route and no delete route at all.
      */
+    /**
+     * Delete a therapist who has never been used. 409 with a reason otherwise.
+     *
+     * Deliberately narrow: this is for correcting a mistake, not for retiring
+     * somebody. See ResourceServiceImpl#deleteTherapist.
+     */
+    @DeleteMapping("/therapists/{id}")
+    public ResponseEntity<Void> deleteTherapist(@PathVariable UUID id) {
+        resourceService.deleteTherapist(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/rooms/{id}")
+    public ResponseEntity<Void> deleteRoom(@PathVariable UUID id) {
+        resourceService.deleteRoom(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/audit-log")
     public ResponseEntity<List<AuditRow>> auditLog(
             @RequestParam(required = false) String action,

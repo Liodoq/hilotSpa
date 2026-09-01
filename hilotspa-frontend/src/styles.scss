@@ -25,6 +25,12 @@
 
   --font-sans: 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
+  /* A second face, used ONLY where the subject is a word rather than a control:
+     the About page's headings and the Tagalog terms in its glossary. Fraunces
+     is a serif cut with a deliberate wobble - it reads as something made by
+     hand, which is what hilot is. Everything a client taps stays Montserrat. */
+  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+
   --radius-sm: 12px;
   --radius-md: 16px;
   --radius-lg: 22px;
@@ -69,9 +75,104 @@ body {
 .btn-quiet   { background: transparent; border-color: var(--color-line); color: var(--color-ink-900); }
 .btn-block   { width: 100%; }
 
+/* ---------------------------------------------------------------- links ----
+   Three jobs, three treatments. One style for all of them is why a link under
+   a button looked like a mistake: a 20px green rule at the browser's default
+   thickness, sitting hard against the letters.
+
+   .link      — inside a sentence. Stays underlined: colour alone as the only
+                signal fails WCAG 1.4.1, and a client on a phone never hovers.
+                The underline is drawn properly instead of loudly.
+   .link-go   — standalone navigation. No underline; an arrow carries the
+                affordance, and the arrow is what says "this goes somewhere".
+   .link-act  — a repeated action in a list. Twenty underlines down a column
+                read as noise, so these are quiet buttons instead.            */
+
 .link {
-  font-size: 20px; font-weight: 500; color: var(--color-forest-700);
-  text-decoration: underline; background: none; border: 0; cursor: pointer; padding: 0;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--color-forest-700);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  /* A hairline, held away from the descenders, at partial strength — then
+     solid and thicker under the pointer, so hover is felt rather than read. */
+  text-decoration-thickness: 1px;
+  text-underline-offset: .22em;
+  text-decoration-color: color-mix(in srgb, var(--color-forest-700) 42%, transparent);
+  transition: text-decoration-color .14s ease, color .14s ease;
+}
+.link:hover,
+.link:focus-visible {
+  color: var(--color-forest-900);
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 2px;
+}
+
+/* Standalone navigation — "See all", "Or just see the treatments". */
+.link-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--color-forest-700);
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color .14s ease;
+}
+.link-go::after {
+  content: "→";
+  font-size: .95em;
+  transition: transform .16s cubic-bezier(.2, .6, .2, 1);
+}
+.link-go:hover { color: var(--color-forest-900); }
+.link-go:hover::after { transform: translateX(4px); }
+/* Keyboard users get the underline back — they have no pointer to hover with,
+   and the arrow alone is a shape, not a state. */
+.link-go:focus-visible {
+  outline: 3px solid var(--color-forest-500);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* A repeated action in a list or a table row. */
+.link-act {
+  font: 500 17px/1 var(--font-sans);
+  color: var(--color-forest-700);
+  background: none;
+  border: 1.5px solid transparent;
+  border-radius: 9px;
+  padding: 9px 14px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color .14s ease, border-color .14s ease, color .14s ease;
+}
+.link-act:hover {
+  background: var(--color-sage-100);
+  border-color: var(--color-line);
+  color: var(--color-forest-900);
+}
+.link-act:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 2px; }
+.link-act.danger { color: var(--color-danger-600); }
+.link-act.danger:hover { background: #F6E6E2; border-color: #E4C9C1; }
+
+/* Going back is the same gesture in reverse, so the arrow leads and travels
+   the other way. */
+.link-go.back { flex-direction: row-reverse; }
+.link-go.back::after { content: "←"; }
+.link-go.back:hover::after { transform: translateX(-4px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .link-go::after { transition: none; }
+  .link-go:hover::after,
+  .link-go.back:hover::after { transform: none; }
 }
 
 /* ---------- surfaces ---------- */
@@ -341,3 +442,347 @@ select.input { appearance: none;
   color: var(--color-forest-900); display: flex; align-items: center; justify-content: center;
   font-size: 21px; font-weight: 700; flex: 0 0 auto; }
 .tablewrap { overflow-x: auto; }
+
+/* ===========================================================================
+   POLISH PASS — 2026-09-01
+   Three system changes, applied together because each one is cheap only while
+   the others are being made. Nothing below alters a colour, a typeface or a
+   radius; the identity is unchanged.
+   =========================================================================== */
+
+/* ---------- 1. the missing middle step in the type scale -------------------
+   .t (46) and .t-s (40) sat six pixels apart and appeared on the same screen,
+   so nothing was clearly in charge. .t-s becomes the section heading it is
+   actually used as, one clear step below the page title. */
+.t-s { font-size: 30px; }
+.footnote { font-size: 15px; }
+
+/* ---------- 2. motion -----------------------------------------------------
+   Three uses, and no others. Every one is the interface acknowledging
+   something happened; none of them is decoration.
+
+   All of it is off for anyone who asked their system for reduced motion —
+   see the media query at the end of this block. */
+:root {
+  --ease: cubic-bezier(.2, .6, .2, 1);
+  --t-enter: 200ms;
+  --t-pulse: 900ms;
+}
+
+/* (a) a screen arrives: the panel rises once, as one move, not per element. */
+.enter { animation: hs-rise var(--t-enter) var(--ease) both; }
+@keyframes hs-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* (b) a list fills in: 30ms apart, CAPPED AT SIX. Past six a stagger stops
+       being feedback and becomes a wait, and a day sheet is not a showreel. */
+.stagger > * { animation: hs-rise var(--t-enter) var(--ease) both; }
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 30ms; }
+.stagger > *:nth-child(3) { animation-delay: 60ms; }
+.stagger > *:nth-child(4) { animation-delay: 90ms; }
+.stagger > *:nth-child(5) { animation-delay: 120ms; }
+.stagger > *:nth-child(n+6) { animation-delay: 150ms; }
+
+/* (c) something changed: one pulse, then settle. Staff mark a visit completed
+       and until now nothing confirmed it landed. */
+.pulse-once { animation: hs-pulse var(--t-pulse) var(--ease) both; }
+@keyframes hs-pulse {
+  0%   { background-color: var(--color-sage-100); border-color: var(--color-forest-500); }
+  100% { background-color: #fff; border-color: var(--color-line); }
+}
+
+/* ---------- 3. skeletons --------------------------------------------------
+   A wait with the shape of the answer. The page stops resizing under the
+   reader when the content lands. */
+.skel {
+  height: 60px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-line);
+  background: linear-gradient(90deg,
+              #fff 0%, var(--color-sage-100) 50%, #fff 100%);
+  background-size: 220% 100%;
+  animation: hs-shim 1100ms linear infinite;
+}
+@keyframes hs-shim {
+  from { background-position: 120% 0; }
+  to   { background-position: -120% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter, .stagger > *, .pulse-once, .skel { animation: none !important; }
+  .enter, .stagger > * { opacity: 1; transform: none; }
+}
+
+/* ---------- 4. a second density for the people who work here --------------
+   NFR#4's 68px target is argued for one specific user: a client in pain,
+   standing at a counter, on a phone. A front-desk laptop showing twelve rows
+   is a different user with a different problem, and forcing the client's
+   sizing on it is what makes the staff screens wrap into ragged rows.
+   44px still clears WCAG 2.5.5 comfortably. */
+.dense {
+  --tap: 44px;
+}
+.dense .btn { min-height: 44px; padding: 0 18px; font-size: 17px; }
+.dense .btn-primary,
+.dense .btn-ghost { min-width: 0; }
+.dense .btn-sm { min-height: 38px; padding: 0 14px; font-size: 15px; }
+.dense .card { padding: 20px; }
+.dense .note { padding: 16px 20px; font-size: 17px; }
+.dense .t-s { font-size: 26px; }
+.dense .link { font-size: 17px; }
+.dense .chip { min-height: 40px; }
+
+/* ===========================================================================
+   PUBLIC PAGES — landing, services, contact, about
+   ---------------------------------------------------------------------------
+   The four surfaces a stranger sees before they have an account. They share a
+   voice: Fraunces where the subject is a word, Montserrat for everything a
+   person taps, and generous rules between sections instead of boxes.
+
+   Scoped under .pub so none of it can reach the app behind the login.
+   =========================================================================== */
+.pub { max-width: 1080px; margin: 0 auto; padding: 0 24px 100px; }
+
+.pub .eyebrow {
+  margin: 0;
+  font-size: 16px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--color-forest-500);
+}
+
+/* The display face, used only where the subject is a word. */
+.pub .display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: clamp(40px, 6.4vw, 72px);
+  line-height: 1.02;
+  letter-spacing: -.02em;
+  color: var(--color-forest-900);
+  margin: 14px 0 0;
+  text-wrap: balance;
+}
+.pub .sec-head {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: clamp(28px, 3.6vw, 36px);
+  line-height: 1.12;
+  color: var(--color-forest-900);
+  margin: 0;
+  text-wrap: balance;
+}
+.pub .lead {
+  margin: 16px 0 0;
+  font-size: 22px;
+  line-height: 1.5;
+  color: var(--color-ink-900);
+  max-width: 46ch;
+}
+.pub .say {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 15px; letter-spacing: .06em; color: var(--color-ink-600);
+}
+
+/* A rule, not a box. Sections on these pages are separated by a line and a lot
+   of air; cards are for things you act on, and prose is not one of them. */
+.pub .band { padding: 54px 0; border-top: 1px solid var(--color-line); }
+.pub .band-head { display: flex; align-items: baseline; justify-content: space-between;
+                  gap: 20px; flex-wrap: wrap; margin-bottom: 26px; }
+
+/* ---------------------------------------------------------------- the menu
+   A price list, set as one. Cards need pictures to justify themselves and the
+   photographs have not arrived; a typeset menu is what a spa actually hands
+   you, and it reads as deliberate rather than as eight empty frames. */
+/* Capped. A price list does not need 1080px — stretched that wide the price
+   ends up an inch from the name it belongs to, with a field of empty cream
+   after it. */
+.pub .menu { display: grid; max-width: 780px; }
+
+/* FLEX, not grid, and deliberately.
+   This was `grid-template-columns: auto 1fr auto` with the thumbnail first.
+   No photographs exist yet, so the thumbnail never rendered — which put the
+   NAME in the auto track and the PRICE in the 1fr track. The price stretched
+   across the middle and the third column sat empty on the right. Flex has no
+   fixed tracks to fall into, so a missing child cannot shift what follows. */
+.pub .mrow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 0;
+  border-top: 1px solid var(--color-line-soft, #E7E2D6);
+  text-decoration: none;
+  color: inherit;
+}
+.pub .mrow:first-child { border-top: 0; }
+.pub .mthumb {
+  flex: 0 0 auto;
+  width: 64px; height: 64px; border-radius: 14px;
+  background: var(--color-sage-100) center/cover no-repeat;
+}
+.pub .mname {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-size: 28px;
+  line-height: 1.15;
+  color: var(--color-forest-900);
+  margin: 0;
+}
+.pub .mwhat { margin: 4px 0 0; font-size: 18px; color: var(--color-ink-600); }
+/* margin-left:auto rather than a spacer: the price is pushed to the end of the
+   row by the row itself, so it lands in the same place whether or not there is
+   a thumbnail beside the name. */
+.pub .mprice { margin-left: auto; text-align: right; white-space: nowrap; }
+.pub .mprice b {
+  display: block;
+  font-size: 19px; font-weight: 600; color: var(--color-forest-900);
+  font-variant-numeric: tabular-nums;
+}
+.pub .mprice span { font-size: 15px; color: var(--color-ink-600); }
+.pub a.mrow:hover .mname { color: var(--color-forest-700); text-decoration: underline; }
+.pub a.mrow:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 4px; }
+
+@media (max-width: 720px) {
+  .pub .mrow { gap: 14px; }
+  .pub .mthumb { display: none; }
+  .pub .mname { font-size: 24px; }
+}
+
+/* ===========================================================================
+   MY DETAILS — /account and /profile
+   ---------------------------------------------------------------------------
+   Two routes, one subject. A client does not think of "account" and "details"
+   as separate places; the split exists because a surname is not clinical data
+   and a weight is not part of a login. So the ROUTES stay apart — an edit on
+   one can never touch the other's endpoint — and the SURFACE is made one
+   thing, so moving between them does not feel like changing product.
+
+   The substantive change is below, in .dl.
+
+   Both pages were rendering stored values as DISABLED INPUTS. A disabled input
+   still looks like an input: it has a box, a border and a caret-shaped
+   invitation, and the only thing telling you it is not for typing is a slight
+   greying — which our own `.panel.locked` rule then removed by setting
+   opacity back to 1. The result is a page that looks like a form you are not
+   allowed to use.
+
+   Stored values are text. They are rendered as text.
+
+   Editing then reuses THE SAME two-column grid, swapping only what sits in the
+   value column, so pressing Edit does not reflow the page — the labels stay
+   exactly where they were and the reader keeps their place.
+   =========================================================================== */
+.me { max-width: 880px; margin: 0 auto; padding: 0 24px 96px; }
+
+/* ------------------------------------------------------------------- head */
+.me .pagehead { padding: 56px 0 30px; }
+.me .eyebrow {
+  margin: 0;
+  font-size: 16px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--color-forest-500);
+}
+/* The display face earns its place here for one reason: on /account the
+   heading is the client's own name. That is the subject of the page, and it is
+   a word — which is the only test this typeface has to pass. */
+.me .display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: clamp(36px, 5.4vw, 54px);
+  line-height: 1.04;
+  letter-spacing: -.02em;
+  color: var(--color-forest-900);
+  margin: 12px 0 0;
+  text-wrap: balance;
+}
+.me .say {
+  margin: 10px 0 0;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 16px; letter-spacing: .04em; color: var(--color-ink-600);
+}
+.me .lead { margin: 14px 0 0; font-size: 20px; line-height: 1.5;
+            color: var(--color-ink-600); max-width: 54ch; }
+.me .pagehead .link-go { margin-top: 18px; }
+
+/* ---------------------------------------------------------------- section
+   A rule and air, not a card inside a card. Cards are for things you act on;
+   a list of facts about yourself is not one. */
+.me .sec { padding: 32px 0; border-top: 1px solid var(--color-line); }
+.me .sec-top {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.me .sec-head {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: 27px;
+  line-height: 1.15;
+  color: var(--color-forest-900);
+  margin: 0;
+}
+.me .sec-why { margin: 6px 0 0; font-size: 17px; line-height: 1.5;
+               color: var(--color-ink-600); max-width: 58ch; }
+
+/* ----------------------------------------------------- THE GRID, both ways
+   Label column fixed so every value on the page starts on the same vertical
+   line, read or edit. Rows are separated by a hairline rather than boxed. */
+.me .dl { margin: 22px 0 0; display: grid; grid-template-columns: 200px minmax(0, 1fr); }
+.me .dl > dt,
+.me .dl > dd {
+  margin: 0;
+  min-height: 60px;
+  padding: 14px 0;
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--color-line-soft, #E7E2D6);
+}
+.me .dl > dt {
+  padding-right: 20px;
+  font-size: 17px; font-weight: 500; color: var(--color-ink-600);
+}
+.me .dl > dd { font-size: 20px; color: var(--color-ink-900); min-width: 0; }
+.me .dl > dt:first-of-type,
+.me .dl > dd:first-of-type { border-top: 0; }
+
+/* A value nobody has given us. An em dash, not an empty row — the difference
+   between "blank" and "we never asked" matters to whoever reads this next. */
+.me .none { color: var(--color-ink-600); }
+.me .dd-note { display: block; margin-top: 4px; font-size: 15px; color: var(--color-ink-600); }
+
+/* Editing: same grid, taller rows, controls in the value column. */
+.me .dl.editing > dt,
+.me .dl.editing > dd { padding: 10px 0; align-items: flex-start; }
+.me .dl.editing > dt { padding-top: 24px; }
+.me .dl > dd > .input,
+.me .dl > dd > app-date-picker { width: 100%; max-width: 420px; }
+.me .dl > dd > .in-sm { max-width: 180px; }
+.me .dl > dd > .in-md { max-width: 300px; }
+.me .dl > dd .stack { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.me .dl > dd .grp { display: flex; gap: 12px; flex-wrap: wrap; width: 100%; }
+.me .dl > dd .grp > .input { flex: 1 1 160px; min-width: 0; }
+
+/* ------------------------------------------------------------------ verbs */
+.me .acts { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+.me .acts .btn-primary, .me .acts .btn-ghost, .me .acts .btn-quiet { min-width: 0; padding: 0 26px; }
+.me .err { margin: 16px 0 0; }
+.me .out { padding: 30px 0 0; border-top: 1px solid var(--color-line); }
+
+@media (max-width: 720px) {
+  .me { padding: 0 20px 80px; }
+  .me .pagehead { padding: 34px 0 24px; }
+  .me .dl { grid-template-columns: 1fr; }
+  .me .dl > dt { padding: 18px 0 2px; min-height: 0; }
+  .me .dl > dd { padding: 0 0 18px; min-height: 0; border-top: 0; }
+  .me .dl.editing > dt { padding-top: 18px; }
+  .me .acts { flex-direction: column-reverse; }
+  .me .acts .btn { width: 100%; }
+}
+
+/* A required marker that never changes is decoration. Once the field is
+   answered the asterisk stops shouting but stays visible, so the rule it
+   states is still legible on a filled-in form. */
+.me .req.done { color: var(--color-sage-300); }

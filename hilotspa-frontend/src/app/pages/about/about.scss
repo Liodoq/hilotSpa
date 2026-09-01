@@ -1,0 +1,180 @@
+/* ===========================================================================
+   About — Knead Wellness Spa
+   ---------------------------------------------------------------------------
+   The one page where a stranger decides whether to trust these hands. It was
+   three grey cards of disclosures; the disclosures are still here, further
+   down, where they belong.
+
+   Boldness is spent in exactly one place — the glossary. Everything around it
+   is quiet on purpose.
+   =========================================================================== */
+
+.about { max-width: 1000px; margin: 0 auto; padding: 0 24px 100px; }
+
+/* ------------------------------------------------------------------- hero */
+.about .lede { padding: 72px 0 56px; border-bottom: 1px solid var(--color-line); }
+.about .eyebrow {
+  margin: 0;
+  font-size: 16px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--color-forest-500);
+}
+
+/* The word, set as a specimen. Fraunces appears here and in the glossary and
+   nowhere else — a display face used everywhere stops being one. */
+.about .word {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: clamp(68px, 13vw, 132px);
+  line-height: .92; letter-spacing: -.02em;
+  color: var(--color-forest-900);
+  margin: 14px 0 0;
+}
+.about .say { margin: 12px 0 0; font-size: 19px; color: var(--color-ink-600); }
+.about .say span {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 17px;
+}
+.about .say em { font-style: italic; }
+.about .def {
+  margin: 18px 0 0; font-size: 23px; line-height: 1.45; max-width: 34ch;
+  color: var(--color-ink-900);
+}
+.about .lede .btn { margin: 26px 12px 0 0; }
+
+/* ------------------------------------------------------------------ bands */
+.about .band { padding: 52px 0; border-bottom: 1px solid var(--color-line); }
+
+/* Heading left, prose right: the heading is a margin note rather than a lid,
+   which also keeps the reading column near 65 characters. */
+.about .two {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 34px; align-items: start;
+}
+.about .head {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600; font-size: 32px; line-height: 1.14;
+  color: var(--color-forest-900); margin: 0; text-wrap: balance;
+}
+.about .sub { margin: 8px 0 0; font-size: 19px; color: var(--color-ink-600); }
+.about .prose { max-width: 62ch; }
+.about .prose p { margin: 0 0 16px; font-size: 20px; line-height: 1.6; }
+.about .prose p:last-child { margin-bottom: 0; }
+
+/* One sentence on this page is the whole safety argument. It gets to be a
+   sentence rather than a paragraph. */
+.about .pull {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: 26px; line-height: 1.35;
+  color: var(--color-forest-700);
+  border-left: 3px solid var(--color-gold-500);
+  padding-left: 20px;
+  margin: 22px 0;
+}
+
+.about .limits { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.about .limits li { font-size: 19px; line-height: 1.5; padding-left: 30px; position: relative; }
+.about .limits li::before {
+  content: ""; position: absolute; left: 0; top: .62em;
+  width: 14px; height: 2px; background: var(--color-sage-300);
+}
+
+/* --------------------------------------------------------- THE GLOSSARY ---
+   The signature. Our menu is written in Tagalog and Spanish loanwords, and a
+   client who cannot name Ventosa will not book Ventosa. Set as a dictionary
+   plate: the term is the object on the page, the meaning sits beside it at
+   reading size. */
+.about .glossband { padding-top: 56px; }
+.about .gloss { margin: 30px 0 0; }
+.about .term {
+  display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 30px;
+  align-items: baseline; padding: 26px 0;
+  border-top: 1px solid var(--color-line);
+}
+.about .term:last-of-type { border-bottom: 1px solid var(--color-line); }
+.about .term dt { margin: 0; }
+.about .tg {
+  display: block;
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-size: clamp(38px, 5vw, 52px);
+  line-height: 1; letter-spacing: -.015em;
+  color: var(--color-forest-900);
+}
+.about .ph {
+  display: block; margin-top: 8px;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 15px; letter-spacing: .06em; color: var(--color-ink-600);
+}
+.about .term dd { margin: 0; font-size: 20px; line-height: 1.6; max-width: 54ch; }
+.about .foot-note {
+  margin: 24px 0 0; font-size: 18px; color: var(--color-ink-600); max-width: 62ch;
+}
+
+/* ------------------------------------------------------------------ close */
+.about .close {
+  margin-top: 56px; background: var(--color-forest-900);
+  border-radius: var(--radius-lg); padding: 46px 40px; color: #fff;
+}
+.about .close h2 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600; font-size: clamp(34px, 5vw, 46px); margin: 0; line-height: 1.1;
+}
+.about .close p {
+  margin: 12px 0 26px; font-size: 20px; color: var(--color-sage-100); max-width: 46ch;
+}
+.about .close .btn { margin: 0 12px 0 0; }
+.about .close .btn-ghost {
+  background: transparent; border-color: var(--color-sage-300); color: #fff;
+}
+.about .close .btn-ghost:hover { background: rgba(255, 255, 255, .1); }
+.about .close .btn-primary { background: #fff; color: var(--color-forest-900); }
+
+/* ----------------------------------------------------------------- motion
+   One orchestrated moment on arrival, then nothing until you scroll. The hero
+   assembles the way a dictionary entry is read: the word, how to say it, what
+   it means, then what to do about it. */
+.about .r1, .about .r2, .about .r3, .about .r4, .about .r5 {
+  animation: about-rise 520ms cubic-bezier(.2, .6, .2, 1) both;
+}
+.about .r1 { animation-delay: 0ms; }
+.about .r2 { animation-delay: 70ms; }
+.about .r3 { animation-delay: 150ms; }
+.about .r4 { animation-delay: 230ms; }
+.about .r5 { animation-delay: 320ms; }
+
+@keyframes about-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Glossary rows arrive as they are reached. Where view timelines are not
+   supported this rule never applies and the rows are simply already there —
+   no observer, no script, nothing to go wrong. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .about .rev {
+      animation: about-rise 500ms cubic-bezier(.2, .6, .2, 1) both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 62%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about .r1, .about .r2, .about .r3, .about .r4, .about .r5, .about .rev {
+    animation: none; opacity: 1; transform: none;
+  }
+}
+
+/* ----------------------------------------------------------------- narrow */
+@media (max-width: 860px) {
+  .about .two { grid-template-columns: 1fr; gap: 16px; }
+  .about .term { grid-template-columns: 1fr; gap: 10px; padding: 22px 0; }
+  .about .lede { padding: 48px 0 40px; }
+  .about .close { padding: 34px 24px; }
+  .about .lede .btn,
+  .about .close .btn { display: flex; width: 100%; margin: 12px 0 0; }
+}

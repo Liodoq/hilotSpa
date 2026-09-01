@@ -5,7 +5,7 @@ import { Toast } from '../../shared/toast/toast';
 import { ToastService } from '../../core/toast.service';
 import { FormsApi } from '../../core/forms.api';
 import { BookingStore } from '../../core/booking.store';
-import { AssistantResponse, AssistantSlot, BookingModel } from '../../core/models';
+import { AssistantResponse, AssistantSlot, BookingModel, Openings } from '../../core/models';
 import { describeHttpError } from '../../core/http-error';
 import { SessionLog } from '../../core/booking.store';
 import { SpeechService } from '../../core/speech.service';
@@ -75,25 +75,86 @@ export class Book implements OnDestroy {
    */
   protected focus = signal<string | null>(null);
 
-  /** suggest -> times -> booked. One panel, three jobs, never two at once. */
-  protected stage = computed<'suggest' | 'times' | 'booked'>(() => {
+  /** suggest -> times -> who -> booked. One panel, four jobs, never two at once. */
+  protected stage = computed<'suggest' | 'times' | 'who' | 'booked'>(() => {
     if (this.booked()) return 'booked';
+    if (this.picked()) return 'who';
     return this.focus() && this.timesForFocus().length ? 'times' : 'suggest';
   });
+
+  /**
+   * The time the client tapped, waiting on the optional who-and-where question.
+   *
+   * Tapping a time no longer books it outright. It used to, and that was the
+   * right design while the spa assigned everyone; now that a client may choose
+   * their therapist, booking on the first tap would take the choice away at the
+   * exact moment they are best placed to make it.
+   */
+  protected picked = signal<AssistantSlot | null>(null);
+  protected openings = signal<Openings | null>(null);
+  protected loadingOpenings = signal(false);
+
+  /** null on either means "any available" - the normal case, and the default. */
+  protected pickedTherapist = signal<string | null>(null);
+  protected pickedRoom = signal<string | null>(null);
 
   private timesForFocus = computed(() =>
     this.slots().filter(s => s.serviceId === this.focus()));
 
-  /** The focused service's times, grouped by day, so a run of half-hours reads
-   *  as one row of chips rather than nine sentences. */
+  /**
+   * ONE day at a time — 2026-09-01.
+   *
+   * This used to print every open time for the whole window at once: four days
+   * of half-hour slots is sixty-odd identical chips, all the same weight, and
+   * the client had to read the lot to find one. Choosing a time was a search.
+   *
+   * Now it is two decisions. Which day - and each day says how many times it
+   * has before you open it, so a nearly-full day is visible without clicking
+   * into it. Then which time, inside morning, afternoon or evening, because
+   * nobody thinks "I want 1:30 PM"; they think "sometime after lunch".
+   */
+  protected pickedDay = signal<string | null>(null);
+
+  /** Every open day for the focused treatment, with how many times it holds. */
   protected days = computed(() => {
-    const out: { day: string; slots: AssistantSlot[] }[] = [];
+    const out: { day: string; count: number }[] = [];
     for (const slot of this.timesForFocus()) {
       const row = out.find(d => d.day === slot.dayLabel);
-      if (row) row.slots.push(slot); else out.push({ day: slot.dayLabel, slots: [slot] });
+      if (row) { row.count++; } else { out.push({ day: slot.dayLabel, count: 1 }); }
     }
     return out;
   });
+
+  /**
+   * The day on screen: the one they chose, or the soonest that has anything.
+   *
+   * Falling back rather than showing an empty panel matters when the times
+   * refresh under them - a booking they just made can empty the day they were
+   * looking at, and a screen that then shows nothing looks broken.
+   */
+  protected activeDay = computed(() => {
+    const chosen = this.pickedDay();
+    const all = this.days();
+    if (chosen && all.some(d => d.day === chosen)) { return chosen; }
+    return all.length ? all[0].day : null;
+  });
+
+  /** That day's times, split the way people describe time to each other. */
+  protected parts = computed(() => {
+    const day = this.activeDay();
+    const mine = this.timesForFocus().filter(s => s.dayLabel === day);
+    // Read the hour off the ISO start, never off the rendered label - the label
+    // is for people and has already been through a formatter.
+    const band = (s: AssistantSlot): number => {
+      const h = Number((s.start ?? '').slice(11, 13));
+      return h < 12 ? 0 : h < 17 ? 1 : 2;
+    };
+    return ['Morning', 'Afternoon', 'Evening']
+      .map((label, i) => ({ label, slots: mine.filter(s => band(s) === i) }))
+      .filter(part => part.slots.length > 0);
+  });
+
+  chooseDay(day: string): void { this.pickedDay.set(day); }
 
   protected focusName = computed(() =>
     this.timesForFocus()[0]?.serviceName ?? '');
@@ -299,6 +360,30 @@ export class Book implements OnDestroy {
 
   val(ev: Event): string { return (ev.target as HTMLInputElement).value; }
 
+  /**
+   * Whether this browser wants the backend's own diagnostics on screen.
+   *
+   * OFF unless somebody deliberately turned it on:
+   *   localStorage.setItem('hilotspa.dev', '1')
+   *
+   * It used to be on for everyone, rendered as an ordinary assistant bubble,
+   * so a client - or a panellist taking a screenshot - read
+   *   (dev: POST http://n8n:5678/... 403 Forbidden)
+   * in the same voice and the same weight as the spa talking to them. The
+   * information is useful; the placement was not.
+   */
+  private devMode = (() => {
+    try { return localStorage.getItem('hilotspa.dev') === '1'; } catch { return false; }
+  })();
+
+  /** Always to the console; to the screen only if this browser asked for it. */
+  private noteDebug(debug: string): void {
+    console.warn('[assistant]', debug);
+    if (this.devMode) {
+      this.say(`<span class="devline">dev · ${debug}</span>`, true);
+    }
+  }
+
   protected thinking = signal(false);
   /** Set the moment a booking is actually written. */
   protected booked = signal<BookingModel | null>(null);
@@ -330,7 +415,16 @@ export class Book implements OnDestroy {
     try {
       const res = await this.api.chat(id, v, this.focus());
       this.slots.set(res.slots ?? []);
-      this.say(res.reply);
+      // An empty reply is not a silent assistant - it is the server declining to
+      // repeat a sentence that is no longer true (see the CHOOSE path).
+      if (res.reply) this.say(res.reply);
+      if (res.status === 'CHOOSE' && res.pendingSlotId) {
+        const s = (res.slots ?? []).find(x => x.slotId === res.pendingSlotId);
+        if (s) {
+          this.focus.set(s.serviceId);
+          this.pendingOpen = s;
+        }
+      }
       if (res.status === 'BOOKED' && res.booking) {
         // Confirm from what SPRING returned, never from the model's sentence.
         // If they ever disagree, the database is right.
@@ -341,9 +435,7 @@ export class Book implements OnDestroy {
         await this.booking.load();
       }
       if (res.debug) {
-        // dev only: the backend explains its own fallback on screen
-        console.warn('[assistant]', res.debug);
-        this.say(`<span style="opacity:.7">(dev: ${res.debug})</span>`, true);
+        this.noteDebug(res.debug);
       }
     } catch (e: unknown) {
       console.error('[book] chat failed', e);
@@ -353,7 +445,19 @@ export class Book implements OnDestroy {
     } finally {
       this.thinking.set(false);
     }
+
+    // Opened AFTER thinking() clears: confirmSlot() refuses to run while a turn
+    // is in flight, and that guard is worth keeping rather than working around.
+    const pending = this.pendingOpen;
+    this.pendingOpen = null;
+    if (pending) await this.confirmSlot(pending);
   }
+
+  /**
+   * A time the assistant settled in prose, to be opened for the who-and-where
+   * question once this turn finishes.
+   */
+  private pendingOpen: AssistantSlot | null = null;
 
   /**
    * The microphone.
@@ -390,13 +494,14 @@ export class Book implements OnDestroy {
     const picked = this.picks().find(r => r.serviceId === serviceId);
     if (!picked) return;
     this.focus.set(serviceId);
+    this.pickedDay.set(null);
     this.draftText.set(
       `I would like the ${picked.name}, ${picked.durationMinutes} minutes. When is it available?`);
     void this.send();
   }
 
   /** Back to the menu without having to type "actually, something else". */
-  clearFocus(): void { this.focus.set(null); }
+  clearFocus(): void { this.focus.set(null); this.pickedDay.set(null); }
 
   /**
    * Dismiss the confirmation and go back to the menu.
@@ -407,6 +512,8 @@ export class Book implements OnDestroy {
   bookAnother(): void {
     this.booked.set(null);
     this.focus.set(null);
+    this.picked.set(null);
+    this.openings.set(null);
   }
 
   /**
@@ -421,18 +528,89 @@ export class Book implements OnDestroy {
   async confirmSlot(slot: AssistantSlot): Promise<void> {
     const id = this.formId();
     if (!id || this.confirming() || this.thinking()) return;
+    this.speech.stopSpeaking();
+    this.picked.set(slot);
+    this.pickedTherapist.set(null);
+    this.pickedRoom.set(null);
+    this.openings.set(null);
+    this.loadingOpenings.set(true);
+    try {
+      const open = await this.api.openings(id, slot.slotId);
+      this.openings.set(open);
+      if (!open.therapists.length || !open.rooms.length) {
+        // Both must exist for the visit to happen at all. Saying "pick a
+        // therapist" over an empty list would be asking for something we cannot
+        // deliver - the honest answer is that the time went.
+        this.picked.set(null);
+        this.say('That time has just been taken. Here are the times that are still open.');
+        await this.refreshTimes(id, slot.serviceId);
+      } else {
+        this.say(`${slot.dayLabel} ${slot.timeLabel} it is. Would you like a particular `
+          + 'therapist or room? You can leave it to us — tap <b>Book this time</b>.');
+      }
+    } catch (e: unknown) {
+      // Say the STATUS out loud. The first version of this swallowed the code
+      // and left three very different faults - not deployed, bad request, not
+      // permitted - wearing the same apology.
+      const status = (e as { status?: number })?.status;
+      console.error('[book] openings failed', status, e);
+      this.picked.set(null);
+      this.say('I could not check who is free just then. Please try another time, '
+        + 'or ask the front desk.' + (status ? ` (${status})` : ''));
+    } finally {
+      this.loadingOpenings.set(false);
+    }
+  }
+
+  /** Go back to the times without booking. Nothing has been written yet. */
+  cancelPick(): void {
+    this.picked.set(null);
+    this.openings.set(null);
+  }
+
+  /** Re-ask the assistant for this treatment's calendar, without a new message. */
+  private async refreshTimes(formId: string, serviceId: string): Promise<void> {
+    try {
+      const res = await this.api.chat(formId, 'What times are still open?', serviceId);
+      this.slots.set(res.slots ?? []);
+    } catch {
+      // The times on screen are now stale but harmless: every one of them is
+      // revalidated server-side on the next tap.
+    }
+  }
+
+  /**
+   * Book the tapped time, with whoever and wherever the client chose.
+   *
+   * Both ids may be null and usually are. A pick that is set is honoured
+   * exactly: if that therapist has gone in the meantime the server refuses and
+   * says so, rather than quietly handing the client somebody else.
+   */
+  async commitPick(): Promise<void> {
+    const id = this.formId();
+    const slot = this.picked();
+    if (!id || !slot || this.confirming() || this.thinking()) return;
     this.confirming.set(slot.slotId);
     this.speech.stopSpeaking();
+
+    const who = this.openings()?.therapists.find(x => x.id === this.pickedTherapist());
+    const where = this.openings()?.rooms.find(x => x.id === this.pickedRoom());
+    const extra = [who ? `with ${who.firstName}` : '', where ? `in ${where.name}` : '']
+      .filter(Boolean).join(', ');
     this.messages.update(m => [...m, {
-      text: `${slot.serviceName}, ${slot.dayLabel} ${slot.timeLabel} — yes please.`,
+      text: `${slot.serviceName}, ${slot.dayLabel} ${slot.timeLabel}`
+        + (extra ? ` ${extra}` : '') + ' — yes please.',
       mine: true, at: 'just now',
     }]);
     try {
-      const res = await this.api.confirmSlot(id, slot.slotId);
+      const res = await this.api.confirmSlot(
+        id, slot.slotId, this.pickedTherapist(), this.pickedRoom());
       this.slots.set(res.slots ?? []);
       this.say(res.reply);
       if (res.status === 'BOOKED' && res.booking) {
         const b = res.booking;
+        this.picked.set(null);
+        this.openings.set(null);
         this.booked.set(b);
         this.say(`Booked — <b>${b.serviceName}</b>, ${b.label}, ${b.durationMinutes} min. `
           + `${b.therapist} · ${b.room}. Pay at the counter.`);
@@ -443,7 +621,34 @@ export class Book implements OnDestroy {
       }
     } catch (e: unknown) {
       console.error('[book] confirm failed', e);
-      this.say('I could not hold that time just now. Please try another, or ask the front desk.');
+      // A 409 here is the interesting case and it carries its own reason: the
+      // slot went, the CLIENT is already booked at that hour, or the therapist
+      // they chose has just been taken. Three different things to do about it,
+      // so show what the server actually said rather than one flat apology.
+      const reason = (e as { error?: { message?: string } })?.error?.message;
+      this.say(reason && reason.trim()
+        ? reason
+        : 'I could not hold that time just now. Please try another, or ask the front desk.');
+      // Re-ask who is free: if it was the therapist that went, the list they are
+      // looking at is now a lie.
+      const slotNow = this.picked();
+      if (slotNow) {
+        try {
+          const open = await this.api.openings(id, slotNow.slotId);
+          this.openings.set(open);
+          if (this.pickedTherapist()
+              && !open.therapists.some(x => x.id === this.pickedTherapist())) {
+            this.pickedTherapist.set(null);
+          }
+          if (this.pickedRoom() && !open.rooms.some(x => x.id === this.pickedRoom())) {
+            this.pickedRoom.set(null);
+          }
+          if (!open.therapists.length || !open.rooms.length) {
+            this.picked.set(null);
+            await this.refreshTimes(id, slotNow.serviceId);
+          }
+        } catch { /* leave the picker as it is; the next tap revalidates */ }
+      }
     } finally {
       this.confirming.set(null);
     }

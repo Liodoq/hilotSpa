@@ -1,6 +1,7 @@
 package com.hilotspa.backend.model;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -14,8 +15,9 @@ public final class BookingDtos {
     /**
      * One open start time.
      *
-     * The client is not choosing a therapist, so identical start times are
-     * collapsed - which therapist takes the session is assigned at booking.
+     * Identical start times are still collapsed here: the first question is
+     * WHEN. Who and where is a second, optional question answered by
+     * /openings once a time is settled - see Openings below.
      *
      * `label` is rendered here, in Java, on purpose. Left to the model, times
      * get reformatted, translated, or quietly shifted by an hour.
@@ -36,10 +38,52 @@ public final class BookingDtos {
             List<Slot> slots) {
     }
 
+    /** A therapist the client may choose, at one specific start time. */
+    public record OpenTherapist(
+            UUID id,
+            String firstName,
+            /** Display text ("Female"), not the enum name - this is for a chip. */
+            String sex) {
+    }
+
+    /** A room the client may choose, at one specific start time. */
+    public record OpenRoom(
+            UUID id,
+            String name,
+            String imageName) {
+    }
+
+    /**
+     * Who and where is free at ONE start time - the second half of booking.
+     *
+     * Both lists are what is free at this instant, not what exists. An empty
+     * list means the time went while the client was reading, and the honest
+     * answer is to send them back to the times.
+     *
+     * Choosing is optional by design. A client with no opinion books exactly as
+     * before and the server assigns; a client who cares picks. Paper Process
+     * Rule #4 speaks of a provisional lock, and there is none here - the
+     * guarantee is the database exclusion constraint at write time, and a lock
+     * we did not build is not a lock we should pretend to have.
+     */
+    public record Openings(
+            LocalDateTime start,
+            String label,
+            List<OpenTherapist> therapists,
+            List<OpenRoom> rooms) {
+    }
+
     public record BookRequest(
             UUID formId,
             UUID serviceId,
             LocalDateTime start,
+            /**
+             * The therapist the client picked, or null for "any available".
+             * Null is the normal case and keeps the original one-tap flow.
+             */
+            UUID therapistId,
+            /** The room the client picked, or null for "any available". */
+            UUID roomId,
             /**
              * Agents retry on timeout. Without this, one slow network call books
              * the same client twice and nobody finds out until they arrive.
@@ -94,6 +138,25 @@ public final class BookingDtos {
     }
 
     /**
+     * One square of the month grid.
+     *
+     * Two numbers, never the rows. Drawing thirty bars does not need thirty
+     * client names, and shipping thirty full day sheets to do it would put a
+     * branch's entire month on the wire to render a strip of hairlines.
+     *
+     * `owed` is the count of visits on that day whose time has passed and which
+     * nobody has closed off. It is the only reason this endpoint is worth
+     * having: those rows are otherwise unreachable from every screen we ship,
+     * and until a human says whether the client came, the visit can never
+     * collect a painScoreAfter.
+     */
+    public record DayLoad(
+            LocalDate date,
+            int total,
+            int owed) {
+    }
+
+    /**
      * S5 — a client who arrived at the counter with no account (B77).
      *
      * Staff-entered, so the branch comes from the token and there is no branchId
@@ -115,6 +178,21 @@ public final class BookingDtos {
             UUID formId,
             /** Front desks double-tap. Same idea as the agent retry guard. */
             String idempotencyKey) {
+    }
+
+    /**
+     * One pain point's score after the visit - the other half of the paper's
+     * before/after.
+     *
+     * painScoreBefore has been collected since Sprint 1 and painScoreAfter has
+     * been a column nothing wrote. A before with no after is not a measurement,
+     * it is half of one, and Chapter IV cannot compute anything from it.
+     */
+    public record OutcomeScore(UUID painPointId, Integer score) {
+    }
+
+    /** What the client submits after a completed visit. */
+    public record OutcomeRequest(List<OutcomeScore> scores) {
     }
 
     /** 409 body: the slot went while the client was deciding. */

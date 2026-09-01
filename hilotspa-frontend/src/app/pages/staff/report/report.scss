@@ -1,5 +1,15 @@
 :host { display: block; }
-.cols { display: grid; grid-template-columns: 380px minmax(0, 1fr) 400px; gap: 18px; align-items: start; }
+/* Capped, because a three-column layout on a 2000px monitor puts the third
+   column against the far edge and leaves a band of empty cream below the
+   content — which reads as a screen that failed to load rather than a record
+   that is simply short. */
+.cols {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr) 380px;
+  gap: 18px;
+  align-items: start;
+  max-width: 1560px;
+}
 .thumbs { display: flex; gap: 10px; justify-content: center; }
 .thumbs ::ng-deep .figure { width: 140px; }
 .thumbs ::ng-deep .figure svg { width: 140px; height: 298px; }

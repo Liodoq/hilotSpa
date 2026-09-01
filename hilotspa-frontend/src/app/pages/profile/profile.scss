@@ -1,10 +1,17 @@
+/* The surface lives in styles.scss under `.me`, shared with /account.
+
+   What used to be here — `.panel.locked`, and the rule that set
+   `opacity: 1; background: sage-100` on disabled inputs — is gone with the
+   thing it was propping up. Disabled inputs are no longer used to display
+   stored values, so there is nothing left to un-grey. */
+
 :host { display: block; min-height: 100dvh; background: var(--color-cream); }
-.wrap { padding: 36px 48px 56px; display: flex; justify-content: center; }
-.col { width: 100%; max-width: 1240px; display: flex; flex-direction: column; gap: 22px; }
-.panel { display: flex; flex-direction: column; gap: 24px; }
-.panel.locked { background: #FCFBF8; }
-.panel.locked .input:disabled, .panel.locked .opt:disabled { opacity: 1; background: var(--color-sage-100); }
-.panel.locked .opt:disabled { cursor: default; }
-.topline { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
-.actions { display: flex; justify-content: flex-end; gap: 14px; }
-@media (max-width: 900px) { .row { flex-direction: column; } .wrap { padding: 20px; } }
+
+/* The one value on this page that is calculated rather than entered. It is
+   read-only even while editing, so it is set as text in both states — a box
+   here would be the same lie the whole page just stopped telling. */
+.me .ageline { color: var(--color-ink-600); }
+
+/* Its dt is pushed down to meet the top of an input; this dd has no input to
+   meet, so it is pushed down to meet its dt instead. */
+.me .dl.editing > dd.ageline { padding-top: 24px; }

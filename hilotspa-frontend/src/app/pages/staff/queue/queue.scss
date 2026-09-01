@@ -5,3 +5,173 @@
 .empty { border: 2px dashed var(--color-line); border-radius: var(--radius-sm); padding: 20px;
   text-align: center; font-size: 18px; color: var(--color-ink-600); }
 @media (max-width: 1400px) { .cols { grid-template-columns: 1fr; } }
+
+/* The actionable section, marked as such.
+   A day sheet where the part that needs you looks exactly like the part that
+   is merely true gets scanned past. Gold, because it is the accent this app
+   almost never spends — which is what makes it read as "here". */
+.needs-you {
+  border-left: 4px solid var(--color-gold-500);
+  padding-left: 16px;
+  margin: 4px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.needs-you .count {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-gold-700);
+  background: rgba(200, 160, 53, .16);
+  border-radius: 999px;
+  padding: 2px 12px;
+  vertical-align: middle;
+  margin-left: 8px;
+}
+.stagger { display: flex; flex-direction: column; gap: 10px; }
+
+/* ===========================================================================
+   THE CALENDAR — the other days
+   ---------------------------------------------------------------------------
+   Everything above this on the page is about today. The grid answers a
+   different question, so it is separated by a rule and given its own head
+   rather than folded into the day sheet.
+
+   EVERY rule below is nested under .cal, and that is not tidiness.
+   `grid`, `day`, `nav` and `load` are all Tailwind utility class names, and
+   tailwind.css is loaded globally ahead of this file. A bare `.grid` here is
+   one specificity tie away from losing to `.grid { display: grid }` and
+   collapsing the month into a single column - which is exactly what it did.
+   Nesting makes every selector (0,2,0) or better, so the collision cannot
+   happen again whatever Tailwind emits.
+   =========================================================================== */
+.cal {
+  margin-top: 30px;
+  padding-top: 26px;
+  border-top: 1.5px solid var(--color-line);
+
+  .calhead {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 18px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .calhead .t-s { font-variant-numeric: tabular-nums; }
+
+  .nav { display: flex; align-items: center; gap: 8px; }
+  .navbtn {
+    min-height: 44px; min-width: 44px; padding: 0 14px;
+    font: 500 16px/1 var(--font-sans);
+    background: #fff; color: var(--color-forest-900);
+    border: 1.5px solid var(--color-line); border-radius: 10px; cursor: pointer;
+    transition: background-color .14s ease, border-color .14s ease;
+  }
+  .navbtn:hover { background: var(--color-sage-100); border-color: var(--color-sage-300); }
+  .navbtn:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 2px; }
+
+  .dow {
+    display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px; margin-bottom: 6px;
+  }
+  .dow span {
+    font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--color-ink-600); text-align: center; padding-bottom: 4px;
+  }
+  .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+
+  /* ------------------------------------------------------------ a square
+     Three things, in reading order: the number, how loaded the day is, and
+     whether it still owes somebody an answer. Nothing else fits in 82px and
+     nothing else is worth the space. */
+  .day {
+    position: relative;
+    display: flex; flex-direction: column; align-items: flex-start;
+    min-height: 82px; padding: 9px 10px 8px;
+    background: #fff;
+    border: 1.5px solid #E7E2D6;
+    border-radius: var(--radius-sm);
+    font: 500 17px/1 var(--font-sans);
+    color: var(--color-ink-900);
+    cursor: pointer; text-align: left;
+    transition: border-color .14s ease, background-color .14s ease;
+  }
+  .day:hover { border-color: var(--color-sage-300); background: #FDFDFB; }
+  .day:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 2px; }
+  .day .n { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .day .cnt {
+    margin-top: auto; font-size: 13px; font-weight: 500;
+    color: var(--color-ink-600); font-variant-numeric: tabular-nums;
+  }
+  .day.blank { background: transparent; border-color: transparent; cursor: default; }
+  .day.quiet .n { color: var(--color-ink-600); font-weight: 500; }
+
+  /* Filled against the BUSIEST day of the month, not against some invented
+     capacity - the question a front desk asks is comparative. */
+  .load {
+    position: absolute; left: 10px; right: 10px; bottom: 8px;
+    height: 4px; border-radius: 2px; background: var(--color-sage-100); overflow: hidden;
+  }
+  .load i { display: block; height: 100%; background: var(--color-sage-300); border-radius: 2px; }
+  .day.past .load i { background: var(--color-line); }
+
+  /* Today is a ring, never a fill. The one filled cell is the day you chose;
+     if today were filled too, two cells would compete and neither would read
+     as "here". */
+  .day.today {
+    border-color: var(--color-forest-500);
+    box-shadow: inset 0 0 0 1.5px var(--color-forest-500);
+  }
+  .day.today .n { color: var(--color-forest-700); }
+
+  .day.sel { background: var(--color-forest-900); border-color: var(--color-forest-900); }
+  .day.sel .n, .day.sel .cnt { color: #fff; }
+  .day.sel .load { background: rgba(255, 255, 255, .22); }
+  .day.sel .load i { background: var(--color-sage-300); }
+
+  /* The gold this app spends almost nowhere else - and the same gold as
+     "Waiting to be closed off" at the top of this page, deliberately, because
+     it means exactly the same thing. */
+  .day .owed {
+    position: absolute; top: 8px; right: 9px;
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--color-gold-500); box-shadow: 0 0 0 2px #fff;
+  }
+  .day.sel .owed { box-shadow: 0 0 0 2px var(--color-forest-900); }
+
+  .calkey {
+    display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 14px;
+    font-size: 14px; color: var(--color-ink-600);
+  }
+  .calkey span { display: inline-flex; align-items: center; gap: 8px; }
+  .calkey .kdot { width: 9px; height: 9px; border-radius: 50%; background: var(--color-gold-500); }
+  .calkey .kbar { width: 22px; height: 4px; border-radius: 2px; background: var(--color-sage-300); }
+  .calkey .kring {
+    width: 14px; height: 14px; border-radius: 4px;
+    border: 2px solid var(--color-forest-500);
+  }
+
+  /* --------------------------------------------------------- the open day */
+  .sheet { margin-top: 22px; }
+  .sheethead {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+  }
+  .sheethead h3 { font-size: 21px; font-weight: 600; color: var(--color-forest-900); }
+
+  .slot.dayrow { margin-top: 10px; }
+  .slot.dayrow.owes .bar { background: var(--color-gold-500); }
+  .slot.dayrow.off .bar { background: var(--color-line); }
+
+  /* align-items: center, and it matters.
+     Without it the action group stretches to the row's height and a status
+     pill - which is inline-flex and therefore obeys the stretch - grows to the
+     height of the button beside it with its text pinned to the top. That is
+     what made "Booked" sit high against Cancel. */
+  .slot.dayrow .acts { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .slot.dayrow .pill { font-size: 14px; padding: 6px 13px; }
+}
+
+@media (max-width: 900px) {
+  .cal .day { min-height: 64px; padding: 7px 7px 6px; font-size: 15px; }
+  .cal .load { left: 7px; right: 7px; }
+  .cal .slot.dayrow { flex-wrap: wrap; }
+  .cal .slot.dayrow .acts { width: 100%; }
+}

@@ -3,7 +3,7 @@
   @if (session(); as s) {
     <div class="col">
       <div class="topline">
-        <button type="button" class="link" (click)="back()">&larr; Back to my sessions</button>
+        <button type="button" class="link-go back" (click)="back()">Back to my sessions</button>
         <div style="display:flex;gap:12px;align-items:center">
           <button type="button" class="btn btn-quiet btn-sm" (click)="print()">Print or save as PDF</button>
           <span class="pill mute">Read only</span>

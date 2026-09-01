@@ -80,7 +80,17 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/protocols/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/v1/appointments/schedule").hasAnyRole("STAFF", "ADMIN")
+                // /schedule/month is a SEPARATE path - the matcher above is exact
+                // and does not cover it. Without this line the month grid would
+                // fall through to anyRequest().authenticated() and a customer
+                // could count a branch's bookings. The service refuses them too;
+                // this is the outer wall.
+                .requestMatchers(HttpMethod.GET, "/api/v1/appointments/schedule/month").hasAnyRole("STAFF", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/appointments/walk-in").hasAnyRole("STAFF", "ADMIN")
+                // Only the spa says a visit happened. The service enforces this too;
+                // this is the outer wall, so a routing mistake cannot expose it.
+                .requestMatchers(HttpMethod.POST, "/api/v1/appointments/*/complete").hasAnyRole("STAFF", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/appointments/*/no-show").hasAnyRole("STAFF", "ADMIN")
                 .requestMatchers("/api/v1/therapists/**").hasAnyRole("STAFF", "ADMIN")
                 .requestMatchers("/api/v1/rooms/**").hasAnyRole("STAFF", "ADMIN")
                 .requestMatchers("/api/v1/audit-log/**").hasAnyRole("STAFF", "ADMIN")

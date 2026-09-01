@@ -3,13 +3,18 @@ package com.hilotspa.backend.services;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
@@ -30,6 +35,7 @@ import com.hilotspa.backend.entities.BookingSource;
 import com.hilotspa.backend.entities.Forms;
 import com.hilotspa.backend.entities.Massage;
 import com.hilotspa.backend.entities.PaymentStatus;
+import com.hilotspa.backend.entities.PatientIntake;
 import com.hilotspa.backend.entities.Role;
 import com.hilotspa.backend.entities.Room;
 import com.hilotspa.backend.entities.Sex;
@@ -38,6 +44,12 @@ import com.hilotspa.backend.entities.TherapistStatus;
 import com.hilotspa.backend.model.BookingDtos.Availability;
 import com.hilotspa.backend.model.BookingDtos.BookRequest;
 import com.hilotspa.backend.model.BookingDtos.Booking;
+import com.hilotspa.backend.model.BookingDtos.DayLoad;
+import com.hilotspa.backend.model.BookingDtos.Openings;
+import com.hilotspa.backend.model.BookingDtos.OpenTherapist;
+import com.hilotspa.backend.model.BookingDtos.OutcomeRequest;
+import com.hilotspa.backend.model.BookingDtos.OutcomeScore;
+import com.hilotspa.backend.model.BookingDtos.OpenRoom;
 import com.hilotspa.backend.model.BookingDtos.ScheduleRow;
 import com.hilotspa.backend.model.BookingDtos.Slot;
 import com.hilotspa.backend.model.BookingDtos.WalkInRequest;
@@ -94,6 +106,46 @@ public class BookingServiceImpl implements BookingService {
     // ---------------------------------------------------------- availability
 
     @Override
+    @Transactional(readOnly = true)
+    public Openings openings(UUID formId, UUID serviceId, LocalDateTime start) {
+        Forms form = loadAndAuthorise(formId);
+        Massage service = massageRepository.findById(serviceId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Service not found"));
+
+        UUID branchId = form.getBranch().getId();
+        LocalDateTime end = start.plusMinutes(service.getDurationMinute());
+
+        // A time in the past is not a time. The client left the tab open.
+        if (start.isBefore(LocalDateTime.now(ZoneId.of(timezone)))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "That time has already passed. Please choose another.");
+        }
+
+        // The assessment's sex preference still narrows the list. It is not a
+        // filter the client is overriding here - it is the reason this shorter
+        // list is the right one to show them.
+        List<OpenTherapist> therapists = freeTherapists(
+                branchId, start, end, form.getTherapistPreference()).stream()
+                .map(t -> new OpenTherapist(
+                        t.getId(),
+                        t.getFirstName(),
+                        // First name and sex only, exactly as the public
+                        // meet-the-team section shows. Surnames and photos are a
+                        // consent question about real employees that nobody has
+                        // asked them.
+                        t.getSex() == null ? null : t.getSex().getDisplayName()))
+                .toList();
+
+        List<OpenRoom> rooms = freeRooms(branchId, start, end).stream()
+                .map(r -> new OpenRoom(r.getId(), r.getName(), r.getImageName()))
+                .toList();
+
+        return new Openings(start, start.format(LABEL), therapists, rooms);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Availability availability(UUID formId, UUID serviceId, LocalDate from, int days) {
         Forms form = loadAndAuthorise(formId);
         Massage service = massageRepository.findById(serviceId)
@@ -278,7 +330,8 @@ public class BookingServiceImpl implements BookingService {
                     + ". Cancel that first, or choose a different time.");
         }
 
-        Assignment assignment = assign(branchId, start, end, form.getTherapistPreference());
+        Assignment assignment = assign(branchId, start, end, form.getTherapistPreference(),
+                req.therapistId(), req.roomId());
         Therapist therapist = assignment.therapist();
         Room room = assignment.room();
 
@@ -330,6 +383,111 @@ public class BookingServiceImpl implements BookingService {
     }
 
     // --------------------------------------------------------------- cancel
+
+    @Override
+    @Transactional
+    public Booking complete(UUID appointmentId, boolean attended) {
+        Appointment a = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Booking not found"));
+
+        // Staff and admin only. A client marking their own visit complete would
+        // make the outcome data self-reported on both ends.
+        if (!CurrentUser.isAdmin()) {
+            boolean sameBranch = CurrentUser.hasRole(Role.STAFF)
+                    && a.getBranch() != null
+                    && CurrentUser.branchId()
+                        .map(b -> b.equals(a.getBranch().getId()))
+                        .orElse(false);
+            if (!sameBranch) {
+                // 404 rather than 403: confirming the id exists is itself a leak.
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
+            }
+        }
+
+        if (a.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "That visit was cancelled. It cannot be marked as attended.");
+        }
+        if (a.getStartTime().isAfter(LocalDateTime.now(ZoneId.of(timezone)))) {
+            // The clock is not the authority here - staff are - but a visit that
+            // has not begun cannot yet have happened, and allowing it would let
+            // a mis-tap create outcome data for next Tuesday.
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "That visit has not started yet.");
+        }
+
+        AppointmentStatus was = a.getStatus();
+        a.setStatus(attended ? AppointmentStatus.COMPLETED : AppointmentStatus.NO_SHOW);
+        Appointment saved = appointmentRepository.save(a);
+
+        auditAction(saved, attended ? "APPOINTMENT_COMPLETED" : "APPOINTMENT_NO_SHOW",
+                "was=" + was + " by=" + CurrentUser.email().orElse("unknown"));
+        return toDto(saved);
+    }
+
+    @Override
+    @Transactional
+    public Booking recordOutcome(UUID appointmentId, OutcomeRequest request) {
+        Appointment a = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Booking not found"));
+
+        boolean owns = a.getCustomer() != null
+                && CurrentUser.id().map(u -> u.equals(a.getCustomer().getId())).orElse(false);
+        if (!owns && !CurrentUser.isAdmin() && !CurrentUser.hasRole(Role.STAFF)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
+        }
+        if (a.getStatus() != AppointmentStatus.COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "We can only record how a visit went once the spa has marked it "
+                    + "completed.");
+        }
+
+        Forms form = a.getForm();
+        if (form == null || form.getPainPoints().isEmpty()) {
+            // A leisure booking, or a walk-in with no assessment. There is
+            // nothing to score, and inventing a pain point to hold a number
+            // would put a complaint on a record that never had one.
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This visit has no pain map to score.");
+        }
+
+        Map<UUID, PatientIntake> mine = form.getPainPoints().stream()
+                .collect(Collectors.toMap(PatientIntake::getId, x -> x));
+
+        List<OutcomeScore> scores = request == null || request.scores() == null
+                ? List.of() : request.scores();
+        int written = 0;
+        for (OutcomeScore s : scores) {
+            if (s == null || s.painPointId() == null || s.score() == null) {
+                continue;
+            }
+            if (s.score() < 0 || s.score() > 10) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "A pain score must be between 0 and 10.");
+            }
+            PatientIntake point = mine.get(s.painPointId());
+            if (point == null) {
+                // The id belongs to somebody else's assessment. Refuse the whole
+                // submission rather than silently writing the ones that matched.
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "That pain point is not part of this visit.");
+            }
+            point.setPainScoreAfter(s.score());
+            written++;
+        }
+        if (written == 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No scores were submitted.");
+        }
+
+        // Forms is the aggregate root - the pain points are cascaded from it and
+        // are never saved on their own. Session 1's rule, still holding.
+        formsRepository.save(form);
+        auditAction(a, "OUTCOME_RECORDED", "points=" + written + "/" + mine.size());
+        return toDto(a);
+    }
 
     @Override
     @Transactional
@@ -478,6 +636,30 @@ public class BookingServiceImpl implements BookingService {
         }
     }
 
+    /**
+     * An audit row for something OTHER than creation.
+     *
+     * A separate helper rather than a parameter on audit(): that one hard-codes
+     * APPOINTMENT_CREATED and is called from the two write paths, and widening
+     * it would touch working code to serve a new caller.
+     */
+    private void auditAction(Appointment a, String action, String details) {
+        try {
+            AuditLog row = new AuditLog();
+            row.setAction(action);
+            row.setEntityType("Appointment");
+            row.setEntityId(a.getId());
+            row.setBranch(a.getBranch());
+            row.setActor(a.getCustomer());
+            row.setOriginNodeId(nodeId);
+            row.setDetails(clip(details + " start=" + a.getStartTime(), 1000));
+            auditLogRepository.save(row);
+        } catch (Exception ignored) {
+            // An audit failure must not undo something the client has been told
+            // already happened.
+        }
+    }
+
     private void audit(Appointment a, String consentText) {
         try {
             AuditLog row = new AuditLog();
@@ -544,6 +726,69 @@ public class BookingServiceImpl implements BookingService {
                 .toList();
     }
 
+    /**
+     * Visits that have not been answered for yet. A day still "owes" us one of
+     * these for every row whose time has passed and whose status is still open.
+     */
+    private static final Set<AppointmentStatus> UNANSWERED = EnumSet.of(
+            AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS);
+
+    @Override
+    public List<DayLoad> month(YearMonth month, UUID branchId) {
+        ZoneId zone = ZoneId.of(timezone);
+        YearMonth ym = month == null ? YearMonth.from(LocalDate.now(zone)) : month;
+        LocalDateTime from = ym.atDay(1).atStartOfDay();
+        LocalDateTime until = ym.plusMonths(1).atDay(1).atStartOfDay();
+
+        List<Appointment> found;
+        if (CurrentUser.isAdmin()) {
+            found = (branchId == null
+                    ? appointmentRepository.findAll()
+                    : appointmentRepository.findByBranchId(branchId)).stream()
+                    .filter(a -> inWindow(a, from, until))
+                    .toList();
+        } else if (CurrentUser.hasRole(Role.STAFF)) {
+            // Same rule as schedule(): the branch is read from the token and
+            // never from the query string, so a wider window is not a wider
+            // permission.
+            UUID branch = CurrentUser.branchId().orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "Staff account has no branch assigned"));
+            found = appointmentRepository
+                    .findByBranchIdAndStartTimeBetween(branch, from, until).stream()
+                    .filter(a -> inWindow(a, from, until))
+                    .toList();
+        } else {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Staff only");
+        }
+
+        LocalDateTime now = LocalDateTime.now(zone);
+        Map<LocalDate, List<Appointment>> byDay = found.stream()
+                .collect(Collectors.groupingBy(a -> a.getStartTime().toLocalDate()));
+
+        // Every day of the month is returned, including the empty ones. A caller
+        // drawing a grid must never have to guess whether a missing date means
+        // "nothing booked" or "we did not look that far".
+        List<DayLoad> out = new ArrayList<>();
+        for (LocalDate d = ym.atDay(1); d.isBefore(ym.plusMonths(1).atDay(1)); d = d.plusDays(1)) {
+            List<Appointment> rows = byDay.getOrDefault(d, List.of());
+            int owed = (int) rows.stream()
+                    .filter(a -> a.getStartTime().isBefore(now))
+                    .filter(a -> UNANSWERED.contains(a.getStatus()))
+                    .count();
+            out.add(new DayLoad(d, rows.size(), owed));
+        }
+        return out;
+    }
+
+    /** Half-open: the first instant of the month counts, the first instant of
+     *  the next one does not. `Between` is inclusive at both ends, which would
+     *  otherwise let a midnight row on the 1st be counted in two months. */
+    private static boolean inWindow(Appointment a, LocalDateTime from, LocalDateTime until) {
+        LocalDateTime t = a.getStartTime();
+        return !t.isBefore(from) && t.isBefore(until);
+    }
+
     private static final DateTimeFormatter TIME_ONLY =
             DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
 
@@ -568,37 +813,83 @@ public class BookingServiceImpl implements BookingService {
      * preference honoured only by the screen is worse than none at all: the
      * client is told they will be treated by a woman, and then is not.
      */
-    private Assignment assign(UUID branchId, LocalDateTime start, LocalDateTime end, Sex want) {
-        // Same rule as availability, applied again at the moment of writing:
-        // status is only consulted for a visit starting TODAY. Without this a
+    /**
+     * Every therapist who could take this visit, in this branch, at this time.
+     *
+     * ONE definition of "free", used by both openings() and assign(). Two
+     * definitions would eventually disagree, and the shape of that bug is a
+     * screen offering a therapist the booking then refuses - which is worse
+     * than not offering the choice at all.
+     */
+    private List<Therapist> freeTherapists(UUID branchId, LocalDateTime start,
+                                           LocalDateTime end, Sex want) {
+        // Status is only consulted for a visit starting TODAY. Without this a
         // walk-in could be handed to somebody the front desk had just marked
         // off duty, thirty seconds after the screen stopped offering them.
         boolean today = start.toLocalDate().equals(LocalDate.now(ZoneId.of(timezone)));
 
-        Therapist therapist = therapistRepository.findByBranchIdAndActiveTrue(branchId).stream()
+        return therapistRepository.findByBranchIdAndActiveTrue(branchId).stream()
                 .filter(t -> want == null || want == t.getSex())
                 .filter(t -> !today || onDuty(t))
                 .filter(t -> !appointmentRepository
                         .existsByTherapistIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
                                 t.getId(), BLOCKING, end, start))
-                .findFirst()
-                // Say WHICH constraint bit. "That time was just taken" and "no
-                // female therapist is free then" send the client to do two
-                // different things, and only one of them is trying another time.
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
-                        want == null
-                                ? "That time was just taken"
-                                : "No " + want.getDisplayName().toLowerCase()
-                                  + " therapist is free at that time. Please choose another time, "
-                                  + "or change your preference on your assessment."));
+                .toList();
+    }
 
-        Room room = roomRepository.findByBranchIdAndActiveTrue(branchId).stream()
+    /** Every room free for the whole visit. Same contract as freeTherapists. */
+    private List<Room> freeRooms(UUID branchId, LocalDateTime start, LocalDateTime end) {
+        return roomRepository.findByBranchIdAndActiveTrue(branchId).stream()
                 .filter(r -> !appointmentRepository
                         .existsByRoomIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
                                 r.getId(), BLOCKING, end, start))
+                .toList();
+    }
+
+    /**
+     * Pick the therapist and room, honouring an explicit choice when there is
+     * one.
+     *
+     * wantTherapist / wantRoom are the client's pick and are usually null. When
+     * one is set it is a FILTER, not a hint: if that person or that room is not
+     * free, this fails rather than quietly substituting somebody else. A client
+     * who chose a female therapist for a reason must never be handed a man
+     * because the system decided it knew better.
+     *
+     * An explicit pick also OVERRIDES the assessment's sex preference - the
+     * client is looking at the actual list and choosing from it, which is a
+     * later and better-informed statement of the same wish.
+     */
+    private Assignment assign(UUID branchId, LocalDateTime start, LocalDateTime end,
+                              Sex want, UUID wantTherapist, UUID wantRoom) {
+        Sex effective = wantTherapist == null ? want : null;
+
+        Therapist therapist = freeTherapists(branchId, start, end, effective).stream()
+                .filter(t -> wantTherapist == null || wantTherapist.equals(t.getId()))
+                .findFirst()
+                // Say WHICH constraint bit. "That time was just taken", "no
+                // female therapist is free then" and "the therapist you chose
+                // has just been booked" send the client to do three different
+                // things, and only one of them is trying another time.
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                        wantTherapist != null
+                                ? "The therapist you chose has just been booked for that time. "
+                                  + "Please choose someone else, or another time."
+                                : want == null
+                                        ? "That time was just taken"
+                                        : "No " + want.getDisplayName().toLowerCase()
+                                          + " therapist is free at that time. Please choose "
+                                          + "another time, or change your preference on your "
+                                          + "assessment."));
+
+        Room room = freeRooms(branchId, start, end).stream()
+                .filter(r -> wantRoom == null || wantRoom.equals(r.getId()))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
-                        "That time was just taken"));
+                        wantRoom != null
+                                ? "The room you chose has just been taken for that time. "
+                                  + "Please choose another room, or another time."
+                                : "That time was just taken"));
 
         return new Assignment(therapist, room);
     }
@@ -667,8 +958,11 @@ public class BookingServiceImpl implements BookingService {
         }
 
         // A walk-in assessed at the counter may have stated a preference too.
+        // Staff assign at the counter by talking to the client, so the walk-in
+        // path passes no explicit pick - it keeps the original behaviour.
         Assignment assignment = assign(branchId, start, end,
-                walkInForm == null ? null : walkInForm.getTherapistPreference());
+                walkInForm == null ? null : walkInForm.getTherapistPreference(),
+                null, null);
 
         Appointment a = new Appointment();
         a.setBranch(branch);

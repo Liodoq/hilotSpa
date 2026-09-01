@@ -1,104 +1,159 @@
 <app-nav />
-<main class="wrap">
-  <div class="col">
-    <div class="topline">
-      <div class="head">
-        <h1 class="t">{{ returning() ? 'One thing before we start' : 'Your details' }}</h1>
-        <p class="s">
-          @if (returning()) {
-            We just need this once. Your therapist uses it to judge pressure and technique —
-            it does not change between visits, so we will not ask again.
-          } @else if (editing()) {
-            Change what you need, then save.
-          } @else {
-            Kept on your profile and reused for every visit. Your name and contact number are
-            already on your account.
-          }
-        </p>
+
+<main class="me">
+
+  <!-- ==================================================================
+       Two arrivals, one page.
+
+       Mid-flow (profileGuard sent them here with ?next=) the page is an
+       interruption, and it says so plainly and promises not to ask again.
+       Arriving from the account it is a record you are looking at.
+       ================================================================== -->
+  <header class="pagehead enter">
+    <p class="eyebrow">Your account</p>
+    <h1 class="display">{{ returning() ? 'One thing before we start' : 'Your details' }}</h1>
+    <p class="lead">
+      @if (returning()) {
+        We need this once. Your practitioner uses it to judge pressure and technique —
+        it does not change between visits, so we will not ask again.
+      } @else if (editing()) {
+        Change what you need, then save.
+      } @else {
+        Kept on your profile and reused for every visit. Your name and contact number
+        live on your account.
+      }
+    </p>
+    @if (!returning() && !editing()) {
+      <a class="link-go back" routerLink="/account">Back to your account</a>
+    }
+  </header>
+
+  <section class="sec">
+    <div class="sec-top">
+      <div>
+        <h2 class="sec-head">{{ editing() ? 'About you' : 'What we have' }}</h2>
+        <p class="sec-why">Date of birth, sex and civil status are needed before a
+          pre-assessment. The rest helps, and none of it is shared.</p>
       </div>
       @if (!editing()) {
-        <button type="button" class="btn btn-ghost" (click)="startEdit()">Edit</button>
+        <button type="button" class="link-act" (click)="startEdit()">Edit</button>
       }
     </div>
 
-    <!-- Read only until Edit is pressed. A profile that is permanently editable
-         invites accidental changes to a record the bone setter relies on. -->
-    <div class="card panel" [class.locked]="!editing()">
-      <div class="row">
-        <div class="field">
-          <label class="lab" for="dob">Date of birth<span class="req" [class.done]="p().birthDate" aria-hidden="true">*</span></label>
-          <app-date-picker [value]="p().birthDate" [disabled]="!editing()" [minYear]="1920"
-                           placeholder="Choose your date of birth"
-                           (changed)="store.patch({ birthDate: $event })" />
-          <span class="help">Used to work out your age.</span>
-        </div>
-        <div class="field">
-          <label class="lab" for="age">Age</label>
-          <div class="input ro">{{ store.age() === null ? '—' : store.age() + ' years old' }}</div>
-          <span class="help">Filled in for you from your birth date.</span>
-        </div>
-      </div>
+    @if (!editing()) {
+      <!-- ==============================================================
+           READ. These were disabled inputs — boxes you could click into
+           and not type in. They are facts, so they are set as facts.
+           ============================================================== -->
+      <dl class="dl">
+        <dt>Date of birth</dt>
+        <dd>@if (birthLabel()) { {{ birthLabel() }} }
+            @else { <span class="none">Not given</span> }</dd>
 
-      <div class="row">
-        <div class="field">
-          <span class="lab" id="sexlab">Sex<span class="req" [class.done]="p().sex" aria-hidden="true">*</span></span>
+        <dt>Age</dt>
+        <dd>@if (store.age() !== null) { {{ store.age() }} years old }
+            @else { <span class="none">—</span> }</dd>
+
+        <dt>Sex</dt>
+        <dd>@if (p().sex) { {{ p().sex }} } @else { <span class="none">Not given</span> }</dd>
+
+        <dt>Civil status</dt>
+        <dd>@if (p().civilStatus) { {{ p().civilStatus }} }
+            @else { <span class="none">Not given</span> }</dd>
+
+        <dt>Occupation</dt>
+        <dd>@if (p().occupation) { {{ p().occupation }} }
+            @else { <span class="none">Not given</span> }</dd>
+
+        <dt>Height and weight</dt>
+        <dd>@if (sizeLabel()) { {{ sizeLabel() }} }
+            @else { <span class="none">Not given — these are optional</span> }</dd>
+      </dl>
+
+    } @else {
+      <!-- ==============================================================
+           EDIT. The same grid, so nothing on the page moves sideways when
+           you press Edit — only what sits in the value column changes.
+           ============================================================== -->
+      <dl class="dl editing">
+        <dt><span class="lab">Date of birth<span class="req"
+              [class.done]="p().birthDate" aria-hidden="true">*</span></span></dt>
+        <dd>
+          <div class="stack">
+            <app-date-picker [value]="p().birthDate" [minYear]="1920"
+                             placeholder="Choose your date of birth"
+                             (changed)="store.patch({ birthDate: $event })" />
+            <span class="dd-note">Your age is worked out from this.</span>
+          </div>
+        </dd>
+
+        <dt><span class="lab">Age</span></dt>
+        <dd class="ageline">{{ store.age() === null ? '—' : store.age() + ' years old' }}</dd>
+
+        <dt><span class="lab" id="sexlab">Sex<span class="req"
+              [class.done]="p().sex" aria-hidden="true">*</span></span></dt>
+        <dd>
           <div class="seg" role="group" aria-labelledby="sexlab">
             @for (s of sexes; track s) {
-              <button type="button" class="opt" [class.on]="p().sex === s" [disabled]="!editing()"
+              <button type="button" class="opt" [class.on]="p().sex === s"
                       [attr.aria-pressed]="p().sex === s" (click)="store.patch({ sex: s })">
                 <span class="dot"></span>{{ s }}
               </button>
             }
           </div>
-        </div>
-        <div class="field">
-          <label class="lab" for="cs">Civil status<span class="req" [class.done]="p().civilStatus" aria-hidden="true">*</span></label>
-          <select id="cs" class="input" [disabled]="!editing()" [value]="p().civilStatus ?? ''"
+        </dd>
+
+        <dt><label class="lab" for="cs">Civil status<span class="req"
+              [class.done]="p().civilStatus" aria-hidden="true">*</span></label></dt>
+        <dd>
+          <select id="cs" class="input in-md" [value]="p().civilStatus ?? ''"
                   (change)="store.patch({ civilStatus: val($event) || null })">
             <option value="">Choose one</option>
             @for (s of statuses; track s) {
               <option [value]="s" [selected]="s === p().civilStatus">{{ s }}</option> }
           </select>
-        </div>
-      </div>
+        </dd>
 
-      <div class="row">
-        <div class="field">
-          <label class="lab" for="occ">Occupation</label>
-          <input id="occ" class="input" placeholder="Sari-sari store owner" [disabled]="!editing()"
-                 [value]="p().occupation ?? ''" (input)="store.patch({ occupation: val($event) || null })">
-          <span class="help">Heavy lifting and desk work strain the body differently.</span>
-        </div>
-        <div class="field">
-          <span class="lab">Height <span class="tag">Optional</span></span>
-          <input class="input" inputmode="numeric" placeholder="158 (cm)" [disabled]="!editing()"
+        <dt><label class="lab" for="occ">Occupation</label></dt>
+        <dd>
+          <div class="stack">
+            <input id="occ" class="input" placeholder="Sari-sari store owner"
+                   [value]="p().occupation ?? ''"
+                   (input)="store.patch({ occupation: val($event) || null })">
+            <span class="dd-note">Heavy lifting and desk work strain the body differently.</span>
+          </div>
+        </dd>
+
+        <dt><label class="lab" for="ht">Height <span class="tag">Optional</span></label></dt>
+        <dd>
+          <input id="ht" class="input in-sm" inputmode="numeric" placeholder="158 (cm)"
                  [value]="p().height ?? ''" (input)="store.patch({ height: num($event) })">
-        </div>
-        <div class="field">
-          <span class="lab">Weight <span class="tag">Optional</span></span>
-          <input class="input" inputmode="numeric" placeholder="62 (kg)" [disabled]="!editing()"
+        </dd>
+
+        <dt><label class="lab" for="wt">Weight <span class="tag">Optional</span></label></dt>
+        <dd>
+          <input id="wt" class="input in-sm" inputmode="numeric" placeholder="62 (kg)"
                  [value]="p().weight ?? ''" (input)="store.patch({ weight: num($event) })">
-        </div>
+        </dd>
+      </dl>
+
+      <div class="note" style="margin-top:24px"><span class="b"></span>
+        <span>Height and weight are optional. Leave them blank if you would rather not
+          say — it will not stop you from booking.</span>
       </div>
-    </div>
 
-    <div class="note"><span class="b"></span>
-      <span>Height and weight are optional. Leave them blank if you would rather not say — it will
-      not stop you from booking.</span>
-    </div>
-
-    @if (editing()) {
-      <div class="actions">
+      <div class="acts">
         <button type="button" class="btn btn-quiet" (click)="cancel()">
           {{ returning() ? 'Not now' : 'Cancel' }}</button>
-        <button type="button" class="btn btn-primary" [disabled]="!store.isComplete()" (click)="save()">
-          {{ returning() ? 'Save and continue' : 'Save my details' }}</button>
+        <button type="button" class="btn btn-primary" [disabled]="!store.isComplete() || saving()"
+                (click)="save()">
+          {{ saving() ? 'Saving…' : (returning() ? 'Save and continue' : 'Save my details') }}</button>
       </div>
       @if (!store.isComplete()) {
-        <p class="help" style="text-align:right">Date of birth, sex and civil status are needed
-          before an assessment.</p>
+        <p class="help" style="margin-top:12px">Date of birth, sex and civil status are
+          needed before an assessment.</p>
       }
     }
-  </div>
+  </section>
 </main>
 <app-toast />

@@ -18,3 +18,40 @@
 .thumbs ::ng-deep .maplab { font-size: 13px; letter-spacing: 1.4px; }
 @media (max-width: 1400px) { .cols { grid-template-columns: 1fr; } }
 @media (max-width: 800px) { .wrap { padding: 20px; } .hero { flex-direction: column; align-items: stretch; } }
+
+/* The before/after, given the weight it earns.
+   Two numbers and the distance between them. Green when the pain came down,
+   because that is the outcome the whole system exists to produce; neutral
+   when it did not, because a system that only renders good news is not a
+   record. */
+.drop {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+/* A leisure visit is not a missing measurement. It says so once, quietly,
+   instead of filling the figure slot with the word for an absence. */
+.quiet-note {
+  font-size: 15px;
+  color: var(--color-ink-600);
+}
+.drop b {
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--color-forest-900);
+  line-height: 1;
+}
+.drop .arrow { font-size: 18px; color: var(--color-forest-500); }
+.drop .drop-label {
+  display: block;
+  width: 100%;
+  font-size: 14px;
+  color: var(--color-ink-600);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.drop.pending b { color: var(--color-ink-600); }
+.drop.none .drop-label { padding-top: 6px; }

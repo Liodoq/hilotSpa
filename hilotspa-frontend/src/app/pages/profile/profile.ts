@@ -1,10 +1,13 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AppNav } from '../../shared/app-nav/app-nav';
 import { Toast } from '../../shared/toast/toast';
 import { DatePicker } from '../../shared/date-picker/date-picker';
 import { ProfileStore } from '../../core/profile.store';
 import { ToastService } from '../../core/toast.service';
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+  'August', 'September', 'October', 'November', 'December'];
 
 /**
  * The demographics block from the paper intake form — captured ONCE, on the
@@ -13,10 +16,16 @@ import { ToastService } from '../../core/toast.service';
  * Reached either from the home page, or by profileGuard when someone starts an
  * assessment without one. In that second case it carries a ?next= so they land
  * back where they were going.
+ *
+ * The redesign changed how stored values are DRAWN, not what they mean. Every
+ * behaviour below is untouched: edit is still locked behind a button, cancel
+ * still restores the snapshot without persisting, save still refuses to close
+ * the editor or mark the profile usable when the server rejected it (B43), and
+ * ?next= still carries the client back into the wizard.
  */
 @Component({
   selector: 'app-profile',
-  imports: [AppNav, Toast, DatePicker],
+  imports: [AppNav, Toast, DatePicker, RouterLink],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
 })
@@ -44,6 +53,23 @@ export class Profile {
 
   /** True when the guard sent them here mid-flow. */
   returning = computed(() => !!this.route.snapshot.queryParamMap.get('next'));
+
+  /** Same wording the date picker uses, so the value does not change shape
+   *  when you press Edit. */
+  birthLabel = computed(() => {
+    const v = this.p().birthDate;
+    if (!v) return '';
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return '';
+    return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  });
+
+  /** Read-mode line for two optional numbers that are usually both blank. */
+  sizeLabel = computed(() => {
+    const { height, weight } = this.p();
+    if (!height && !weight) return '';
+    return `${height ? height + ' cm' : '—'} · ${weight ? weight + ' kg' : '—'}`;
+  });
 
   val(ev: Event): string { return (ev.target as HTMLInputElement | HTMLSelectElement).value; }
 

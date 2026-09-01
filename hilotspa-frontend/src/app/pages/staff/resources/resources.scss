@@ -2,3 +2,198 @@
 .stack { display: flex; flex-direction: column; gap: 20px; }
 @media (max-width: 1300px) { .grid3 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 850px) { .grid3, .grid2 { grid-template-columns: 1fr; } }
+
+/* ---------------------------------------------------------------- ⋯ menus
+   A card holds three or four actions of very different weight — rename,
+   retire, delete. Laid out as a row of equal buttons they read as equally
+   safe, which the last one is not. Folded behind ⋯ the destructive one has to
+   be looked for. */
+.menu-dots {
+  border: 1px solid var(--color-line, #d8d8d0);
+  background: transparent;
+  border-radius: 999px;
+  width: 38px; height: 38px;
+  font-size: 20px; line-height: 1;
+  cursor: pointer;
+  color: var(--color-ink-600, #55554e);
+  flex: 0 0 auto;
+}
+.menu-dots:hover { background: rgba(0, 0, 0, .04); }
+
+/* The button is the anchor, so the panel opens from it rather than from
+   wherever it happens to sit in the flow. Before this it had position:absolute
+   with no offsets, so it landed at its static position — on top of the row's
+   own controls, half off the card. */
+.menu-wrap { position: relative; display: inline-flex; flex: 0 0 auto; }
+
+/* An invisible full-screen button behind the panel: one click anywhere closes
+   it. A real <button> rather than a div, so it is in the tab order and keyboard
+   users are not trapped behind an open menu. */
+.menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+
+/* Hangs from the RIGHT by default, because every ⋯ in this app sits at the
+   right edge of its row — opening leftward is the only direction that keeps the
+   panel on the page. */
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 260px;
+  max-width: min(320px, calc(100vw - 32px));
+  background: #fff;
+  border: 1px solid var(--color-line, #d8d8d0);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .12);
+  padding: 6px;
+}
+.menu-panel button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+.menu-panel button:hover:not(:disabled) { background: rgba(0, 0, 0, .05); }
+.menu-panel button:disabled { opacity: .5; cursor: default; }
+.menu-panel button.danger { color: #9b2c2c; }
+.menu-panel .menu-note {
+  margin: 6px 4px 4px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-ink-600, #55554e);
+}
+
+/* The card is the positioning context for its own menu. */
+.card { position: relative; }
+
+/* A room has a name and two states. A card is for something with several
+   facts; three rooms in a three-column grid wrapped two-then-one and read as
+   broken, which was the layout telling us it was the wrong container. */
+.room-list { display: flex; flex-direction: column; gap: 10px; max-width: 760px; }
+.room-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+}
+
+/* Former staff: present, findable, and out of the way. */
+.former { margin: 18px 0 8px; max-width: 760px; }
+.former > summary {
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-ink-600);
+  padding: 10px 0;
+  list-style: revert;
+}
+.former > summary:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 3px; }
+.former .count {
+  font-size: 15px;
+  background: var(--color-sage-100);
+  color: var(--color-forest-900);
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-left: 8px;
+}
+.former-list { display: flex; flex-direction: column; gap: 10px; padding: 6px 0 4px; }
+.f-line {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  background: #fff;
+  opacity: .75;
+}
+
+/* ============================================================ roster rows
+   A therapist is a row. Three cards across a wide monitor left most of each
+   one empty, and rooms sat in a narrower column underneath — two grids on one
+   screen, which is what read as unfinished. One column, one width, readable
+   straight down. */
+.rosterbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 14px 20px;
+  margin: 4px 0 16px;
+  max-width: 900px;
+}
+.rosterbar .stat { display: flex; align-items: baseline; gap: 9px; }
+.rosterbar .stat b {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-forest-900);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.rosterbar .stat span { font-size: 16px; color: var(--color-ink-600); }
+.rosterbar .vr { width: 1px; align-self: stretch; background: var(--color-line); }
+
+.roster { display: flex; flex-direction: column; gap: 10px; max-width: 900px; }
+.rrow {
+  background: #fff;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+.rhead { display: flex; align-items: center; gap: 14px; }
+.rcontrols { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rcontrols .chips { margin: 0; }
+.rlabel {
+  margin: 0;
+  min-width: 168px;
+  letter-spacing: .06em;
+}
+
+@media (max-width: 720px) {
+  .rlabel { min-width: 0; width: 100%; }
+}
+
+
+/* The row with a menu open has to sit above the rows after it. Each .rrow is
+   its own stacking context, so a z-index inside one cannot beat a sibling that
+   paints later — which is why the next row's ⋯ was drawn on top of the open
+   panel. Lift the whole row instead. */
+.rrow.menu-open,
+.room-row.menu-open { z-index: 30; }
+.room-row { position: relative; }
+
+/* The page's own action bar. "Add" belongs beside the heading, not at the foot
+   of a list you have to scroll past first. */
+.pagebar {
+  display: flex;
+  justify-content: flex-end;
+  margin: -46px 0 18px;
+}
+@media (max-width: 700px) {
+  .pagebar { justify-content: flex-start; margin: 8px 0 16px; }
+}

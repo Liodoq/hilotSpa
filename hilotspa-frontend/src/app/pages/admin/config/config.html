@@ -158,8 +158,8 @@
                 <td><span class="pill" [class.ok]="m.active" [class.mute]="!m.active">
                   {{ m.active ? 'On sale' : 'Withdrawn' }}</span></td>
                 <td style="text-align:right;white-space:nowrap">
-                  <button type="button" class="link" (click)="editService(m)">Edit</button>
-                  <button type="button" class="link" style="margin-left:14px"
+                  <button type="button" class="link-act" (click)="editService(m)">Edit</button>
+                  <button type="button" class="link-act" style="margin-left:6px"
                           [disabled]="saving() === m.id" (click)="toggleService(m)">
                     {{ m.active ? 'Withdraw' : 'Restore' }}</button>
                 </td>

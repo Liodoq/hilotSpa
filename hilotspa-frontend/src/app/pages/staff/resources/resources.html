@@ -21,25 +21,91 @@
           can be offered — a booking needs both a therapist and a room.</span></div>
     }
 
-    <div class="grid3">
-      @for (s of staff(); track s.id) {
-        <div class="card" style="display:flex;flex-direction:column;gap:14px"
-             [style.opacity]="s.active ? 1 : 0.55">
-          <div style="display:flex;gap:14px;align-items:center">
-            <span class="avatar" style="width:60px;height:60px;font-size:21px">{{ initials(s) }}</span>
-            <div><div style="font-size:22px;font-weight:600;color:var(--color-forest-900)">{{ name(s) }}</div>
-              <div class="help">{{ s.branchName }}</div></div>
+    <!-- What anyone opening this screen actually wants to know, before any of
+         the controls. -->
+    <!-- Adding somebody is the main thing you come here to DO, so it sits with
+         the heading. At the foot of the page it was below the fold on a laptop
+         and nobody found it. -->
+    <div class="pagebar">
+      <div class="menu-wrap">
+        <button type="button" class="btn btn-primary btn-sm"
+                [attr.aria-expanded]="addMenu()" (click)="toggleAddMenu()">Add ▾</button>
+        @if (addMenu()) {
+          <button type="button" class="menu-scrim" aria-label="Close menu"
+                  (click)="closeMenus()"></button>
+          <div class="menu-panel">
+            <button type="button" (click)="openAdd('therapist'); closeMenus()">A therapist</button>
+            <button type="button" (click)="openAdd('room'); closeMenus()">A room</button>
           </div>
-          <div class="chips" role="group" [attr.aria-label]="'Status for ' + name(s)">
-            @for (st of statuses; track st) {
-              <button type="button" class="chip" [class.on]="s.status === st"
-                      [disabled]="saving() === s.id"
-                      [attr.aria-pressed]="s.status === st" (click)="setStatus(s, st)">
-                {{ label(st) }}</button>
-            }
+        }
+      </div>
+    </div>
+
+    @if (!loading() && staff().length) {
+      <div class="rosterbar">
+        <span class="stat"><b>{{ available() }}</b><span>free to take a client</span></span>
+        <span class="vr"></span>
+        <span class="stat"><b>{{ onBreakCount() }}</b><span>busy or on break</span></span>
+        <span class="vr"></span>
+        <span class="stat"><b>{{ roomsOpen() }}</b><span>{{ roomsOpen() === 1 ? 'room open' : 'rooms open' }}</span></span>
+      </div>
+    }
+
+    <!-- A therapist is a ROW, not a card. Three cards across a wide monitor left
+         most of each one empty, and rooms sat in a narrower column below them —
+         two grids on one screen, which is what made this look unfinished. -->
+    <div class="roster stagger">
+      @for (s of onTeam(); track s.id) {
+        <div class="rrow" [class.pulse-once]="justChanged() === s.id"
+             [class.menu-open]="menu() === s.id">
+          <div class="rhead">
+            <span class="avatar" style="width:46px;height:46px;font-size:17px">{{ initials(s) }}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:19px;font-weight:600;color:var(--color-forest-900)">{{ name(s) }}</div>
+              <div class="help">{{ s.branchName }}</div>
+            </div>
+            <span class="menu-wrap">
+              <button type="button" class="menu-dots" [attr.aria-label]="'Options for ' + name(s)"
+                      [attr.aria-expanded]="menu() === s.id" (click)="toggleMenu(s.id)">⋯</button>
+
+              @if (menu() === s.id) {
+                <!-- A full-screen invisible button behind the panel. Clicking
+                     anywhere closes it, and it is a real <button> so Escape and
+                     the tab order work without a document listener. Same pattern
+                     the account menu in the shell already uses. -->
+                <button type="button" class="menu-scrim" aria-label="Close menu"
+                        (click)="closeMenus()"></button>
+                <div class="menu-panel">
+              <button type="button" (click)="openEditTherapist(s)">Edit name</button>
+              <button type="button" [disabled]="saving() === s.id"
+                      (click)="setWorksHere(s, false)">
+                {{ confirmLeave() === s.id ? 'Tap again to remove from the rota' : 'No longer works here' }}
+              </button>
+              <button type="button" class="danger" [disabled]="saving() === s.id"
+                      (click)="remove('therapist', s.id, name(s))">
+                {{ confirmDelete() === s.id ? 'Tap again — this cannot be undone' : 'Delete permanently' }}
+              </button>
+                  <p class="menu-note">
+                    Delete only works if they have never been on an appointment. Once they
+                    have, the record is what keeps the spa's history true — retire them
+                    instead.
+                  </p>
+                </div>
+              }
+            </span>
           </div>
-          <div>
-            <div class="help" style="margin-bottom:6px">CLIENTS MAY ASK FOR</div>
+          <div class="rcontrols">
+            <div class="chips" role="group" [attr.aria-label]="'Status for ' + name(s)">
+              @for (st of statuses; track st) {
+                <button type="button" class="chip" [class.on]="s.status === st"
+                        [disabled]="saving() === s.id"
+                        [attr.aria-pressed]="s.status === st" (click)="setStatus(s, st)">
+                  {{ label(st) }}</button>
+              }
+            </div>
+          </div>
+          <div class="rcontrols">
+            <div class="help rlabel">CLIENTS MAY ASK FOR</div>
             <div class="chips" role="group" [attr.aria-label]="'Sex for ' + name(s)">
               @for (x of sexes; track x.value) {
                 <button type="button" class="chip" [class.on]="s.sex === x.value"
@@ -55,32 +121,160 @@
             }
           </div>
 
-          @if (!s.active) {
-            <div class="note bad" style="padding:12px 16px;font-size:17px"><span class="b"></span>
-              <span>No longer employed here — excluded from every slot search.</span></div>
+          <!-- Correcting a name, and recording that somebody has left. There is no
+               delete: every past appointment names a therapist, and removing the
+               row would take those visits with it. -->
+          @if (editing() === s.id) {
+            <div>
+              <input class="input" placeholder="First name" [value]="editFirstName()"
+                     (input)="editFirstName.set($any($event.target).value)" />
+              <input class="input" style="margin-top:8px" placeholder="Last name"
+                     [value]="editLastName()"
+                     (input)="editLastName.set($any($event.target).value)" />
+              <button type="button" class="btn btn-primary btn-sm" style="margin-top:10px"
+                      [disabled]="saving() === s.id" (click)="saveTherapistName(s)">Save</button>
+              <button type="button" class="link-act" style="margin-left:8px"
+                      (click)="closeEdit()">Cancel</button>
+            </div>
           }
         </div>
       }
     </div>
 
+    <!-- People who have left. Folded, not deleted: they still appear on every
+         session they gave, and the day one of them comes back this is where
+         you find them. -->
+    @if (formerStaff().length) {
+      <details class="former">
+        <summary>
+          No longer on the team
+          <span class="count">{{ formerStaff().length }}</span>
+        </summary>
+        <div class="former-list">
+          @for (s of formerStaff(); track s.id) {
+            <div class="f-line">
+              <span class="avatar">{{ initials(s) }}</span>
+              <span style="flex:1;min-width:0">
+                <b>{{ name(s) }}</b>
+                <span class="help" style="display:block">{{ s.branchName }}</span>
+              </span>
+              <button type="button" class="btn btn-ghost btn-sm"
+                      [disabled]="saving() === s.id" (click)="setWorksHere(s, true)">Bring back</button>
+              <button type="button" class="btn btn-quiet btn-sm"
+                      [disabled]="saving() === s.id"
+                      (click)="remove('therapist', s.id, name(s))">
+                {{ confirmDelete() === s.id ? 'Tap again — cannot be undone' : 'Delete' }}
+              </button>
+            </div>
+          }
+        </div>
+      </details>
+    }
+
     @if (rooms().length) {
       <h2 class="t-s" style="margin-top:4px">Rooms</h2>
-      <div class="grid2" style="max-width:900px">
+      <div class="room-list stagger">
         @for (r of rooms(); track r.id) {
-          <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap">
-            <div><div style="font-size:22px;font-weight:600;color:var(--color-forest-900)">{{ r.name }}</div>
+          <div class="room-row" [class.pulse-once]="justChanged() === r.id"
+               [class.menu-open]="menu() === r.id">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:20px;font-weight:600;color:var(--color-forest-900)">{{ r.name }}</div>
               <div class="help">{{ r.branchName }} · {{ label(roomState(r)) }}</div></div>
-            <div class="chips" role="group" [attr.aria-label]="'State for ' + r.name">
-              <button type="button" class="chip" [class.on]="r.active" [disabled]="saving() === r.id"
-                      [attr.aria-pressed]="r.active" (click)="setRoomOpen(r, true)">Open</button>
-              <button type="button" class="chip" [class.on]="!r.active" [disabled]="saving() === r.id"
-                      [attr.aria-pressed]="!r.active" (click)="setRoomOpen(r, false)">Closed</button>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="chips" role="group" [attr.aria-label]="'State for ' + r.name">
+                <button type="button" class="chip" [class.on]="r.active" [disabled]="saving() === r.id"
+                        [attr.aria-pressed]="r.active" (click)="setRoomOpen(r, true)">Open</button>
+                <button type="button" class="chip" [class.on]="!r.active" [disabled]="saving() === r.id"
+                        [attr.aria-pressed]="!r.active" (click)="setRoomOpen(r, false)">Closed</button>
+              </div>
+              <span class="menu-wrap">
+                <button type="button" class="menu-dots" [attr.aria-label]="'Options for ' + r.name"
+                        [attr.aria-expanded]="menu() === r.id" (click)="toggleMenu(r.id)">⋯</button>
+                @if (menu() === r.id) {
+                  <button type="button" class="menu-scrim" aria-label="Close menu"
+                          (click)="closeMenus()"></button>
+                  <div class="menu-panel">
+              <button type="button" (click)="openEditRoom(r)">Rename</button>
+              <button type="button" class="danger" [disabled]="saving() === r.id"
+                      (click)="remove('room', r.id, r.name)">
+                {{ confirmDelete() === r.id ? 'Tap again — this cannot be undone' : 'Delete permanently' }}
+              </button>
+                    <p class="menu-note">
+                      Closing a room takes it out of use and keeps its bookings. Delete only
+                      works on a room nothing has ever been booked into.
+                    </p>
+                  </div>
+                }
+              </span>
             </div>
           </div>
+          @if (editing() === r.id) {
+            <div class="card" style="padding:14px">
+              <input class="input" [value]="editRoomName()"
+                     (input)="editRoomName.set($any($event.target).value)" />
+              <button type="button" class="btn btn-primary btn-sm" style="margin-top:10px"
+                      [disabled]="saving() === r.id" (click)="saveRoomName(r)">Save</button>
+              <button type="button" class="link-act" style="margin-left:8px"
+                      (click)="closeEdit()">Cancel</button>
+              <p class="help" style="margin:10px 0 0">
+                Closing a room is how one is taken out of use — there is no delete, because
+                past bookings name it.
+              </p>
+            </div>
+          }
         }
       </div>
       <p class="help">Occupied is worked out from today's bookings, not stored as a flag —
         so it cannot go stale when somebody forgets to clear it.</p>
+    }
+
+    <!-- The spa can hire and open rooms without a developer. Both are added to
+         the branch being viewed: a therapist belongs to exactly one branch, and
+         that is the basis of the single-writer claim. -->
+
+    @if (adding() === 'therapist') {
+      <div class="card" style="padding:18px;max-width:520px">
+        <b>New therapist</b>
+        <p class="help" style="margin:4px 0 12px">
+          They start <b>off duty</b> — set them available when their shift does.
+        </p>
+        <input class="input" placeholder="First name" [value]="newFirstName()"
+               (input)="newFirstName.set($any($event.target).value)" />
+        <input class="input" style="margin-top:8px" placeholder="Last name" [value]="newLastName()"
+               (input)="newLastName.set($any($event.target).value)" />
+        <div class="help" style="margin:12px 0 6px">CLIENTS MAY ASK FOR</div>
+        <div class="chips">
+          <button type="button" class="chip" [class.on]="newSex() === 'FEMALE'"
+                  (click)="newSex.set('FEMALE')">Female</button>
+          <button type="button" class="chip" [class.on]="newSex() === 'MALE'"
+                  (click)="newSex.set('MALE')">Male</button>
+          <button type="button" class="chip" [class.on]="newSex() === null"
+                  (click)="newSex.set(null)">Not recorded</button>
+        </div>
+        <p class="help" style="margin:8px 0 0">
+          Left unrecorded, they are offered only to clients who expressed no preference.
+          It is never guessed.
+        </p>
+        <button type="button" class="btn btn-primary" style="margin-top:14px"
+                [disabled]="saving()" (click)="addTherapist()">
+          {{ saving() === 'new-therapist' ? 'Adding…' : 'Add' }}
+        </button>
+        <button type="button" class="link-act" style="margin-left:8px" (click)="closeAdd()">Cancel</button>
+      </div>
+    }
+
+    @if (adding() === 'room') {
+      <div class="card" style="padding:18px;max-width:520px">
+        <b>New room</b>
+        <input class="input" style="margin-top:10px" placeholder="e.g. Treatment Room 3"
+               [value]="newRoomName()"
+               (input)="newRoomName.set($any($event.target).value)" />
+        <button type="button" class="btn btn-primary" style="margin-top:14px"
+                [disabled]="saving()" (click)="addRoom()">
+          {{ saving() === 'new-room' ? 'Adding…' : 'Add' }}
+        </button>
+        <button type="button" class="link-act" style="margin-left:8px" (click)="closeAdd()">Cancel</button>
+      </div>
     }
 
     <div class="note"><span class="b"></span>

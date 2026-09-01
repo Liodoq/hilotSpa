@@ -130,7 +130,9 @@ export class AssessmentStore {
       coordinateY: Math.round(p.y * 10),
       painScoreBefore: p.score,
       complaintType: d.mainComplaint,
-      // painScoreAfter is never sent from here — staff write it on S4.
+      // painScoreAfter is never sent from here - it does not exist yet. The
+      // client records it after the visit, through the outcome route, once
+      // the front desk has marked the visit completed.
     }));
 
     return {

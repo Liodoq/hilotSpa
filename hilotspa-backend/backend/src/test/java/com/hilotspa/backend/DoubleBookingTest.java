@@ -74,8 +74,33 @@ class DoubleBookingTest {
                 .as("the seeded branch must have open times, or nothing below can be tested")
                 .isNotEmpty();
 
-        return new Fixture(ana, ben, staff, anaForm, benForm, serviceId,
-                slots.get(0).get("start").asText());
+        // Find a slot where TWO clients can genuinely both be served.
+        //
+        // This used to take slots.get(0) and assume it. The earliest open time
+        // only needs ONE free therapist and ONE free room to be offered, so any
+        // other appointment sitting at that hour - and locally these tests share
+        // a database with the running app - left Ana with the last pair and Ben
+        // with a perfectly correct 409. The test then blamed rule 4 for doing
+        // its job.
+        //
+        // /openings answers exactly this question, so ask it rather than guess.
+        String chosen = null;
+        for (JsonNode slot : slots) {
+            String start = slot.get("start").asText();
+            JsonNode open = api.getAs(ana, "/api/v1/assistant/openings/" + anaForm
+                    + "?slotId=" + serviceId + "@" + start);
+            if (open.get("therapists").size() >= 2 && open.get("rooms").size() >= 2) {
+                chosen = start;
+                break;
+            }
+        }
+        assertThat(chosen)
+                .as("no open time at Bulan has two free therapists AND two free rooms - "
+                    + "these tests need that, and leftover bookings in a shared database "
+                    + "are the usual reason it is not true")
+                .isNotNull();
+
+        return new Fixture(ana, ben, staff, anaForm, benForm, serviceId, chosen);
     }
 
     private String bookBody(String formId, String serviceId, String start, String key) {
