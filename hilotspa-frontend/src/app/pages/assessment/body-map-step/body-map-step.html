@@ -16,7 +16,7 @@
       <div class="editor" [class.idle]="!editing()">
         @if (selected(); as p) {
           <div class="ehead">
-            <span class="mk static" [class]="'mk static ' + sev(p.score)">{{ indexOf(p.key) }}</span>
+            <span class="mk flat" [class]="'mk flat ' + sev(p.score)">{{ indexOf(p.key) }}</span>
             <div style="min-width:0">
               <div class="ename">{{ fullLabel(p) }}</div>
               <div class="help">{{ p.view === 'FRONT' ? 'Front of the body' : 'Back of the body' }}</div>
@@ -81,7 +81,7 @@
 
         @for (p of draft().points; track p.key) {
           <div class="pt" [class.sel]="p.key === selectedKey()">
-            <button type="button" class="mk static" [class]="'mk static ' + sev(p.score)"
+            <button type="button" class="mk flat" [class]="'mk flat ' + sev(p.score)"
                     (click)="selectedKey.set(p.key)"
                     [attr.aria-label]="'Edit spot ' + indexOf(p.key)">{{ indexOf(p.key) }}</button>
             <div class="meta">

@@ -6,37 +6,44 @@
       <div class="note bad"><span class="b"></span>
         <span>{{ e }} <button type="button" class="link" (click)="load()">Try again</button></span></div>
     }
-    @if (loading()) { <p class="s">Counting…</p> }
+    @if (loading() && !data()) {
+      <div class="skel-tiles">
+        <div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div>
+      </div>
+      <div class="skel" style="height:130px"></div>
+    }
 
     @if (data(); as d) {
       <div class="tiles">
-        <div class="stat"><div class="n">{{ d.bookingsToday }}</div><div class="k">Bookings today, all branches</div></div>
+        <div class="stat lead"><div class="n">{{ d.bookingsToday }}</div><div class="k">Bookings today, all branches</div></div>
         <div class="stat"><div class="n">{{ d.bookingsThisWeek }}</div><div class="k">Bookings this week</div></div>
         <div class="stat"><div class="n">{{ d.assessmentsThisWeek }}</div><div class="k">Assessments this week</div></div>
-        <div class="stat"><div class="n">{{ d.nodesOnline }} / {{ d.nodesTotal }}</div><div class="k">Nodes online</div></div>
+        <div class="stat" [class.warn]="d.nodesOnline < d.nodesTotal">
+          <div class="n">{{ d.nodesOnline }} / {{ d.nodesTotal }}</div>
+          <div class="k">Nodes online</div></div>
       </div>
 
       <!-- Readiness first, because this system degrades quietly by design: when
          Vertex or n8n dies the client still gets a sensible answer and nothing
          else on this page would say so. -->
     @if (health(); as h) {
-      <div class="card" style="display:flex;flex-direction:column;gap:12px"
-           [style.border]="'2.5px solid ' + (h.state === 'OK' ? 'var(--color-forest-700)'
-             : h.state === 'DOWN' ? 'var(--color-danger-600)' : 'var(--color-gold-700)')">
-        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div class="card hcard"
+           [class.ok]="h.state === 'OK'"
+           [class.warn]="h.state === 'DEGRADED'"
+           [class.bad]="h.state === 'DOWN'">
+        <div class="rowbar">
           <span class="pill" [class.ok]="h.state === 'OK'" [class.warn]="h.state === 'DEGRADED'"
                 [class.bad]="h.state === 'DOWN'"><i class="dotx"></i>{{ h.state }}</span>
-          <span style="font-size:19px">{{ h.summary }}</span>
-          <span class="help" style="margin-left:auto">node {{ h.nodeId }} · {{ h.timezone }}</span>
+          <span class="hsummary">{{ h.summary }}</span>
+          <span class="help mono whoami">node {{ h.nodeId }} · {{ h.timezone }}</span>
         </div>
         @if (faults().length) {
           <hr class="hr">
           @for (c of faults(); track c.name) {
-            <div style="display:flex;gap:12px;align-items:flex-start">
-              <span class="pill" style="flex:0 0 auto"
-                    [class.warn]="c.state === 'DEGRADED'" [class.bad]="c.state === 'DOWN'">
-                {{ c.name }}</span>
-              <span style="font-size:17px;color:var(--color-ink-600)">{{ c.detail }}</span>
+            <div class="hfault">
+              <span class="pill" [class.warn]="c.state === 'DEGRADED'"
+                    [class.bad]="c.state === 'DOWN'">{{ c.name }}</span>
+              <span>{{ c.detail }}</span>
             </div>
           }
         }
@@ -73,24 +80,23 @@
         }
       }
 
-      <h2 class="t-s">Branch nodes</h2>
+      <div class="sec-rule"><h2 class="t-s">Branch nodes</h2></div>
       <div class="grid2">
         @for (n of nodes(); track n.branchId) {
-          <div class="card" style="display:flex;flex-direction:column;gap:12px"
-               [style.border]="'2.5px solid var(--color-forest-700)'">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-              <div style="font-size:24px;font-weight:600;color:var(--color-forest-900)">{{ n.branchName }}</div>
+          <div class="card colstack nodecard">
+            <div class="rowbar split">
+              <div class="nodename">{{ n.branchName }}</div>
               <span class="pill ok"><i class="dotx"></i>ONLINE</span>
             </div>
             <div class="help mono">node {{ n.nodeId }} · last write {{ when(n.lastWrite) }}</div>
-            <div style="display:flex;gap:30px;margin-top:2px;flex-wrap:wrap">
-              <div><div class="figN">{{ n.bookingsToday }}</div><div class="help">bookings today</div></div>
-              <div><div class="figN">{{ n.therapistsAvailable }} / {{ n.therapists }}</div>
+            <div class="figrow">
+              <div class="fig"><div class="figN">{{ n.bookingsToday }}</div><div class="help">bookings today</div></div>
+              <div class="fig"><div class="figN">{{ n.therapistsAvailable }} / {{ n.therapists }}</div>
                 <div class="help">therapists available</div></div>
-              <div><div class="figN">{{ n.rooms }}</div><div class="help">rooms</div></div>
-              <div><div class="figN">{{ n.assessmentsThisWeek }}</div><div class="help">assessments (7d)</div></div>
+              <div class="fig"><div class="figN">{{ n.rooms }}</div><div class="help">rooms</div></div>
+              <div class="fig"><div class="figN">{{ n.assessmentsThisWeek }}</div><div class="help">assessments (7d)</div></div>
             </div>
-            <button type="button" class="btn btn-ghost btn-sm" style="align-self:flex-start"
+            <button type="button" class="btn btn-ghost btn-sm start"
                     (click)="open(n)">Manage this branch</button>
           </div>
         }
@@ -102,13 +108,13 @@
           else. A second branch drawn here as "offline" would be a mock-up, not evidence.</span></div>
 
       <div class="cols">
-        <div class="card" style="display:flex;flex-direction:column;gap:10px;min-width:0">
-          <h2 class="t-s" style="font-size:22px">Most common complaints, last 30 days</h2>
+        <div class="card colstack">
+          <h2 class="t-s sub">Most common complaints, last 30 days</h2>
           @for (c of complaints(); track c.label) {
-            <div style="display:flex;align-items:center;gap:14px">
-              <span style="width:200px;font-size:18px">{{ c.label }}</span>
+            <div class="meter">
+              <span class="mlabel">{{ c.label }}</span>
               <span class="bar-track"><i [style.width.%]="c.pct"></i></span>
-              <b class="tnum">{{ c.count }}</b>
+              <b>{{ c.count }}</b>
             </div>
           } @empty {
             <p class="s">No assessments in the last 30 days.</p>
@@ -118,23 +124,23 @@
         </div>
 
         @if (assistant(); as a) {
-          <div class="card" style="display:flex;flex-direction:column;gap:12px">
-            <h2 class="t-s" style="font-size:22px">Assistant reliability</h2>
-            <div style="display:flex;gap:28px;flex-wrap:wrap">
-              <div><div class="figN" style="font-size:36px">{{ a.rejectedSuggestions }}</div>
+          <div class="card colstack">
+            <h2 class="t-s sub">Assistant reliability</h2>
+            <div class="figrow">
+              <div class="fig big"><div class="figN">{{ a.rejectedSuggestions }}</div>
                 <div class="help">suggestions rejected by the server</div></div>
-              <div><div class="figN" style="font-size:36px">{{ a.rejectionRatePct }}%</div>
+              <div class="fig big"><div class="figN">{{ a.rejectionRatePct }}%</div>
                 <div class="help">of everything the model proposed</div></div>
             </div>
             <hr class="hr">
-            <div style="font-size:18px;color:var(--color-ink-600)">
+            <div class="runline">
               {{ a.calls }} assistant calls · {{ a.ok }} succeeded · {{ a.failed }} fell back ·
               {{ a.returnedSuggestions }} suggestions shown to clients.</div>
             <p class="help">{{ a.note }}</p>
             <p class="help">Counted from <span class="mono">audit_log</span>, not asserted. Every reply
               is re-checked against the real service list before it is shown, which is what makes the
               rejected count exist at all.</p>
-            <button type="button" class="link-go" style="align-self:flex-start"
+            <button type="button" class="link-go start"
                     (click)="goAudit('ASSISTANT_RECOMMEND')">See the rows this is counted from</button>
           </div>
         }

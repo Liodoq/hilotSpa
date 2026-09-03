@@ -1,4 +1,15 @@
+/* Console vocabulary is in styles.scss under `.dash`. Only page shape here.
+
+   NOTE the drawer: it is rendered OUTSIDE <app-dash-shell>, so nothing scoped
+   under `.dash` reaches it. Anything it needs has to live in this file. */
 :host { display: block; }
 .stack { display: flex; flex-direction: column; gap: 18px; }
 .cols { display: grid; grid-template-columns: minmax(0, 1fr) 520px; gap: 20px; }
+
+/* The count reads first, then the search, then the filters — the order someone
+   actually uses them in. */
+.toolbar .help { margin-right: 4px; }
+.search { max-width: 420px; }
+
 @media (max-width: 1300px) { .cols { grid-template-columns: 1fr; } }
+@media (max-width: 700px)  { .search { max-width: none; width: 100%; } }

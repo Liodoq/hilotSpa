@@ -1,4 +1,4 @@
-/* The surface lives in styles.scss under `.me`, shared with /account.
+/* The surface lives in styles.scss under `.myinfo`, shared with /account.
 
    What used to be here — `.panel.locked`, and the rule that set
    `opacity: 1; background: sage-100` on disabled inputs — is gone with the
@@ -10,8 +10,8 @@
 /* The one value on this page that is calculated rather than entered. It is
    read-only even while editing, so it is set as text in both states — a box
    here would be the same lie the whole page just stopped telling. */
-.me .ageline { color: var(--color-ink-600); }
+.myinfo .ageline { color: var(--color-ink-600); }
 
 /* Its dt is pushed down to meet the top of an input; this dd has no input to
    meet, so it is pushed down to meet its dt instead. */
-.me .dl.editing > dd.ageline { padding-top: 24px; }
+.myinfo .dl.editing > dd.ageline { padding-top: 24px; }

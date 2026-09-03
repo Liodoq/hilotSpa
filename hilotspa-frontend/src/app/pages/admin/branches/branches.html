@@ -8,7 +8,7 @@
     {{ nodes().length === 1 ? 'branch' : 'branches' }}</span>
 
   <div class="stack">
-    <div class="head">
+    <div class="phead">
       <h1 class="t">Choose a branch to manage</h1>
       <p class="s">Opening a branch loads that node's own data, scoped exactly the way a staff member's
         would be — plus the ability to change settings.</p>
@@ -18,23 +18,28 @@
       <div class="note bad"><span class="b"></span>
         <span>{{ e }} <button type="button" class="link" (click)="load()">Try again</button></span></div>
     }
-    @if (loading()) { <p class="s">Loading…</p> }
-
-    <div style="display:flex;justify-content:flex-end">
+    <div class="rowbar end">
       <button type="button" class="btn btn-primary btn-sm" (click)="addBranch()">Add a branch</button>
     </div>
 
-    <div class="grid2" style="max-width:1300px">
+    @if (loading() && !nodes().length) {
+      <div class="grid2 wide">
+        <div class="skel" style="height:118px"></div>
+        <div class="skel" style="height:118px"></div>
+      </div>
+    }
+
+    <div class="grid2 wide">
       @for (n of nodes(); track n.branchId) {
         <button type="button" class="branchcard" [class.on]="ctx.branchId() === n.branchId"
                 (click)="select(n)">
           <span class="tag2">{{ initials(n.branchName) }}</span>
-          <span style="flex:1;min-width:0">
-            <span class="t-s" style="font-size:22px;display:block">{{ short(n.branchName) }}</span>
-            <span class="help" style="display:block">{{ n.therapists }}
+          <span class="fillrow">
+            <span class="bname">{{ short(n.branchName) }}</span>
+            <span class="bmeta">{{ n.therapists }}
               {{ n.therapists === 1 ? 'therapist' : 'therapists' }} · {{ n.rooms }}
               {{ n.rooms === 1 ? 'room' : 'rooms' }} · {{ n.bookingsToday }} booked today</span>
-            <span class="chips" style="margin-top:8px">
+            <span class="chips bnode">
               <span class="pill ok"><i class="dotx"></i>{{ n.nodeId }}</span>
             </span>
           </span>
@@ -51,15 +56,15 @@
     </div>
 
     @if (current(); as c) {
-      <div class="card" style="max-width:1300px;display:flex;flex-direction:column;gap:16px">
-        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap">
-          <h2 class="t-s" style="font-size:22px">{{ short(c.branchName) }} — what you can do from here</h2>
+      <div class="card colstack wide">
+        <div class="sec-top">
+          <h2 class="t-s sub">{{ short(c.branchName) }} — what you can do from here</h2>
           <button type="button" class="link-act" (click)="editBranch(c)">Edit this branch</button>
         </div>
 
         <!-- Fetched WITH branchId applied, not filtered in the browser. Filtering
              here would look identical on screen and prove nothing. -->
-        <p class="s" style="font-size:19px">You are scoped to this branch. The list below was requested
+        <p class="s scoped">You are scoped to this branch. The list below was requested
           with <span class="mono">branchId={{ c.branchId.slice(0, 8) }}…</span> — the same value a staff
           account gets from its own token, which is why an administrator sees exactly what that branch
           sees and nothing more.</p>
@@ -75,7 +80,7 @@
                 <td>{{ short(t.branchName) }}</td>
               </tr>
             } @empty {
-              <tr><td colspan="3" style="text-align:center;color:var(--color-ink-600)">
+              <tr><td class="no" colspan="3">
                 No therapists at this branch — it can take no bookings until one exists.</td></tr>
             }
           </table>
@@ -88,7 +93,7 @@
           <div class="stat"><div class="n">{{ c.rooms }}</div><div class="k">Rooms</div></div>
         </div>
 
-        <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div class="rowbar">
           <button type="button" class="btn btn-primary" (click)="open('/staff/dashboard')">Open full dashboard</button>
           <button type="button" class="btn btn-ghost" (click)="open('/staff/resources')">Therapists &amp; rooms</button>
           <button type="button" class="btn btn-quiet" (click)="leave()">Leave branch view</button>
@@ -99,7 +104,7 @@
         <span>No branch is open. Pick one above to switch context into it.</span></div>
     }
 
-    <div class="note warm" style="max-width:1300px"><span class="b"></span>
+    <div class="note warm wide"><span class="b"></span>
       <span>Cross-node behaviour — queued writes, last-synced state, gossip — is Sprint 3 and is not built.
       What <b>is</b> true today is the rule that makes it safe: a therapist and a room belong to exactly one
       branch, so only that branch can book them, and two nodes can never award the same slot.</span>

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth.guard';
+import { publicHomeGuard } from './core/role-home';
 import { roleGuard } from './core/role.guard';
 import { profileGuard } from './core/profile.guard';
 
@@ -12,7 +13,7 @@ export const routes: Routes = [
   //
   // Browsing is public; BOOKING is not, and stays gated behind a completed
   // pre-assessment exactly as Process Rule #2 requires.
-  { path: '', pathMatch: 'full',
+  { path: '', pathMatch: 'full', canActivate: [publicHomeGuard],
     loadComponent: () => import('./pages/landing/landing').then(m => m.Landing) },
   { path: 'contact',
     loadComponent: () => import('./pages/contact/contact').then(m => m.Contact) },

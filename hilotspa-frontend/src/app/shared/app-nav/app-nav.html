@@ -9,7 +9,7 @@
 }
 
 <header class="appbar">
-  <a class="brand" [routerLink]="auth.token() ? '/home' : '/'" aria-label="Knead Wellness Spa, home">
+  <a class="brand" [routerLink]="home()" aria-label="Knead Wellness Spa, home">
     <app-logo [size]="58" />
     <span><b>Knead Wellness Spa</b><small>Bulan, Sorsogon</small></span>
   </a>
@@ -17,7 +17,17 @@
   <!-- The same bar serves signed-in clients and visitors. A visitor browsing
        the menu should not be shown "MY BOOKINGS", and a client should not be
        shown "Create account". -->
-  @if (auth.token()) {
+  @if (auth.token() && isConsole()) {
+    <!-- Somebody who works here. They reach this bar only by opening a PUBLIC
+         page - / bounces them to their own console - so it must not offer them
+         MY BOOKINGS or "My health details". An administrator has no bookings
+         and no pain map, and offering them is what made B101 reachable. -->
+    <nav class="navlinks" aria-label="Main">
+      <a routerLink="/services" routerLinkActive="on">SERVICES</a>
+      <a routerLink="/about"    routerLinkActive="on">ABOUT</a>
+      <a routerLink="/contact"  routerLinkActive="on">CONTACT</a>
+    </nav>
+  } @else if (auth.token()) {
     <nav class="navlinks" aria-label="Main">
       <a routerLink="/home"     routerLinkActive="on">HOME</a>
       <a routerLink="/services" routerLinkActive="on">SERVICES</a>
@@ -40,7 +50,10 @@
 
   @if (auth.token()) {
   <div class="account">
-    <span style="font-size:19px;font-weight:500">{{ auth.fullName() || 'Guest' }}</span>
+    @if (isConsole()) {
+      <a class="btn btn-quiet btn-sm" [routerLink]="home()">Back to {{ auth.role() === 'ADMIN' ? 'the console' : 'the dashboard' }}</a>
+    }
+    <span class="whoami">{{ auth.fullName() || 'Guest' }}</span>
     <button type="button" class="avatar" [attr.aria-expanded]="open()" aria-haspopup="menu"
             [attr.aria-label]="'Account menu for ' + auth.fullName()"
             (click)="open.set(!open())">{{ initials() }}</button>
@@ -49,10 +62,15 @@
       <!-- Clicking the avatar used to sign you out immediately. One stray click
            and the whole assessment was gone. It opens a menu now. -->
       <div class="menu" role="menu">
-        <button type="button" role="menuitem" (click)="go('/home')">Home</button>
-        <button type="button" role="menuitem" (click)="go('/account')">My account</button>
-        <button type="button" role="menuitem" (click)="go('/profile')">My health details</button>
-        <button type="button" role="menuitem" (click)="go('/booking')">My bookings</button>
+        @if (isConsole()) {
+          <button type="button" role="menuitem" (click)="go(home())">{{ consoleLabel() }}</button>
+          <button type="button" role="menuitem" (click)="go('/account')">My account</button>
+        } @else {
+          <button type="button" role="menuitem" (click)="go('/home')">Home</button>
+          <button type="button" role="menuitem" (click)="go('/account')">My account</button>
+          <button type="button" role="menuitem" (click)="go('/profile')">My health details</button>
+          <button type="button" role="menuitem" (click)="go('/booking')">My bookings</button>
+        }
         <hr class="hr">
         <button type="button" role="menuitem" class="danger" (click)="signOut()">Sign out</button>
       </div>

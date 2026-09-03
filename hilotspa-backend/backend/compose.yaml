@@ -44,6 +44,10 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       # .env says http://localhost:5678, which is right for run.ps1 on Windows
       # but resolves to the backend container itself when running in compose.
+      # Let a 4xx carry its REASON, not just "Bad Request". Read straight from
+      # the environment (relaxed binding) as well as application.properties, so
+      # it can be switched without rebuilding the image. B105.
+      SERVER_ERROR_INCLUDE_MESSAGE: ${ERROR_INCLUDE_MESSAGE:-always}
       N8N_WEBHOOK_URL: http://n8n:5678
 
     depends_on:
@@ -64,7 +68,17 @@ services:
   # know and n8n sends back a ranked list. See n8n/README.md.
   # ---------------------------------------------------------------------------
   n8n:
-    image: docker.n8n.io/n8nio/n8n:latest
+    # PINNED. 0.13 / B99. This tag is the version the n8n_data volume has
+    # already been migrated to - confirmed with `docker compose exec n8n n8n
+    # --version` before pinning, which is the only safe way to choose it. n8n
+    # migrates its SQLite schema forward on upgrade and REFUSES TO START against
+    # a database newer than the binary, so pinning to an older tag than the one
+    # running would brick the assistant rather than protect it.
+    #
+    # It was :latest until 2 September. An earlier commit message claimed the
+    # pin was done; it was not, and nobody checked. Verify with the command
+    # above, not with the changelog.
+    image: docker.n8n.io/n8nio/n8n:2.33.5
     container_name: hilotspa_n8n
     restart: unless-stopped
     ports:

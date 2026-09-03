@@ -316,6 +316,15 @@ export interface AssistantChatResponse {
    * to answer who and where. The write has NOT happened.
    */
   pendingSlotId?: string | null;
+  /**
+   * The service THIS reply is about, so the panel can follow the conversation.
+   *
+   * It cannot be worked out from `slots`: that list carries every allowed
+   * service at once, on purpose, so the client can always change their mind.
+   * Which service is under discussion is something only the assistant knows,
+   * so the server reports it.
+   */
+  replyServiceId?: string | null;
 }
 
 export interface AccountMe {

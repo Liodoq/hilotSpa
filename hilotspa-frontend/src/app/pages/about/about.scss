@@ -56,9 +56,9 @@
   color: var(--color-forest-900); margin: 0; text-wrap: balance;
 }
 .about .sub { margin: 8px 0 0; font-size: 19px; color: var(--color-ink-600); }
-.about .prose { max-width: 62ch; }
-.about .prose p { margin: 0 0 16px; font-size: 20px; line-height: 1.6; }
-.about .prose p:last-child { margin-bottom: 0; }
+.about .proseblk { max-width: 62ch; }
+.about .proseblk p { margin: 0 0 16px; font-size: 20px; line-height: 1.6; }
+.about .proseblk p:last-child { margin-bottom: 0; }
 
 /* One sentence on this page is the whole safety argument. It gets to be a
    sentence rather than a paragraph. */

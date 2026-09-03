@@ -201,7 +201,21 @@ public final class AssistantDtos {
              * Spring decides" split the tap path already had - the prose path
              * was the one place a sentence still reached the database.
              */
-            String pendingSlotId) {
+            String pendingSlotId,
+            /**
+             * The service THIS REPLY is about, as the model reported it.
+             *
+             * The panel beside the conversation used to move only when the
+             * client tapped something, so a client who typed "I would like the
+             * Therapeutic Massage" was answered with that treatment's times in
+             * prose while the panel went on offering the three original
+             * suggestions - the times were in the sentence and nowhere tappable.
+             *
+             * It cannot be inferred from `slots`: that list deliberately carries
+             * every allowed service at once, so "which service is this turn
+             * about" is information only the model has. Hence a field.
+             */
+            UUID replyServiceId) {
 
         /**
          * The five-argument form every other path uses: nothing pending.
@@ -211,7 +225,13 @@ public final class AssistantDtos {
          */
         public ChatResponse(String reply, String status, Object booking, String debug,
                             List<ChatSlot> slots) {
-            this(reply, status, booking, debug, slots, null);
+            this(reply, status, booking, debug, slots, null, null);
+        }
+
+        /** The six-argument form: a settled time, no service to focus. */
+        public ChatResponse(String reply, String status, Object booking, String debug,
+                            List<ChatSlot> slots, String pendingSlotId) {
+            this(reply, status, booking, debug, slots, pendingSlotId, null);
         }
     }
 

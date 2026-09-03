@@ -133,7 +133,7 @@
         <span>Thu</span><span>Fri</span><span>Sat</span>
       </div>
 
-      <div class="grid" role="group" [attr.aria-label]="monthLabel()" (keydown)="gridKey($event)">
+      <div class="calgrid" role="group" [attr.aria-label]="monthLabel()" (keydown)="gridKey($event)">
         @for (c of cells(); track $index) {
           @if (!c.key) {
             <div class="day blank" aria-hidden="true"></div>

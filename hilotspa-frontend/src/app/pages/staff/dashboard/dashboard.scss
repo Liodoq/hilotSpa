@@ -1,4 +1,18 @@
+/* The console vocabulary lives in styles.scss under `.dash`, shared with the
+   admin screens. Only the two-column shape of THIS page belongs here. */
 :host { display: block; }
 .stack { display: flex; flex-direction: column; gap: 20px; }
+
+/* The day sheet is the page; the aside is support. A fixed 440px right column
+   keeps "Needs attention" the same width on every branch, so staff learn where
+   to look rather than re-finding it. */
 .cols { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 20px; align-items: start; }
-@media (max-width: 1400px) { .cols { grid-template-columns: 1fr; } .tiles { grid-template-columns: repeat(2, 1fr); } }
+.side { display: flex; flex-direction: column; gap: 16px; }
+
+/* Card headings sit one step below the section headings they live under. */
+.t-s.sub { font-size: 22px; }
+
+@media (max-width: 1400px) {
+  .cols { grid-template-columns: 1fr; }
+  .tiles { grid-template-columns: repeat(2, 1fr); }
+}

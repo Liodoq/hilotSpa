@@ -11,21 +11,37 @@
         <span>{{ e }} <button type="button" class="link" (click)="load()">Try again</button></span></div>
     }
 
-    <div class="tiles">
-      <div class="stat"><div class="n">{{ today().length }}</div><div class="k">Bookings today</div></div>
-      <div class="stat"><div class="n">{{ completed() }}</div><div class="k">Completed</div></div>
-      <div class="stat"><div class="n">{{ available() }} / {{ onDuty() }}</div><div class="k">Therapists available</div></div>
-      <div class="stat"><div class="n">{{ fromAssistant() }}</div><div class="k">Booked by the assistant</div></div>
-    </div>
+    @if (loading() && !today().length) {
+      <!-- The shape of the answer, so the page does not jump when it lands. -->
+      <div class="skel-tiles">
+        <div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div>
+      </div>
+    } @else {
+      <!-- A tile carries state. Zero therapists available is not the same kind
+           of fact as four bookings today, and four identical white tiles say
+           that it is. -->
+      <div class="tiles">
+        <div class="stat lead"><div class="n">{{ today().length }}</div><div class="k">Bookings today</div></div>
+        <div class="stat"><div class="n">{{ completed() }}</div><div class="k">Completed</div></div>
+        <div class="stat" [class.bad]="!available() && onDuty()">
+          <div class="n">{{ available() }} / {{ onDuty() }}</div>
+          <div class="k">Therapists available</div></div>
+        <div class="stat"><div class="n">{{ fromAssistant() }}</div><div class="k">Booked by the assistant</div></div>
+      </div>
+    }
 
     <div class="cols">
-      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
-        <div style="display:flex;align-items:baseline;justify-content:space-between">
+      <div class="colstack">
+        <div class="sec-top">
           <h2 class="t-s">Today's schedule</h2>
           <button type="button" class="link-act" (click)="load()">Refresh</button>
         </div>
 
-        @if (loading()) { <p class="s">Loading…</p> }
+        @if (loading() && !today().length) {
+          <div class="skel-rows">
+            <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+          </div>
+        }
 
         @if (!loading() && !today().length && !error()) {
           <div class="note"><span class="b"></span>
@@ -36,7 +52,7 @@
           <div class="slot" [class.walkin]="s.source === 'STAFF_MANUAL'">
             <span class="bar"></span>
             <span class="time">{{ s.time }}</span>
-            <div style="flex:1;min-width:0">
+            <div class="fillrow">
               <b>{{ s.serviceName }}</b> · {{ s.durationMinutes }} min
               <div class="help">{{ s.client }} · {{ s.therapist }} · {{ s.room }}</div>
             </div>
@@ -56,9 +72,9 @@
         }
       </div>
 
-      <aside style="display:flex;flex-direction:column;gap:16px">
-        <div class="card" style="display:flex;flex-direction:column;gap:12px">
-          <h2 class="t-s" style="font-size:22px">Needs attention</h2>
+      <aside class="side">
+        <div class="card colstack">
+          <h2 class="t-s sub">Needs attention</h2>
           @if (withoutAssessment()) {
             <div class="note bad"><span class="b"></span>
               <span>{{ withoutAssessment() }}
@@ -73,8 +89,8 @@
             <div class="note"><span class="b"></span><span>Nothing needs attention right now.</span></div>
           }
         </div>
-        <div class="card" style="display:flex;flex-direction:column;gap:10px">
-          <h2 class="t-s" style="font-size:22px">Quick actions</h2>
+        <div class="card colstack">
+          <h2 class="t-s sub">Quick actions</h2>
           <button type="button" class="btn btn-primary btn-block" routerLink="/staff/walkin">Record a walk-in</button>
           <button type="button" class="btn btn-ghost btn-block" routerLink="/staff/resources">Therapists &amp; rooms</button>
           <button type="button" class="btn btn-quiet btn-block" (click)="offline.set(!offline())">

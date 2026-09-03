@@ -374,8 +374,189 @@ public class AssistantServiceImpl implements AssistantService {
         if (raw != null && raw.book()) {
             return attemptBooking(form, raw, slotsById, reply);
         }
+
+        // B112. The guard below attemptBooking() only ever examined replies that
+        // ADMITTED to booking - it fires on raw.book(). A reply that announces a
+        // booking in prose while book is false went straight to the client
+        // untouched, and did exactly that: "booked na po kayo for Basic Massage,
+        // Thursday 12:30 PM" with nothing written and no confirmation card.
+        //
+        // The model is not on the writing path and never has been, so it cannot
+        // know whether a booking happened. Any past-tense claim from it is
+        // therefore unfounded by construction - which is what makes this
+        // checkable in Java rather than a matter of prompt wording.
+        if (claimsBooking(reply)) {
+            log.warn("Assistant claimed a booking that did not happen, form {}: {}",
+                    form.getId(), reply);
+            return new ChatResponse(
+                    "I have not booked anything yet - I do not do the booking myself. "
+                    + "Pick one of the times below and you can choose your therapist "
+                    + "and room next.",
+                    "CHOOSE", null,
+                    devOnly("reply claimed a booking with book=false; discarded: " + reply),
+                    List.copyOf(slotsById.values()));
+        }
+
+        // B115. The model settled a time in PROSE and left book=false, so no
+        // slotId reached Spring, so the who-and-where card never opened and no
+        // visit was ever written. The client had agreed to everything and the
+        // conversation simply stopped: "Na-hold na po namin ang time na Fri 4
+        // Sep, 9:00 AM" with nothing held anywhere.
+        //
+        // Why the model does it: rules 7 and 7b spend six lines telling it that
+        // it does NOT book and must never say it has. book=true reads like the
+        // thing it was just forbidden to do, so it stops setting the flag as
+        // well as stopping saying the word. The prompt now separates the two
+        // (rule 7d), but a prompt is a request and this is a guarantee.
+        //
+        // Recovery, not rejection: the reply names the day and the hour, and
+        // Spring knows every slot it offered, so the sentence can be matched
+        // back to the slot it describes. Nothing is written by doing so - it
+        // returns CHOOSE, which opens the therapist-and-room card the client
+        // still has to confirm. A wrong match is therefore visible and
+        // cancellable rather than silent.
+        if (raw.slotId() == null && claimsHold(reply)) {
+            ChatSlot settled = slotNamedIn(reply, raw.serviceId(), slotsById);
+            if (settled != null) {
+                log.warn("Assistant settled a time with book=false, form {}; recovered "
+                        + "slot {} from the reply text", form.getId(), settled.slotId());
+                return new ChatResponse(reply, "CHOOSE", null,
+                        devOnly("book=false but the reply settled a time; recovered "
+                                + settled.slotId()),
+                        List.copyOf(slotsById.values()), settled.slotId(),
+                        settled.serviceId());
+            }
+            log.warn("Assistant claimed a hold that matches no slot Spring sent, form {}: {}",
+                    form.getId(), reply);
+        }
+
+        // The model is now ASKED to report serviceId, and Spring works it out
+        // anyway when it does not. The first version of this trusted the field
+        // alone and the panel never moved once: serviceId has always been in the
+        // reply schema, and nothing in the prompt had ever told the model to set
+        // it, so it was null on every turn. Reading a field nobody was asked to
+        // fill is the same mistake as B115 in the other direction.
+        UUID about = raw.serviceId() != null ? raw.serviceId() : serviceNamedIn(reply, allowed);
         return new ChatResponse(reply, raw.status() == null ? "OK" : raw.status(), null, null,
-                List.copyOf(slotsById.values()));
+                List.copyOf(slotsById.values()), null, about);
+    }
+
+    /**
+     * Does this sentence tell the client they are already booked?
+     *
+     * Deliberately narrow. "I-book ko po kayo" is a promise and legitimate;
+     * "fully booked" is availability and legitimate. Only completed claims about
+     * THIS client's own visit match, in the two languages the assistant speaks.
+     *
+     * Prompt rule 7b already forbids all of this. Rules are guidance to a model;
+     * this is the wall behind them, and the wall is the part the paper's
+     * integrity claim can actually rest on (paper-deltas D2).
+     */
+    private static final java.util.regex.Pattern BOOKING_CLAIM =
+            java.util.regex.Pattern.compile(
+                "\\bbooked na\\b"                                  // "booked na po kayo"
+              + "|\\bnaka-?book\\b|\\bna-?book(ed)?\\b"          // naka-book / na-book
+              + "|\\bna-?reserve\\b|\\bna-?schedule\\b"
+              + "|\\byou('re| are) booked\\b"
+              + "|\\b(i have|i've) booked\\b"
+              + "|\\byour (appointment|visit|booking) (is|has been) "
+              + "(confirmed|booked|set|scheduled)\\b"
+              + "|\\byou('re| are) all set\\b",
+                java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    private static boolean claimsBooking(String reply) {
+        return reply != null && BOOKING_CLAIM.matcher(reply).find();
+    }
+
+    /**
+     * Does this reply announce that a time has been HELD?
+     *
+     * Deliberately narrower than BOOKING_CLAIM. That one catches a lie - a
+     * claim that a visit exists - and discards the sentence. This one catches
+     * a sentence that is TRUE in intent but arrived without the slotId that
+     * makes it true, so the sentence is kept and the missing half is recovered.
+     */
+    private static final java.util.regex.Pattern HOLD_CLAIM =
+            java.util.regex.Pattern.compile(
+                "\\bna-?hold\\b|\\bhold(ed)? na\\b"           // na-hold na po namin
+              + "|\\bay held na\\b|\\bheld na po\\b"
+              + "|\\b(i have|i've|we have|we've) held\\b"
+              + "|\\byour time is (held|set|reserved)\\b"
+              + "|\\bnaka-?reserve na\\b",
+                java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    private boolean claimsHold(String reply) {
+        return reply != null && HOLD_CLAIM.matcher(reply).find();
+    }
+
+    /**
+     * Which service is this reply about, worked out from the reply itself.
+     *
+     * Name alone is not enough: the spa sells "Signature Massage" at 60 and 90
+     * minutes, which are two different services with one name, so a match on the
+     * name would pick whichever came first and send the panel to the wrong
+     * duration. Name AND minutes together are what identify it - which is also
+     * exactly how the prompt requires the model to write it ("always say the
+     * minutes with the name"), so this is reading back a format Spring imposed.
+     *
+     * Ambiguity returns null rather than a guess. The panel not moving is a
+     * small failure; the panel moving to the wrong treatment while the client
+     * reads about a different one is a much worse one.
+     */
+    private UUID serviceNamedIn(String reply, List<AllowedService> allowed) {
+        if (reply == null || reply.isBlank()) {
+            return null;
+        }
+        UUID found = null;
+        for (AllowedService svc : allowed) {
+            if (svc.name() == null || svc.durationMinutes() == null
+                    || !reply.contains(svc.name())
+                    || !reply.contains(String.valueOf(svc.durationMinutes()))) {
+                continue;
+            }
+            if (found != null && !found.equals(svc.serviceId())) {
+                return null;
+            }
+            found = svc.serviceId();
+        }
+        return found;
+    }
+
+    /**
+     * Find the slot a reply is describing, by the day and hour it prints.
+     *
+     * Spring rendered both of those labels itself and handed them to the model
+     * in AVAILABLE TIMES, so a reply that names a real slot names it in exactly
+     * the words Spring chose. That is what makes matching on them safe rather
+     * than clever: it is not parsing free text, it is recognising Spring's own
+     * output coming back.
+     *
+     * Requires BOTH labels, and the service when the model reported one. A
+     * reply mentioning only "9:00 AM" matches nothing - the same hour exists on
+     * seven days.
+     */
+    private ChatSlot slotNamedIn(String reply, UUID serviceId,
+                                 Map<String, ChatSlot> slotsById) {
+        if (reply == null) {
+            return null;
+        }
+        ChatSlot found = null;
+        for (ChatSlot slot : slotsById.values()) {
+            if (serviceId != null && !serviceId.equals(slot.serviceId())) {
+                continue;
+            }
+            if (slot.dayLabel() == null || slot.timeLabel() == null
+                    || !reply.contains(slot.dayLabel()) || !reply.contains(slot.timeLabel())) {
+                continue;
+            }
+            if (found != null) {
+                // Two slots answer to the same sentence. Guessing between them
+                // is how a client ends up holding an hour they never named.
+                return null;
+            }
+            found = slot;
+        }
+        return found;
     }
 
     /**
@@ -414,7 +595,7 @@ public class AssistantServiceImpl implements AssistantService {
         // what language the screen is in.
         return new ChatResponse("", "CHOOSE", null,
                 devOnly("model said: " + reply),
-                List.copyOf(slotsById.values()), slot.slotId());
+                List.copyOf(slotsById.values()), slot.slotId(), slot.serviceId());
     }
 
     /**

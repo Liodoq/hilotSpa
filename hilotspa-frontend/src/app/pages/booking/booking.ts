@@ -7,6 +7,9 @@ import { ToastService } from '../../core/toast.service';
 import { FormsApi } from '../../core/forms.api';
 import { BookingModel } from '../../core/models';
 
+/** Statuses that still hold a therapist and a room, i.e. a live booking. */
+const OPEN = new Set(['PENDING', 'CONFIRMED', 'IN_PROGRESS']);
+
 /**
  * C10 — My bookings.
  *
@@ -41,7 +44,7 @@ export class Booking {
   protected upcoming = computed(() => {
     const now = Date.now();
     return this.all()
-      .filter(x => new Date(x.start).getTime() >= now && x.status !== 'CANCELLED')
+      .filter(x => new Date(x.start).getTime() >= now && OPEN.has(x.status))
       .sort((p, q) => new Date(p.start).getTime() - new Date(q.start).getTime());
   });
 
@@ -49,12 +52,60 @@ export class Booking {
   protected b = computed(() => this.upcoming()[0]);
   protected later = computed(() => this.upcoming().slice(1));
 
-  protected past = computed(() => {
+  /**
+   * Everything that is no longer ahead of you — B101.
+   *
+   * This was headed "Past visits" and filtered on
+   * `start < now || status === 'CANCELLED'`, so a visit CANCELLED for next
+   * Wednesday appeared under a heading promising the past, beside a no-show and
+   * beside a visit from three days ago that nobody had closed off. Three
+   * different kinds of thing under one wrong label, each showing its raw
+   * database enum.
+   *
+   * The set is right - a client does want to see a booking they cancelled - so
+   * what changed is the NAME and the labels. It is a history, not a list of
+   * visits that happened.
+   */
+  protected history = computed(() => {
     const now = Date.now();
     return this.all()
       .filter(x => new Date(x.start).getTime() < now || x.status === 'CANCELLED')
       .sort((p, q) => new Date(q.start).getTime() - new Date(p.start).getTime());
   });
+
+  /**
+   * Visits whose time has passed and which the spa has never closed off.
+   *
+   * The client is not at fault and must not be told they were: it says "not
+   * recorded", never "no show". Only a person who was in the room can say which
+   * it was, and until they do this visit produces no after-score at all - which
+   * is exactly what the staff calendar exists to surface.
+   */
+  protected unrecorded = computed(() => {
+    const now = Date.now();
+    return this.all().filter(x =>
+      new Date(x.start).getTime() < now && OPEN.has(x.status));
+  });
+
+  /** What a client should read. Never the enum. */
+  statusLabel(v: BookingModel): string {
+    switch (v.status) {
+      case 'COMPLETED': return 'Completed';
+      case 'NO_SHOW':   return 'Did not attend';
+      case 'CANCELLED': return 'Cancelled';
+      default:
+        return new Date(v.start).getTime() < Date.now() ? 'Not recorded' : 'Booked';
+    }
+  }
+
+  statusTone(v: BookingModel): string {
+    switch (v.status) {
+      case 'COMPLETED': return 'ok';
+      case 'CANCELLED': return 'bad';
+      case 'NO_SHOW':   return 'warn';
+      default:          return 'mute';
+    }
+  }
 
   /** The booking awaiting a second tap, and the one currently being cancelled.
    *  Keyed by id so a page showing three visits cannot confirm the wrong one. */

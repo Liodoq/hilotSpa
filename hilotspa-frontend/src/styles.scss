@@ -176,8 +176,17 @@ body {
 }
 
 /* ---------- surfaces ---------- */
-.card { background: #fff; border: 1.5px solid var(--color-line); border-radius: var(--radius-lg); padding: 32px; }
-.note { background: var(--color-sage-100); border-radius: var(--radius-md); padding: 24px 28px;
+/* Both of these declare their own text colour, and that is not belt-and-braces.
+   `.side` and `.sidebar` set `color: #fff` on a forest-900 panel, and a .card or
+   a .note dropped inside one INHERITED that white onto its own pale background -
+   white on sage-100, which is invisible. It was on the body-map step's "Spots
+   you marked" list and its "not a diagnosis" note, and anywhere else the two are
+   nested. A surface that paints its own background must paint its own text
+   (B104). */
+.card { background: #fff; color: var(--color-ink-900);
+        border: 1.5px solid var(--color-line); border-radius: var(--radius-lg); padding: 32px; }
+.note { background: var(--color-sage-100); color: var(--color-ink-900);
+        border-radius: var(--radius-md); padding: 24px 28px;
         display: flex; gap: 18px; align-items: center; font-size: 19px; }
 .note .b { width: 14px; height: 14px; border-radius: 50%; background: var(--color-forest-700); flex: 0 0 auto; }
 .note.warm { background: #F6EEDC; }
@@ -255,7 +264,7 @@ select.input { appearance: none;
 .mk { position: absolute; transform: translate(-50%, -50%); width: 50px; height: 50px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center; color: #fff; font: 700 21px/1 var(--font-sans);
       border: 3px solid #fff; box-shadow: 0 3px 10px rgba(0,0,0,.28); cursor: pointer; }
-.mk.static { position: static; transform: none; width: 42px; height: 42px; font-size: 18px; flex: 0 0 auto; }
+.mk.flat { position: static; transform: none; width: 42px; height: 42px; font-size: 18px; flex: 0 0 auto; }
 .mk.sel { box-shadow: 0 0 0 4px var(--color-forest-700); }
 .mk.s-low  { background: var(--color-forest-500); }
 .mk.s-mid  { background: var(--color-gold-700); }
@@ -296,7 +305,8 @@ select.input { appearance: none;
         padding: 28px; display: flex; flex-direction: column; gap: 16px; }
 .side h4 { font-size: 24px; font-weight: 600; margin: 0; }
 .side li { font-size: 19px; line-height: 1.6; color: var(--color-sage-100); margin-left: 20px; }
-.consent { display: flex; gap: 16px; align-items: flex-start; background: var(--color-sage-100);
+.consent { color: var(--color-ink-900);
+        display: flex; gap: 16px; align-items: flex-start; background: var(--color-sage-100);
         border-radius: var(--radius-md); padding: 22px; cursor: pointer; }
 
 /* ===========================================================================
@@ -653,6 +663,12 @@ select.input { appearance: none;
 
 /* ===========================================================================
    MY DETAILS — /account and /profile
+
+   The class is `.myinfo`, and the awkward name is the point. It was `.me`,
+   which collided head-on with `.bub.me` — the client's own chat bubble — and
+   handed every message a 96px bottom padding and `margin: 0 auto`. The text
+   sat at the top of a tall, centred green box. Same failure as B96: a short,
+   obvious class name in a global stylesheet will eventually mean two things.
    ---------------------------------------------------------------------------
    Two routes, one subject. A client does not think of "account" and "details"
    as separate places; the split exists because a surname is not clinical data
@@ -675,11 +691,11 @@ select.input { appearance: none;
    value column, so pressing Edit does not reflow the page — the labels stay
    exactly where they were and the reader keeps their place.
    =========================================================================== */
-.me { max-width: 880px; margin: 0 auto; padding: 0 24px 96px; }
+.myinfo { max-width: 880px; margin: 0 auto; padding: 0 24px 96px; }
 
 /* ------------------------------------------------------------------- head */
-.me .pagehead { padding: 56px 0 30px; }
-.me .eyebrow {
+.myinfo .pagehead { padding: 56px 0 30px; }
+.myinfo .eyebrow {
   margin: 0;
   font-size: 16px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase;
   color: var(--color-forest-500);
@@ -687,7 +703,7 @@ select.input { appearance: none;
 /* The display face earns its place here for one reason: on /account the
    heading is the client's own name. That is the subject of the page, and it is
    a word — which is the only test this typeface has to pass. */
-.me .display {
+.myinfo .display {
   font-family: var(--font-display);
   font-optical-sizing: auto;
   font-weight: 600;
@@ -698,24 +714,24 @@ select.input { appearance: none;
   margin: 12px 0 0;
   text-wrap: balance;
 }
-.me .say {
+.myinfo .say {
   margin: 10px 0 0;
   font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
   font-size: 16px; letter-spacing: .04em; color: var(--color-ink-600);
 }
-.me .lead { margin: 14px 0 0; font-size: 20px; line-height: 1.5;
+.myinfo .lead { margin: 14px 0 0; font-size: 20px; line-height: 1.5;
             color: var(--color-ink-600); max-width: 54ch; }
-.me .pagehead .link-go { margin-top: 18px; }
+.myinfo .pagehead .link-go { margin-top: 18px; }
 
 /* ---------------------------------------------------------------- section
    A rule and air, not a card inside a card. Cards are for things you act on;
    a list of facts about yourself is not one. */
-.me .sec { padding: 32px 0; border-top: 1px solid var(--color-line); }
-.me .sec-top {
+.myinfo .sec { padding: 32px 0; border-top: 1px solid var(--color-line); }
+.myinfo .sec-top {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: 16px; flex-wrap: wrap;
 }
-.me .sec-head {
+.myinfo .sec-head {
   font-family: var(--font-display);
   font-optical-sizing: auto;
   font-weight: 600;
@@ -724,15 +740,15 @@ select.input { appearance: none;
   color: var(--color-forest-900);
   margin: 0;
 }
-.me .sec-why { margin: 6px 0 0; font-size: 17px; line-height: 1.5;
+.myinfo .sec-why { margin: 6px 0 0; font-size: 17px; line-height: 1.5;
                color: var(--color-ink-600); max-width: 58ch; }
 
 /* ----------------------------------------------------- THE GRID, both ways
    Label column fixed so every value on the page starts on the same vertical
    line, read or edit. Rows are separated by a hairline rather than boxed. */
-.me .dl { margin: 22px 0 0; display: grid; grid-template-columns: 200px minmax(0, 1fr); }
-.me .dl > dt,
-.me .dl > dd {
+.myinfo .dl { margin: 22px 0 0; display: grid; grid-template-columns: 200px minmax(0, 1fr); }
+.myinfo .dl > dt,
+.myinfo .dl > dd {
   margin: 0;
   min-height: 60px;
   padding: 14px 0;
@@ -740,49 +756,188 @@ select.input { appearance: none;
   align-items: center;
   border-top: 1px solid var(--color-line-soft, #E7E2D6);
 }
-.me .dl > dt {
+.myinfo .dl > dt {
   padding-right: 20px;
   font-size: 17px; font-weight: 500; color: var(--color-ink-600);
 }
-.me .dl > dd { font-size: 20px; color: var(--color-ink-900); min-width: 0; }
-.me .dl > dt:first-of-type,
-.me .dl > dd:first-of-type { border-top: 0; }
+.myinfo .dl > dd { font-size: 20px; color: var(--color-ink-900); min-width: 0; }
+.myinfo .dl > dt:first-of-type,
+.myinfo .dl > dd:first-of-type { border-top: 0; }
 
 /* A value nobody has given us. An em dash, not an empty row — the difference
    between "blank" and "we never asked" matters to whoever reads this next. */
-.me .none { color: var(--color-ink-600); }
-.me .dd-note { display: block; margin-top: 4px; font-size: 15px; color: var(--color-ink-600); }
+.myinfo .none { color: var(--color-ink-600); }
+.myinfo .dd-note { display: block; margin-top: 4px; font-size: 15px; color: var(--color-ink-600); }
 
 /* Editing: same grid, taller rows, controls in the value column. */
-.me .dl.editing > dt,
-.me .dl.editing > dd { padding: 10px 0; align-items: flex-start; }
-.me .dl.editing > dt { padding-top: 24px; }
-.me .dl > dd > .input,
-.me .dl > dd > app-date-picker { width: 100%; max-width: 420px; }
-.me .dl > dd > .in-sm { max-width: 180px; }
-.me .dl > dd > .in-md { max-width: 300px; }
-.me .dl > dd .stack { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-.me .dl > dd .grp { display: flex; gap: 12px; flex-wrap: wrap; width: 100%; }
-.me .dl > dd .grp > .input { flex: 1 1 160px; min-width: 0; }
+.myinfo .dl.editing > dt,
+.myinfo .dl.editing > dd { padding: 10px 0; align-items: flex-start; }
+.myinfo .dl.editing > dt { padding-top: 24px; }
+.myinfo .dl > dd > .input,
+.myinfo .dl > dd > app-date-picker { width: 100%; max-width: 420px; }
+.myinfo .dl > dd > .in-sm { max-width: 180px; }
+.myinfo .dl > dd > .in-md { max-width: 300px; }
+.myinfo .dl > dd .stack { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.myinfo .dl > dd .grp { display: flex; gap: 12px; flex-wrap: wrap; width: 100%; }
+.myinfo .dl > dd .grp > .input { flex: 1 1 160px; min-width: 0; }
 
 /* ------------------------------------------------------------------ verbs */
-.me .acts { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
-.me .acts .btn-primary, .me .acts .btn-ghost, .me .acts .btn-quiet { min-width: 0; padding: 0 26px; }
-.me .err { margin: 16px 0 0; }
-.me .out { padding: 30px 0 0; border-top: 1px solid var(--color-line); }
+.myinfo .acts { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+.myinfo .acts .btn-primary, .myinfo .acts .btn-ghost, .myinfo .acts .btn-quiet { min-width: 0; padding: 0 26px; }
+.myinfo .err { margin: 16px 0 0; }
+.myinfo .out { padding: 30px 0 0; border-top: 1px solid var(--color-line); }
 
 @media (max-width: 720px) {
-  .me { padding: 0 20px 80px; }
-  .me .pagehead { padding: 34px 0 24px; }
-  .me .dl { grid-template-columns: 1fr; }
-  .me .dl > dt { padding: 18px 0 2px; min-height: 0; }
-  .me .dl > dd { padding: 0 0 18px; min-height: 0; border-top: 0; }
-  .me .dl.editing > dt { padding-top: 18px; }
-  .me .acts { flex-direction: column-reverse; }
-  .me .acts .btn { width: 100%; }
+  .myinfo { padding: 0 20px 80px; }
+  .myinfo .pagehead { padding: 34px 0 24px; }
+  .myinfo .dl { grid-template-columns: 1fr; }
+  .myinfo .dl > dt { padding: 18px 0 2px; min-height: 0; }
+  .myinfo .dl > dd { padding: 0 0 18px; min-height: 0; border-top: 0; }
+  .myinfo .dl.editing > dt { padding-top: 18px; }
+  .myinfo .acts { flex-direction: column-reverse; }
+  .myinfo .acts .btn { width: 100%; }
 }
 
 /* A required marker that never changes is decoration. Once the field is
    answered the asterisk stops shouting but stays visible, so the rule it
    states is still legible on a filled-in form. */
-.me .req.done { color: var(--color-sage-300); }
+.myinfo .req.done { color: var(--color-sage-300); }
+
+/* ===========================================================================
+   THE CONSOLE — staff and admin screens (S1, A1–A6)
+   ---------------------------------------------------------------------------
+   The client screens, the public site and /account all got a considered pass;
+   these did not, and they are the ones the spa's own people drive every day —
+   and the ones a panel watches over your shoulder.
+
+   The content here was never the problem. The problem was that it was placed
+   with inline style attributes: forty-odd `style="display:flex;gap:12px"` in
+   five files, no two quite alike, so nothing could be adjusted and nothing
+   lined up. Everything below exists to give those a name.
+
+   Scoped under .dash so none of it reaches the client screens.
+   =========================================================================== */
+
+/* ------------------------------------------------------------- page head
+   A rule under the title, the same device the public pages and /account use.
+   A heading with nothing under it floats; a heading with a line under it is a
+   heading. */
+.dash .phead { padding-bottom: 18px; border-bottom: 1.5px solid var(--color-line); }
+.dash .phead .t { font-size: 34px; }
+.dash .phead .s { font-size: 19px; max-width: 74ch; margin-top: 6px; }
+
+/* ------------------------------------------------------------- a section */
+.dash .sec-top {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.dash .sec-top .t-s { margin: 0; }
+.dash .sec-rule { padding-top: 22px; border-top: 1.5px solid var(--color-line); }
+
+/* ---------------------------------------------------------- generic rows
+   Named versions of the inline flexes that were scattered across these five
+   templates. One definition each, so they cannot drift apart again. */
+.dash .rowbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dash .rowbar.end { justify-content: flex-end; }
+.dash .rowbar.split { justify-content: space-between; }
+.dash .colstack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.dash .fillrow { flex: 1; min-width: 0; }
+
+/* ------------------------------------------------------------ stat tiles
+   Tabular figures, because "12 / 14" beside "9 / 14" jittered on every reload.
+
+   And a tile can now carry a STATE. Four identical white tiles say that
+   nothing on the screen matters more than anything else, which is false: zero
+   therapists available is not the same kind of fact as four bookings today.
+   The edge is the only thing that changes — the number stays where it was, so
+   the row does not reflow when the state does. */
+.dash .stat { position: relative; overflow: hidden; }
+.dash .stat .n { font-variant-numeric: tabular-nums; }
+.dash .stat .k { line-height: 1.35; }
+.dash .stat::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: transparent;
+}
+.dash .stat.lead::before { background: var(--color-sage-300); }
+.dash .stat.warn::before { background: var(--color-gold-500); }
+.dash .stat.bad::before  { background: var(--color-danger-600); }
+.dash .stat.bad .n { color: var(--color-danger-600); }
+
+/* ------------------------------------------------------- figure clusters
+   The "big number over a caption" pattern appeared three times, inline, at
+   three different sizes. */
+.dash .figrow { display: flex; gap: 30px; flex-wrap: wrap; }
+.dash .fig .figN {
+  font-size: 32px; font-weight: 600; color: var(--color-forest-900);
+  line-height: 1.1; font-variant-numeric: tabular-nums;
+}
+.dash .fig.big .figN { font-size: 36px; }
+.dash .fig .help { display: block; max-width: 22ch; }
+
+/* ------------------------------------------------------------- the tables
+   A row you can follow across 1400px, and an empty state that is a sentence
+   rather than a blank cell. */
+.dash .tbl tbody tr:hover td,
+.dash .tbl tr:hover td { background: #FCFBF8; }
+.dash .tbl th:last-child, .dash .tbl td:last-child { text-align: right; }
+.dash .tbl td.no {
+  text-align: center; color: var(--color-ink-600); padding: 26px 12px; font-size: 17px;
+}
+.dash .tbl tr.off td { opacity: .55; }
+.dash .tbl .link-act + .link-act { margin-left: 6px; }
+.dash .tablecard { padding: 8px 22px; }
+
+/* --------------------------------------------------------- health states
+   The readiness card's border colour was computed in the template as a string
+   of three nested ternaries. It is a state, so it is a class. */
+.dash .hcard { border-width: 2.5px; display: flex; flex-direction: column; gap: 12px; }
+.dash .hcard.ok   { border-color: var(--color-forest-700); }
+.dash .hcard.warn { border-color: var(--color-gold-700); }
+.dash .hcard.bad  { border-color: var(--color-danger-600); }
+.dash .hcard .whoami { margin-left: auto; }
+.dash .hfault { display: flex; gap: 12px; align-items: flex-start; }
+.dash .hfault .pill { flex: 0 0 auto; }
+.dash .hfault span:last-child { font-size: 17px; color: var(--color-ink-600); }
+
+/* ------------------------------------------------------------- the waits
+   A wait with the shape of the answer. "Loading…" as a line of body text
+   makes the whole page jump when the content lands, and on a demo that reads
+   as the system stalling. */
+.dash .skel-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.dash .skel-tiles .skel { height: 96px; }
+.dash .skel-rows { display: flex; flex-direction: column; gap: 10px; }
+.dash .skel-rows .skel { height: 74px; }
+
+/* --------------------------------------------------------------- a meter */
+.dash .meter { display: flex; align-items: center; gap: 14px; }
+.dash .meter .mlabel { width: 200px; font-size: 18px; }
+.dash .meter b { font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+
+@media (max-width: 900px) {
+  .dash .skel-tiles { grid-template-columns: repeat(2, 1fr); }
+  .dash .meter .mlabel { width: 120px; font-size: 16px; }
+  .dash .figrow { gap: 20px; }
+}
+
+/* ---------------------------------------------------------------------------
+   Announced, not shown.
+
+   Lives here rather than in a component because component styles are scoped: a
+   second component writing class="offscreen" would get no rule at all and its
+   screen-reader text would render on the page.
+
+   Deliberately NOT named `sr-only`. That is a Tailwind utility, and Tailwind 4
+   generates utilities by scanning templates - so taking the name does not risk
+   a collision, it CREATES one. B96, B108 and B111 were each exactly that.
+   --------------------------------------------------------------------------- */
+.offscreen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

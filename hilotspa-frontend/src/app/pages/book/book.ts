@@ -1,5 +1,5 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AppNav } from '../../shared/app-nav/app-nav';
 import { Toast } from '../../shared/toast/toast';
 import { ToastService } from '../../core/toast.service';
@@ -10,7 +10,13 @@ import { describeHttpError } from '../../core/http-error';
 import { SessionLog } from '../../core/booking.store';
 import { SpeechService } from '../../core/speech.service';
 
-interface Msg { text: string; mine: boolean; at: string; spoken?: boolean; }
+interface Msg {
+  text: string; mine: boolean; at: string; spoken?: boolean;
+  /** The assistant never reached the model on this turn. Marked rather than
+   *  hidden: deleting it would leave a question with no answer above it, and a
+   *  client scrolling back should be able to see that a turn failed. */
+  failed?: boolean;
+}
 
 /**
  * C9 — the assistant.
@@ -32,7 +38,7 @@ interface Msg { text: string; mine: boolean; at: string; spoken?: boolean; }
  */
 @Component({
   selector: 'app-book',
-  imports: [AppNav, Toast],
+  imports: [AppNav, Toast, RouterLink],
   templateUrl: './book.html',
   styleUrl: './book.scss',
 })
@@ -63,6 +69,17 @@ export class Book implements OnDestroy {
 
   protected picks = computed(() => this.result()?.recommendations ?? []);
 
+  /**
+   * Did this client tap "I am here to relax"?
+   *
+   * That path deliberately skips the pain map and the questions, so every
+   * sentence on this screen that says "assessment", counts marked spots or
+   * reports a severity is describing a form they were never shown. One signal,
+   * read everywhere that matters, rather than three separate wordings drifting
+   * apart.
+   */
+  protected relaxing = computed(() => this.assessment()?.intent === 'LEISURE');
+
   /** Every time the server said the assistant could name, this turn. */
   protected slots = signal<AssistantSlot[]>([]);
 
@@ -75,12 +92,27 @@ export class Book implements OnDestroy {
    */
   protected focus = signal<string | null>(null);
 
-  /** suggest -> times -> who -> booked. One panel, four jobs, never two at once. */
-  protected stage = computed<'suggest' | 'times' | 'who' | 'booked'>(() => {
+  /** suggest -> times -> confirm -> booked. One panel, four jobs, never two at once. */
+  protected stage = computed<'suggest' | 'times' | 'confirm' | 'booked'>(() => {
     if (this.booked()) return 'booked';
-    if (this.picked()) return 'who';
+    if (this.picked()) return 'confirm';
     return this.focus() && this.timesForFocus().length ? 'times' : 'suggest';
   });
+
+  /**
+   * Has the client asked to pick their own therapist or room?
+   *
+   * The picker used to BE this stage: settling a time opened two rows of chips
+   * and a Book button, so everyone answered a question most clients do not have
+   * an opinion about. A client who has just said "kayo na ang bahala" - leave it
+   * to you - was then shown a chooser, which is the system asking again after
+   * being told.
+   *
+   * Now the default is a summary and one Confirm. The chips are still here,
+   * one tap away, for the client who does care. Same two signals underneath,
+   * same single write path; only what is offered first has changed.
+   */
+  protected choosing = signal(false);
 
   /**
    * The time the client tapped, waiting on the optional who-and-where question.
@@ -223,7 +255,7 @@ export class Book implements OnDestroy {
     } catch (e: unknown) {
       console.error('[book] recommend failed', e);
       this.error.set(describeHttpError(e, 'We could not reach the assistant just now.'));
-      this.say('I am having trouble right now. The front desk can help you choose.');
+      this.sayFailed('I am having trouble right now. The front desk can help you choose.');
     } finally {
       this.loading.set(false);
     }
@@ -238,7 +270,19 @@ export class Book implements OnDestroy {
     // reads as a duplicate. Always say the minutes with it.
     const names = res.recommendations
       .map(r => `<b>${r.name}</b> (${r.durationMinutes} min)`).join(', ');
-    this.say(`Kumusta po. Based on your assessment, I would suggest ${names}.`);
+
+    // "Based on your assessment" to somebody who tapped "I am here to relax" is
+    // the system claiming to have read something they were never asked. That
+    // path deliberately skips the pain map and the questions - the record it
+    // writes says LEISURE and almost nothing else - so citing an assessment as
+    // the reason for the suggestion is not just clumsy, it is untrue.
+    //
+    // The intent has been in the form all along (FormsModel.intent, and the
+    // prompt already branches on it server-side). Only this sentence never
+    // asked.
+    this.say(this.relaxing()
+      ? `Kumusta po. For a relaxing visit, I would suggest ${names}.`
+      : `Kumusta po. Based on your assessment, I would suggest ${names}.`);
     for (const r of res.recommendations) {
       this.say(`<b>${r.name}</b>, ${r.durationMinutes} minutes — ${r.reason}`);
     }
@@ -253,6 +297,11 @@ export class Book implements OnDestroy {
    * `quiet` exists for the dev diagnostic line only — it belongs on screen but
    * nobody wants a voice reading a stack of debug JSON at a client.
    */
+  /** A turn that fell back — same bubble, visibly marked as not an answer. */
+  private sayFailed(text: string): void {
+    this.messages.update(m => [...m, { text, mine: false, at: 'just now', failed: true }]);
+  }
+
   private say(text: string, quiet = false): void {
     const spoken = !quiet && this.speech.voiceOn() && this.speech.canSpeak;
     this.messages.update(m => [...m, { text, mine: false, at: 'just now', spoken }]);
@@ -415,6 +464,7 @@ export class Book implements OnDestroy {
     try {
       const res = await this.api.chat(id, v, this.focus());
       this.slots.set(res.slots ?? []);
+      if (res.replyServiceId) this.focus.set(res.replyServiceId);
       // An empty reply is not a silent assistant - it is the server declining to
       // repeat a sentence that is no longer true (see the CHOOSE path).
       if (res.reply) this.say(res.reply);
@@ -430,8 +480,16 @@ export class Book implements OnDestroy {
         // If they ever disagree, the database is right.
         const b = res.booking;
         this.booked.set(b);
-        this.say(`Booked — <b>${b.serviceName}</b>, ${b.label}, ${b.durationMinutes} min, `
-          + `₱${b.price}. ${b.therapist} · ${b.room}. Pay at the counter.`);
+        // B116. The BOOKED card below carries every one of these facts, and
+        // Spring's own reply has just said it in the client's language. A third
+        // telling in composed prose put the same booking on screen three times
+        // running - and this exact comment sat here saying so while the line it
+        // describes was still executing. A note that a thing was fixed is not
+        // the fix.
+        //
+        // It also printed "₱0" unguarded: the B110 zero-price guard was applied
+        // to the card and never to this sentence, so removing the sentence
+        // closes that too.
         await this.booking.load();
       }
       if (res.debug) {
@@ -440,7 +498,7 @@ export class Book implements OnDestroy {
     } catch (e: unknown) {
       console.error('[book] chat failed', e);
       // The assistant being down must never look like the spa being down.
-      this.say('I am having trouble answering right now. '
+      this.sayFailed('I am having trouble answering right now. '
         + 'The front desk can help you with any question about our services.');
     } finally {
       this.thinking.set(false);
@@ -532,6 +590,7 @@ export class Book implements OnDestroy {
     this.picked.set(slot);
     this.pickedTherapist.set(null);
     this.pickedRoom.set(null);
+    this.choosing.set(false);
     this.openings.set(null);
     this.loadingOpenings.set(true);
     try {
@@ -545,8 +604,9 @@ export class Book implements OnDestroy {
         this.say('That time has just been taken. Here are the times that are still open.');
         await this.refreshTimes(id, slot.serviceId);
       } else {
-        this.say(`${slot.dayLabel} ${slot.timeLabel} it is. Would you like a particular `
-          + 'therapist or room? You can leave it to us — tap <b>Book this time</b>.');
+        this.say(`${slot.dayLabel} ${slot.timeLabel} it is. Check the details below and `
+          + 'tap <b>Confirm booking</b> — we will assign your therapist and room. '
+          + 'You can choose them yourself first if you would rather.');
       }
     } catch (e: unknown) {
       // Say the STATUS out loud. The first version of this swallowed the code
@@ -565,7 +625,28 @@ export class Book implements OnDestroy {
   /** Go back to the times without booking. Nothing has been written yet. */
   cancelPick(): void {
     this.picked.set(null);
+    this.choosing.set(false);
     this.openings.set(null);
+  }
+
+  /**
+   * What the summary says about therapist and room before anything is written.
+   *
+   * "Assigned by the spa" rather than a name the client has not been promised:
+   * with no pick, Spring chooses inside the booking transaction, and printing a
+   * likely-looking name here would be guessing on the spa's behalf. The real
+   * name appears on the confirmation the moment it is a fact.
+   */
+  protected therapistLabel(o: Openings): string {
+    const id = this.pickedTherapist();
+    if (!id) return 'Assigned by the spa';
+    return o.therapists.find(t => t.id === id)?.firstName ?? 'Assigned by the spa';
+  }
+
+  protected roomLabel(o: Openings): string {
+    const id = this.pickedRoom();
+    if (!id) return 'Assigned by the spa';
+    return o.rooms.find(r => r.id === id)?.name ?? 'Assigned by the spa';
   }
 
   /** Re-ask the assistant for this treatment's calendar, without a new message. */
@@ -612,8 +693,7 @@ export class Book implements OnDestroy {
         this.picked.set(null);
         this.openings.set(null);
         this.booked.set(b);
-        this.say(`Booked — <b>${b.serviceName}</b>, ${b.label}, ${b.durationMinutes} min. `
-          + `${b.therapist} · ${b.room}. Pay at the counter.`);
+        // B116, the tap path. Spring's reply plus the card is already twice.
         await this.booking.load();
       }
       if (res.debug) {

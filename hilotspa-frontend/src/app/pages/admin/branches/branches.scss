@@ -1,6 +1,24 @@
+/* Console vocabulary is in styles.scss under `.dash`. Page shape only. */
 :host { display: block; }
 .stack { display: flex; flex-direction: column; gap: 20px; }
+
+/* 1300px, not the full pane. A branch picker stretched to a 1920px monitor puts
+   the "Open branch" button an arm's length from the name it belongs to. */
+.wide { max-width: 1300px; }
+
 .tag2 { width: 70px; height: 70px; border-radius: var(--radius-md); background: var(--color-sage-100);
   display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700;
   color: var(--color-forest-900); flex: 0 0 auto; }
-@media (max-width: 1300px) { .grid2 { grid-template-columns: 1fr; } .tiles { grid-template-columns: repeat(2, 1fr); } }
+
+.bname { display: block; font-size: 22px; font-weight: 600; color: var(--color-forest-900);
+  line-height: 1.25; }
+.bmeta { display: block; font-size: 17px; color: var(--color-ink-600); }
+.bnode { margin-top: 8px; }
+
+.t-s.sub { font-size: 22px; }
+.scoped { font-size: 19px; }
+
+@media (max-width: 1300px) {
+  .grid2 { grid-template-columns: 1fr; }
+  .tiles { grid-template-columns: repeat(2, 1fr); }
+}

@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { Logo } from '../../shared/logo/logo';
 import { describeHttpError } from '../../core/http-error';
+import { homeFor, isClientPath, isConsoleRole } from '../../core/role-home';
 
 @Component({
   selector: 'app-login',
@@ -24,13 +25,20 @@ export class Login {
 
   val(ev: Event): string { return (ev.target as HTMLInputElement).value; }
 
-  /** Each role starts where its work is. Figures 3.1-3.3 are three different jobs. */
+  /**
+   * Each role starts where its work is. Figures 3.1-3.3 are three different
+   * jobs, and homeFor() is now the single place that says so.
+   *
+   * A ?next= is honoured only if the person who just signed in could actually
+   * use it. An administrator bounced off /booking by authGuard used to be sent
+   * back to /booking after signing in - a client screen that is empty for them
+   * by definition, since mine() returns the caller's own appointments.
+   */
   private landing(): string {
-    switch (this.auth.role()) {
-      case 'ADMIN': return '/admin/overview';
-      case 'STAFF': return '/staff/dashboard';
-      default:      return '/home';
-    }
+    const next = this.route.snapshot.queryParamMap.get('next');
+    const role = this.auth.role();
+    if (next && !(isConsoleRole(role) && isClientPath(next))) return next;
+    return homeFor(role);
   }
 
   async submit(): Promise<void> {
@@ -39,8 +47,7 @@ export class Login {
     this.error.set('');
     try {
       await this.auth.login({ email: this.email().trim(), password: this.password() });
-      const next = this.route.snapshot.queryParamMap.get('next');
-      await this.router.navigateByUrl(next ?? this.landing());
+      await this.router.navigateByUrl(this.landing());
     } catch (e: unknown) {
       // The backend deliberately returns the same 401 for an unknown email and
       // a wrong password, so an attacker cannot enumerate accounts. Do not

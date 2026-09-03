@@ -25,7 +25,7 @@
 .dow span { text-align: center; font-size: 14px; font-weight: 600; letter-spacing: .6px;
   color: var(--color-ink-600); }
 
-.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.daygrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .pad { height: 44px; }
 .day { height: 44px; border-radius: 50%; border: 0; background: none; cursor: pointer;
   font: 500 18px/1 var(--font-sans); color: var(--color-ink-900); }

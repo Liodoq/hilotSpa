@@ -39,7 +39,7 @@
     </div>
 
     <aside class="right">
-      <div class="card block">
+      <div class="card stackblk">
         <div>
           <h2 class="bt">Which one bothers you most?</h2>
           @if (ticked().length === 1) {
@@ -60,17 +60,33 @@
           } @empty {
             <p class="help">Tick a condition on the left and it will appear here.</p>
           }
+
+          <!-- Always available, ticked list or not. A client who cannot name
+               their condition is not failing to fill in the form. -->
+          <button type="button" class="opt unsure"
+                  [class.on]="draft().mainComplaint === 'OTHER'"
+                  [attr.aria-pressed]="draft().mainComplaint === 'OTHER'"
+                  (click)="store.setUnsure()">
+            <span class="dot"></span>I am not sure / it is not on this list
+          </button>
         </div>
 
+        <!-- "How long have you had it?" has no subject until a chief complaint
+             exists. It was answerable with nothing ticked, which recorded a
+             duration for a condition the client had not named. -->
         <div>
           <h2 class="bt">How long have you had it?</h2>
-          <div class="chips mt">
+          <div class="chips mt" [class.locked]="!draft().mainComplaint">
             @for (d of durations; track d) {
               <button type="button" class="chip" [class.on]="draft().duration === d"
+                      [disabled]="!draft().mainComplaint"
                       [attr.aria-pressed]="draft().duration === d"
                       (click)="store.patch({ duration: d })">{{ d }}</button>
             }
           </div>
+          @if (!draft().mainComplaint) {
+            <p class="help mt">Pick what bothers you most first — this question is about that one.</p>
+          }
         </div>
       </div>
 

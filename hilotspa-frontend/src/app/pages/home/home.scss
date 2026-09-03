@@ -55,3 +55,87 @@
 }
 .drop.pending b { color: var(--color-ink-600); }
 .drop.none .drop-label { padding-top: 6px; }
+
+
+/* ===========================================================================
+   The vocabulary, 2026-09-02
+   ---------------------------------------------------------------------------
+   Thirty-seven inline style attributes lived in this template and no two of
+   them agreed. The content was never the problem; nothing could be adjusted
+   without editing HTML in seven places, and nothing lined up because nothing
+   shared a definition. Everything below exists to give those a name.
+   =========================================================================== */
+
+/* ---------------------------------------------------------------- the hero
+   The one dark surface a client sees. Its text colours are declared here
+   rather than inherited, for the reason B104 taught: a surface that paints
+   its own background must paint its own text. */
+.hero-copy { min-width: 0; }
+.hero .kicker { color: var(--color-sage-300); }
+.hero .t { color: #fff; margin-top: 6px; }
+.hero .lede { font-size: 21px; color: var(--color-sage-100); margin-top: 10px; max-width: 60ch; }
+
+.t-s.sec-h { margin-bottom: 14px; }
+.t-s.sec-h.tight { margin-bottom: 6px; }
+
+/* ------------------------------------------------------------- the states
+   Loading, unreachable and empty share one shape, so the card does not
+   change size as the answer arrives. Three states, not two: "no upcoming
+   visit" is only true once we have asked and been told so. */
+.state {
+  padding: 28px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+.state.roomy { padding: 34px; gap: 14px; }
+.skelcard { padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+
+/* --------------------------------------------------------- the next visit */
+.visit .what { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.visit .svc { font-size: 25px; font-weight: 600; color: var(--color-forest-900); }
+.visit .meta { font-size: 19px; color: var(--color-ink-600); }
+.visit .pills { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.visit .acts { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
+
+/* ------------------------------------------------------------ the record */
+.tablecard { padding: 6px 22px; }
+.tbl td.when { width: 132px; }
+.tbl td.fig  { width: 132px; text-align: right; }
+.tbl td.act  { text-align: right; white-space: nowrap; }
+.tbl td.act .link-act + .link-act { margin-left: 4px; }
+.tbl td.emptycell { padding: 18px 0; }
+.unbooked { padding: 0 0 14px; }
+
+/* --------------------------------------------------- rating a past visit
+   Opens inside the row it belongs to rather than in a dialog, so the visit
+   being scored stays on screen while you score it. */
+.tbl td.ratecell { padding: 14px 0 20px; }
+.rate { padding: 18px; }
+.rate-why { margin: 4px 0 14px; }
+.rate-area { margin-bottom: 12px; }
+.rate-region { font-size: 15px; margin-bottom: 4px; }
+.rate-region .was { color: var(--color-ink-600); }
+.rate-acts { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+/* -------------------------------------------------- the wellness profile
+   A definition list, because that is what it is: labelled facts read off a
+   record. It was three hand-built div pairs at three different sizes. */
+.profrow { display: flex; gap: 24px; align-items: center; margin-top: 18px; }
+.facts { flex: 1; min-width: 0; margin: 0; display: grid; gap: 3px 0; }
+.facts dt {
+  font-size: 15px; color: var(--color-ink-600);
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.facts dt + dd { margin: 0 0 12px; font-size: 19px; }
+.facts dd:last-child { margin-bottom: 0; }
+.facts dd.big { font-size: 21px; font-weight: 600; color: var(--color-forest-900); }
+.empty-why { margin-top: 14px; }
+.hr.sep { margin: 20px 0; }
+
+@media (max-width: 900px) {
+  .profrow { flex-direction: column; align-items: flex-start; gap: 18px; }
+  .tbl td.when, .tbl td.fig { width: auto; }
+}

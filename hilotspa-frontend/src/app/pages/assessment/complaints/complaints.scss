@@ -2,7 +2,7 @@
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 460px; gap: 22px; align-items: start; }
 .left { display: flex; flex-direction: column; gap: 18px; padding: 26px; }
 .right { display: flex; flex-direction: column; gap: 16px; }
-.block { display: flex; flex-direction: column; gap: 20px; padding: 28px; }
+.stackblk { display: flex; flex-direction: column; gap: 20px; padding: 28px; }
 .bt { font-size: 23px; font-weight: 600; color: var(--color-forest-900); margin: 0; }
 .mt { margin-top: 12px; }
 .others { display: flex; gap: 14px; align-items: center; }
@@ -14,4 +14,38 @@
   .grid4 { grid-template-columns: 1fr; }
   .others { flex-direction: column; align-items: stretch; }
   .othertile { width: 100%; flex: none; }
+}
+
+/* Locked until a chief complaint is picked. Greyed rather than hidden: the
+   question still tells the client what is coming, it just cannot be answered
+   about a condition they have not named yet. */
+.chips.locked .chip { opacity: .45; cursor: not-allowed; }
+.chips.locked .chip:hover { background: #fff; border-color: var(--color-line); }
+.mt { margin-top: 10px; }
+
+/* The escape hatch. Set apart by a rule rather than styled as a condition,
+   because it is not one — it is the honest absence of one. */
+.opt.unsure {
+  margin-top: 14px;
+  padding: 16px 0 0;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+  border-radius: 0;
+  background: none;
+  font-size: 17px;
+  color: var(--color-ink-600);
+  text-align: left;
+}
+.opt.unsure .dot { border-color: var(--color-line); }
+.opt.unsure.on,
+.opt.unsure.on:hover {
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-forest-900);
+  font-weight: 600;
+}
+.opt.unsure.on .dot {
+  background: var(--color-forest-700);
+  border-color: var(--color-forest-700);
 }

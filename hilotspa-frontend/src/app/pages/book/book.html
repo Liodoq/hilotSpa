@@ -3,15 +3,33 @@
   <section class="chatcol">
     <div class="thread" #thread>
       @for (m of messages(); track $index) {
-        <div class="bub" [class.me]="m.mine" [class.them]="!m.mine">
+        @if (m.text) {
+        <div class="bub" [class.me]="m.mine" [class.them]="!m.mine"
+             [class.failed]="!m.mine && m.failed">
           <span [innerHTML]="m.text"></span>
           <div class="meta">{{ m.mine ? 'You' : 'Assistant' }}
-            @if (m.spoken) { · spoken } · {{ m.at }}</div>
+            @if (m.spoken) { · spoken } · {{ m.at }}
+            @if (m.failed) { · could not reach the assistant }</div>
+        </div>
+        }
+      }
+
+      <!-- The assistant is answering. Without this the thread simply sat there:
+           a cold n8n start runs several seconds, and silence after you press
+           Send is indistinguishable from a system that has stopped listening.
+           It occupies the same slot the real reply will, so the thread does not
+           jump when it arrives. -->
+      @if (thinking()) {
+        <div class="bub them typing">
+          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="offscreen" aria-live="polite">The assistant is replying</span>
         </div>
       }
 
       @if (loading()) {
-        <div class="offer"><p class="help">Checking which services suit your assessment…</p></div>
+        <div class="offer"><p class="help">{{ relaxing()
+          ? 'Finding relaxation treatments for you…'
+          : 'Checking which services suit your assessment…' }}</p></div>
       }
 
       <!-- Reached without an assessment: from Home's "book again", from the
@@ -22,21 +40,21 @@
         <div class="offer">
           <div class="help">BEFORE I CAN SUGGEST ANYTHING</div>
           @if (previous(); as p) {
-            <div style="font-size:19px">Your last assessment was on <b>{{ p.date }}</b>
+            <div class="offer-line">Your last assessment was on <b>{{ p.date }}</b>
               @if (p.complaint) { — {{ p.complaint }} }</div>
-            <div style="font-size:17px;color:var(--color-ink-600)">
+            <div class="ctx-dim sm">
               I will copy those answers onto a new record dated today. Nothing old is
               passed off as current, and you can change anything afterwards.</div>
-            <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <div class="offer-acts">
               <button type="button" class="btn btn-primary" [disabled]="reusing()"
                       (click)="useLast()">{{ reusing() ? 'One moment…' : 'Use it' }}</button>
               <button type="button" class="btn btn-quiet" [disabled]="reusing()"
                       (click)="startAssessment()">Answer the form again</button>
             </div>
           } @else {
-            <div style="font-size:19px">I need a short pre-assessment before I can suggest
+            <div class="offer-line">I need a short pre-assessment before I can suggest
               anything — it takes about a minute.</div>
-            <button type="button" class="btn btn-primary" style="align-self:flex-start"
+            <button type="button" class="btn btn-primary leftalign"
                     (click)="startAssessment()">Start the short form</button>
           }
         </div>
@@ -46,20 +64,20 @@
         <div class="offer">
           <div class="help">SUGGESTED FOR YOU</div>
           @for (r of picks(); track r.serviceId) {
-            <div style="display:flex;gap:14px;align-items:flex-start;padding:10px 0">
-              <div class="datechip" style="flex:0 0 44px;padding:8px">
-                <div class="d" style="font-size:22px">{{ r.rank }}</div>
+            <div class="reco">
+              <div class="datechip rank">
+                <div class="d">{{ r.rank }}</div>
               </div>
-              <div style="flex:1;min-width:0">
-                <div style="font-size:21px;font-weight:600;color:var(--color-forest-900)">
+              <div class="reco-body">
+                <div class="reco-name">
                   {{ r.name }}</div>
                 <!-- The spa sells the same treatment at two lengths. Without the
                      minutes the list reads as the same row twice. -->
-                <div style="font-size:17px;color:var(--color-ink-600)">
+                <div class="reco-sub">
                   {{ r.durationMinutes }} minutes@if (r.price > 0) { · ₱{{ r.price }} }</div>
-                <div style="font-size:17px;color:var(--color-ink-600);margin-top:2px">{{ r.reason }}</div>
+                <div class="reco-why">{{ r.reason }}</div>
               </div>
-              <button type="button" class="btn btn-quiet" style="flex:0 0 auto"
+              <button type="button" class="btn btn-quiet holdw"
                       (click)="choose(r.serviceId)">See times</button>
             </div>
           }
@@ -73,7 +91,7 @@
 
       @if (stage() === 'times') {
         <div class="offer">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+          <div class="cardhead">
             <div class="help">OPEN TIMES · {{ focusName() }} · {{ focusMinutes() }} MIN</div>
             <button type="button" class="link-go" (click)="clearFocus()">Choose a different treatment</button>
           </div>
@@ -113,55 +131,80 @@
         </div>
       }
 
-      <!-- Who and where. Optional by design: "Any available" is selected from the
-           start, so a client with no opinion is one tap from booked, exactly as
-           before. A client who cares gets to say so at the moment it matters. -->
-      @if (stage() === 'who' && picked(); as p) {
+      <!-- Confirm, then optionally choose.
+           This used to open with two rows of chips and a Book button, so every
+           client answered a question most of them have no opinion about - and a
+           client who had just said "kayo na ang bahala" was shown a chooser
+           immediately after telling us not to bother them with one. The summary
+           and one Confirm are what almost everybody needs; the chips are one tap
+           away for the client who cares which therapist they get. -->
+      @if (stage() === 'confirm' && picked(); as p) {
         <div class="offer">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
-            <div class="help">{{ p.serviceName }} · {{ p.dayLabel }} {{ p.timeLabel }}</div>
+          <div class="cardhead">
+            <div class="help">READY TO BOOK</div>
             <button type="button" class="link-go" (click)="cancelPick()">Choose a different time</button>
           </div>
 
           @if (loadingOpenings()) {
-            <p class="help" style="margin-top:10px">Checking who is free then…</p>
+            <p class="help checking">Checking who is free then…</p>
           } @else if (openings(); as o) {
-            <div style="margin-top:12px">
-              <div style="font-size:18px;font-weight:600;color:var(--color-forest-900)">Therapist</div>
-              <div class="chips" style="margin-top:6px">
-                <button type="button" class="chip" [class.on]="pickedTherapist() === null"
-                        [disabled]="confirming()"
-                        (click)="pickedTherapist.set(null)">Any available</button>
-                @for (t of o.therapists; track t.id) {
-                  <button type="button" class="chip" [class.on]="pickedTherapist() === t.id"
-                          [disabled]="confirming()"
-                          [attr.aria-label]="'Choose ' + t.firstName"
-                          (click)="pickedTherapist.set(t.id)">
-                    {{ t.firstName }}@if (t.sex) { <span style="opacity:.65">&nbsp;· {{ t.sex }}</span> }
-                  </button>
-                }
-              </div>
-            </div>
+            <dl class="sums">
+              <dt>Treatment</dt>
+              <dd><b>{{ p.serviceName }}</b> · {{ p.durationMinutes }} minutes</dd>
+              <dt>When</dt>
+              <dd><b>{{ p.dayLabel }}, {{ p.timeLabel }}</b></dd>
+              <dt>Price</dt>
+              <dd>
+                @if (p.price) { ₱ {{ p.price }} }
+                @else { <span class="help">Not on file — ask at the counter.</span> }
+              </dd>
+              <dt>Therapist</dt>
+              <dd>{{ therapistLabel(o) }}</dd>
+              <dt>Room</dt>
+              <dd>{{ roomLabel(o) }}</dd>
+            </dl>
 
-            <div style="margin-top:14px">
-              <div style="font-size:18px;font-weight:600;color:var(--color-forest-900)">Room</div>
-              <div class="chips" style="margin-top:6px">
-                <button type="button" class="chip" [class.on]="pickedRoom() === null"
-                        [disabled]="confirming()"
-                        (click)="pickedRoom.set(null)">Any available</button>
-                @for (r of o.rooms; track r.id) {
-                  <button type="button" class="chip" [class.on]="pickedRoom() === r.id"
-                          [disabled]="confirming()"
-                          [attr.aria-label]="'Choose ' + r.name"
-                          (click)="pickedRoom.set(r.id)">{{ r.name }}</button>
-                }
-              </div>
-            </div>
-
-            <button type="button" class="btn btn-primary" style="margin-top:16px"
+            <button type="button" class="btn btn-primary confirmbtn"
                     [disabled]="confirming()" (click)="commitPick()">
-              {{ confirming() ? 'Booking…' : 'Book this time' }}
+              {{ confirming() ? 'Booking…' : 'Confirm booking' }}
             </button>
+
+            @if (!choosing()) {
+              <button type="button" class="link-act pickopen" [disabled]="confirming()"
+                      (click)="choosing.set(true)">I would like to choose my therapist or room</button>
+            } @else {
+              <div class="pickgroup">
+                <div class="pickgroup-h">Therapist</div>
+                <div class="chips pickchips">
+                  <button type="button" class="chip" [class.on]="pickedTherapist() === null"
+                          [disabled]="confirming()"
+                          (click)="pickedTherapist.set(null)">Any available</button>
+                  @for (t of o.therapists; track t.id) {
+                    <button type="button" class="chip" [class.on]="pickedTherapist() === t.id"
+                            [disabled]="confirming()"
+                            [attr.aria-label]="'Choose ' + t.firstName"
+                            (click)="pickedTherapist.set(t.id)">
+                      {{ t.firstName }}@if (t.sex) { <span class="chip-sex">&nbsp;· {{ t.sex }}</span> }
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="pickgroup">
+                <div class="pickgroup-h">Room</div>
+                <div class="chips pickchips">
+                  <button type="button" class="chip" [class.on]="pickedRoom() === null"
+                          [disabled]="confirming()"
+                          (click)="pickedRoom.set(null)">Any available</button>
+                  @for (r of o.rooms; track r.id) {
+                    <button type="button" class="chip" [class.on]="pickedRoom() === r.id"
+                            [disabled]="confirming()"
+                            [attr.aria-label]="'Choose ' + r.name"
+                            (click)="pickedRoom.set(r.id)">{{ r.name }}</button>
+                  }
+                </div>
+              </div>
+            }
             <p class="help">Nothing is charged online — you settle at the counter.</p>
           }
         </div>
@@ -170,26 +213,36 @@
       @if (booked(); as b) {
         <div class="offer">
           <div class="help">BOOKED</div>
-          <div style="font-size:23px;font-weight:600;color:var(--color-forest-900)">
+          <div class="booked-svc">
             {{ b.serviceName }} · {{ b.durationMinutes }} min</div>
-          <div style="font-size:19px;color:var(--color-ink-600);margin-top:4px">
+          <div class="booked-meta">
             {{ b.label }} · {{ b.therapist }} · {{ b.room }}</div>
-          <div style="font-size:21px;font-weight:600;color:var(--color-forest-900);margin-top:8px">
-            ₱ {{ b.price }} · pay at counter</div>
-          <p class="help">To move or cancel this visit, please ask the front desk.</p>
-          <button type="button" class="btn btn-quiet" style="margin-top:8px"
+          <!-- Zero is the ABSENCE of a price, not a price of nothing (B87). The
+               recommendation list above already guards this; this card did not,
+               and quoted a client "₱ 0". -->
+          <div class="bookedprice">
+            @if (b.price > 0) { ₱ {{ b.price }} · pay at counter }
+            @else { Price is not on file — ask at the counter }</div>
+          <!-- B117. This said "please ask the front desk", and it has not been
+               true since cancelling was built: My Bookings carries a Cancel
+               button that calls the API directly. Telling a client to phone the
+               spa for something the screen does it for is worse than saying
+               nothing - it teaches them the system cannot do it. -->
+          <p class="help">Cancel or review this visit any time under
+            <a class="link" routerLink="/booking">My bookings</a>.</p>
+          <button type="button" class="btn btn-quiet again"
                   (click)="bookAnother()">Book another treatment</button>
         </div>
       }
 
       @if (referred()) {
         <div class="offer">
-          <div style="font-size:19px">{{ result()?.note }}</div>
+          <div class="offer-line">{{ result()?.note }}</div>
         </div>
       }
 
       @if (error()) {
-        <div class="offer"><div style="color:var(--color-danger-600)">{{ error() }}</div></div>
+        <div class="offer"><div class="errline">{{ error() }}</div></div>
       }
 
     </div>
@@ -198,8 +251,16 @@
          word by word (SpeechSynthesis boundary events); while the microphone is
          open it shows what is being heard, so a misheard word is visible before
          it is sent. aria-live makes the same information reach a screen reader. -->
-    <div class="subtitle" [class.live]="captionKind() !== 'idle'"
-         role="status" aria-live="polite" aria-atomic="true">
+    <!-- The caption band comes and goes with the voice.
+         It stays in the DOM rather than sitting behind an @if: an aria-live
+         region that is removed and re-added does not announce reliably, and a
+         band that pops in and out shoves the composer up the screen. So it
+         COLLAPSES instead — height and opacity, with its own negative margin
+         cancelling the column gap so the row leaves no trace when shut. -->
+    <div class="capslot" [class.open]="captionKind() !== 'idle'">
+     <div class="capclip">
+      <div class="subtitle" [class.live]="captionKind() !== 'idle'"
+           role="status" aria-live="polite" aria-atomic="true">
       <span class="tag">{{ captionKind() === 'listening' ? 'HEARING' : 'SUBTITLE' }}</span>
       <span class="cap">
         @switch (captionKind()) {
@@ -210,6 +271,8 @@
           @default { {{ subtitle() }} }
         }
       </span>
+      </div>
+     </div>
     </div>
 
     @if (speech.canSpeak || speech.canListen) {
@@ -219,22 +282,24 @@
                   [attr.aria-pressed]="speech.voiceOn()" [attr.aria-label]="voiceLabel()"
                   (click)="toggleVoice()">
             {{ speech.voiceOn() ? 'Voice on' : 'Voice off' }}</button>
-          <button type="button" class="vbtn" [disabled]="!lastSpoken()"
-                  aria-label="Say that again" (click)="repeat()">Say it again</button>
+          @if (speech.voiceOn() && lastSpoken()) {
+            <button type="button" class="vbtn"
+                    aria-label="Say that again" (click)="repeat()">Say it again</button>
+          }
         }
         <!-- Clients code-switch. One button, and both halves of the API follow it. -->
         <button type="button" class="vbtn" aria-label="Change the assistant's language"
                 (click)="toggleLang()">
           {{ speech.lang() === 'fil-PH' ? 'Filipino' : 'English' }}</button>
         @if (!speech.canListen) {
-          <span class="help" style="margin:0">This browser cannot listen — Chrome or Edge can.
+          <span class="help flush">This browser cannot listen — Chrome or Edge can.
             Typing works everywhere.</span>
         }
       </div>
     }
 
     @if (speech.micError()) {
-      <p class="help" role="alert" style="color:var(--color-danger-600);margin:0">
+      <p class="help flush errline" role="alert">
         {{ speech.micError() }}</p>
     }
 
@@ -244,13 +309,13 @@
                 [attr.aria-label]="listening() ? 'Stop listening' : 'Speak your answer'"
                 (click)="toggleMic()"><i></i></button>
       }
-      <input class="input" style="flex:1" [value]="draftText()"
+      <input class="input fillrow" [value]="draftText()"
              (input)="draftText.set(val($event))" (keydown.enter)="send()"
              [placeholder]="speech.canListen
                ? 'Type here, or tap the microphone to speak…'
                : 'Type your message here…'"
              aria-label="Message the booking assistant">
-      <button type="button" class="btn btn-primary" style="flex:0 0 auto"
+      <button type="button" class="btn btn-primary holdw"
               [disabled]="!draftText().trim() || thinking()" (click)="send()">
         {{ thinking() ? '…' : 'Send' }}</button>
     </div>
@@ -258,33 +323,40 @@
 
   <aside class="context">
     <div>
-      <h2 class="t-s" style="font-size:23px">What the assistant is working from</h2>
-      <p class="help" style="margin-top:6px">It never sees a free medical question — only this.</p>
+      <h2 class="t-s ctx-title">What the assistant is working from</h2>
+      <p class="help ctx-why">It never sees a free medical question — only this.</p>
     </div>
 
-    <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:10px">
-      <div class="help">YOUR ASSESSMENT</div>
+    <div class="card ctxpanel">
+      <div class="help">{{ relaxing() ? 'WHY YOU CAME' : 'YOUR ASSESSMENT' }}</div>
       @if (assessment(); as a) {
-        <div style="font-size:19px"><b>{{ a.complaint }}</b>@if (a.duration) { · {{ a.duration }} }</div>
-        <div style="font-size:18px;color:var(--color-ink-600)">
-          {{ a.points.length }} spot{{ a.points.length === 1 ? '' : 's' }} marked
-          @if (a.before !== null) { · worst severity {{ a.before }} }
-        </div>
+        <div class="ctx-line"><b>{{ a.complaint }}</b>@if (a.duration) { · {{ a.duration }} }</div>
+        <!-- A relaxation visit skips the body map on purpose, so "0 spots
+             marked" here is the screen reporting a gap in a form the client was
+             never shown - and reporting it as though something were missing. -->
+        @if (!relaxing()) {
+          <div class="ctx-dim">
+            {{ a.points.length }} spot{{ a.points.length === 1 ? '' : 's' }} marked
+            @if (a.before !== null) { · worst severity {{ a.before }} }
+          </div>
+        } @else {
+          <div class="ctx-dim">No pain map — this visit is for relaxation.</div>
+        }
         @if (a.notes) { <div><span class="pill warn">{{ a.notes }}</span></div> }
       } @else {
-        <div style="font-size:18px;color:var(--color-ink-600)">No assessment loaded.</div>
+        <div class="ctx-dim">No assessment loaded.</div>
       }
     </div>
 
-    <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:10px">
+    <div class="card ctxpanel">
       <div class="help">SERVICES IT MAY OFFER</div>
-      <div style="font-size:18px">{{ allowedCount() }} of {{ allowedCount() + excludedCount() }}</div>
+      <div class="ctx-line">{{ allowedCount() }} of {{ allowedCount() + excludedCount() }}</div>
       @if (excludedCount() > 0) {
-        <div style="font-size:17px;color:var(--color-danger-600)">
+        <div class="ctx-bad">
           {{ excludedCount() }} excluded before the assistant was asked</div>
       }
       @if (rejectedCount() > 0) {
-        <div style="font-size:17px;color:var(--color-danger-600)">
+        <div class="ctx-bad">
           {{ rejectedCount() }} of its answers discarded — not on the approved list</div>
       }
       @if (result(); as r) {
@@ -292,15 +364,15 @@
       }
     </div>
 
-    <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:10px">
+    <div class="card ctxpanel">
       <div class="help">AVAILABILITY IT CAN SEE</div>
-      <div style="font-size:18px">Only times when a therapist and a room are both free,
+      <div class="ctx-line">Only times when a therapist and a room are both free,
         in the next 7 days.</div>
-      <div style="font-size:17px;color:var(--color-ink-600)">
+      <div class="ctx-dim sm">
         It cannot offer a time that is not on that list.</div>
     </div>
 
-    <div class="note" style="margin-top:auto"><span class="b"></span>
+    <div class="note pushdown"><span class="b"></span>
       <span>Every suggestion is checked against the real service list before you see it. If it cannot
       be matched, it is discarded and logged.</span>
     </div>

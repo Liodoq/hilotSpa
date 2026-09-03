@@ -2,7 +2,7 @@
   <button bar type="button" class="btn btn-primary btn-sm" (click)="add()">Add an account</button>
 
   <div class="stack">
-    <div class="head">
+    <div class="phead">
       <h1 class="t">Accounts</h1>
       <p class="s">Staff and administrator accounts are created here. Nobody can register themselves
         into a role — the public sign-up form has no role field at all.</p>
@@ -20,10 +20,10 @@
           load no therapists, no rooms and no schedule at all.</span></div>
     }
 
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <div class="rowbar toolbar">
       <span class="help">{{ counts().total }} accounts · {{ counts().staff }} staff ·
         {{ counts().admin }} admin{{ counts().disabled ? ' · ' + counts().disabled + ' disabled' : '' }}</span>
-      <input class="input sm" style="max-width:420px" [value]="q()" (input)="q.set(val($event))"
+      <input class="input sm search" [value]="q()" (input)="q.set(val($event))"
              placeholder="Search by name or email…" aria-label="Search accounts">
       <div class="chips" role="group" aria-label="Filter by role">
         @for (r of roles; track r) {
@@ -33,12 +33,12 @@
       </div>
     </div>
 
-    <div class="card" style="padding:8px 22px">
+    <div class="card tablecard">
       <table class="tbl">
         <tr><th style="width:280px">NAME</th><th style="width:320px">EMAIL</th><th style="width:170px">ROLE</th>
             <th style="width:210px">BRANCH</th><th style="width:140px">STATUS</th><th></th></tr>
         @for (a of shown(); track a.id) {
-          <tr [style.opacity]="a.enabled ? 1 : 0.6">
+          <tr [class.off]="!a.enabled">
             <td><b>{{ name(a) }}</b></td>
             <td>{{ a.email }}</td>
             <td><span class="pill" [class.bad]="a.role === 'ADMIN'" [class.warn]="a.role === 'STAFF'"
@@ -46,14 +46,14 @@
             <td>{{ branchName(a.branchId) }}</td>
             <td><span class="pill" [class.ok]="a.enabled" [class.mute]="!a.enabled">
               {{ a.enabled ? 'Enabled' : 'Disabled' }}</span></td>
-            <td style="text-align:right">
+            <td>
               <button type="button" class="link-act" (click)="edit(a)">Edit</button>
-              <button type="button" class="link-act" style="margin-left:6px" [disabled]="saving() === a.id"
+              <button type="button" class="link-act" [disabled]="saving() === a.id"
                 (click)="toggleEnabled(a)">{{ a.enabled ? 'Disable' : 'Enable' }}</button></td>
           </tr>
         } @empty {
-          <tr><td colspan="6" style="text-align:center;color:var(--color-ink-600)">
-            {{ loading() ? 'Loading…' : 'No account matches that.' }}</td></tr>
+          <tr><td class="no" colspan="6">
+            {{ loading() ? 'Loading the account list…' : 'No account matches that search.' }}</td></tr>
         }
       </table>
     </div>

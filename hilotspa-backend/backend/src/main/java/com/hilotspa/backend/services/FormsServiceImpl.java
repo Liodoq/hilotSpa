@@ -126,9 +126,29 @@ public class FormsServiceImpl implements FormsService {
         Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Branch not found"));
-        User user = ownerId == null ? null : userRepository.findById(ownerId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "User not found"));
+        // A missing user means two completely different things, and answering
+        // both with 400 is what made B107 take an evening to find.
+        //
+        // If it is the CALLER'S OWN id, their token outlived their row - the
+        // database was reset while the browser kept a perfectly valid JWT. That
+        // is an authentication problem, and 401 is the answer: the interceptor
+        // clears the session and the client signs in again. Returning 400 sent
+        // them a bare "Bad Request" at step 5 of a five-step form, with every
+        // read on the site still working, which points at the data they just
+        // typed instead of at the session.
+        //
+        // If it is SOMEBODY ELSE'S id - an administrator recording on behalf of
+        // a client - then the body really is wrong, and 400 is right.
+        User user = null;
+        if (ownerId != null) {
+            final UUID lookFor = ownerId;
+            user = userRepository.findById(lookFor).orElseThrow(() -> lookFor.equals(actorId)
+                    ? new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                            "Your session belongs to an account that no longer exists. "
+                            + "Please sign in again.")
+                    : new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "User not found"));
+        }
 
         requireComplaintWhenInPain(model);
 

@@ -75,7 +75,7 @@
     font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
     color: var(--color-ink-600); text-align: center; padding-bottom: 4px;
   }
-  .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .calgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 
   /* ------------------------------------------------------------ a square
      Three things, in reading order: the number, how loaded the day is, and

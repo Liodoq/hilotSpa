@@ -1,14 +1,100 @@
 :host { display: block; min-height: 100dvh; background: var(--color-cream); }
 .wrap { padding: 36px 48px 56px; display: flex; justify-content: center; }
-.col { width: 100%; max-width: 1400px; display: flex; flex-direction: column; gap: 22px; }
-.hero { display: flex; gap: 20px; align-items: center; }
-.check { width: 84px; height: 84px; border-radius: 50%; background: var(--color-forest-700);
-  flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
-.check i { width: 32px; height: 17px; border-left: 6px solid #fff; border-bottom: 6px solid #fff;
-  transform: rotate(-45deg) translate(3px, -5px); display: block; }
-.cols { display: grid; grid-template-columns: minmax(0, 1fr) 460px; gap: 22px; align-items: start; }
-.refbar { background: var(--color-forest-900); color: #fff; padding: 22px 30px;
-  display: flex; align-items: center; justify-content: space-between; }
-.k { width: 210px; color: var(--color-ink-600); }
-@media (max-width: 1200px) { .cols { grid-template-columns: 1fr; } }
-@media (max-width: 800px) { .wrap { padding: 20px; } .k { width: 130px; } }
+.col { width: 100%; max-width: 1100px; display: flex; flex-direction: column; gap: 22px; }
+.loadline { padding: 24px; }
+
+.phead { display: flex; flex-direction: column; gap: 6px; }
+.phead .s { color: var(--color-ink-600); font-size: 19px; margin: 0; max-width: 68ch; }
+
+/* ---------------------------------------------------------------- the visits
+
+   One shape for every upcoming visit. The next one is heavier - a forest rule
+   down its left edge and a "Next visit" pill - but it is the SAME object, so a
+   client with four bookings reads four rows instead of one poster and a list.
+   That was the whole complaint: the page was built around having exactly one. */
+.visits { list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 14px; }
+
+.vcard {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: start;
+  background: #fff;
+  border: 1px solid var(--color-sage-200);
+  border-left: 4px solid var(--color-sage-200);
+  border-radius: 14px;
+  padding: 20px 24px;
+}
+.vcard.next { border-left-color: var(--color-forest-700); box-shadow: 0 1px 3px rgb(0 0 0 / 6%); }
+
+/* The date column. Four facts stacked, because the eye finds a day number far
+   faster than it parses "Fri 4 Sep, 11:00 AM" - and this is the column you
+   scan down when you are looking for one particular visit. */
+.when { display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding-top: 2px; }
+.when .dow { font-size: 15px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--color-ink-600); }
+.when .dnum { font-size: 42px; line-height: 1.05; font-weight: 600;
+  color: var(--color-forest-900); }
+.when .mon { font-size: 17px; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--color-ink-600); }
+.when .at { margin-top: 6px; font-size: 19px; font-weight: 600;
+  color: var(--color-forest-900); }
+
+.what { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.what .pill { align-self: flex-start; margin-bottom: 4px; }
+.svc { margin: 0; font-size: 25px; font-weight: 600; color: var(--color-forest-900); }
+.meta { margin: 0; font-size: 18px; color: var(--color-ink-600); }
+.refline { margin: 8px 0 0; font-size: 16px; color: var(--color-ink-600);
+  display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline; }
+.refline .sep { color: var(--color-sage-300); }
+.refline .unpriced { color: var(--color-clay-700, var(--color-ink-600)); }
+
+.acts { display: flex; flex-direction: column; gap: 10px; align-items: stretch;
+  min-width: 190px; }
+
+/* The cancel confirmation opens INSIDE the card it belongs to, so it can never
+   be unclear which visit is about to go. */
+.sure { background: var(--color-cream); border: 1px solid var(--color-sage-200);
+  border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.sure-q { margin: 0; font-size: 18px; font-weight: 600; color: var(--color-forest-900); }
+.sure-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Advice, not data — closed by default because it is the same four lines every
+   visit. It used to be a card of equal weight beside the booking, which is what
+   made the page read as two competing columns. */
+.prep { border: 1px solid var(--color-sage-200); border-radius: 12px;
+  background: #fff; padding: 4px 20px; }
+.prep summary { cursor: pointer; padding: 14px 0; font-size: 19px; font-weight: 600;
+  color: var(--color-forest-900); }
+.prep ul { margin: 0 0 16px; padding-left: 22px; display: flex; flex-direction: column;
+  gap: 6px; font-size: 18px; color: var(--color-ink-600); }
+
+.pageacts { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.pageacts .help { max-width: 60ch; margin: 0; }
+
+.empty { max-width: 640px; margin: 40px auto 0; padding: 32px; text-align: center;
+  display: flex; flex-direction: column; gap: 10px; align-items: center; }
+
+/* --------------------------------------------------------------- the history
+
+   The footnote exists because a visit nobody closed off used to read as the raw
+   enum CONFIRMED weeks after the fact, which tells a client nothing and quietly
+   blames them for a gap that is the spa's to fill (B101/B102). */
+.hist { margin-top: 26px; }
+.hist-note { margin: 10px 0 0; max-width: 68ch; line-height: 1.5; }
+.histcard { padding: 8px 22px; overflow-x: auto; }
+.c-when { width: 230px; }
+.c-who { width: 200px; }
+.c-stat { width: 150px; }
+
+@media (max-width: 900px) {
+  .vcard { grid-template-columns: 84px minmax(0, 1fr); }
+  .acts { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; min-width: 0; }
+  .sure { flex-basis: 100%; }
+}
+@media (max-width: 800px) {
+  .wrap { padding: 20px; }
+  .when .dnum { font-size: 34px; }
+}

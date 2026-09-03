@@ -83,6 +83,7 @@ export class Review {
     if (problem) { this.error.set(problem); return; }
     this.busy.set(true);
     this.error.set('');
+    let usedBranch: string | null = null;
     try {
       // branchId comes from the token for staff; a customer has none, so we
       // fall back to the first branch. When multi-branch selection ships this
@@ -92,7 +93,19 @@ export class Review {
         const branches = await this.api.branches();
         branchId = branches[0]?.id ?? null;
       }
+      usedBranch = branchId;
       if (!branchId) throw new Error('no-branch');
+
+      // The server refuses a PAIN assessment with no chief complaint, and it is
+      // right to: every contraindication rule is keyed to a condition. Catch it
+      // here so the client is told WHICH step to go back to, instead of being
+      // handed a 400 at the end of a five-step form (B105).
+      const d = this.store.draft();
+      if (d.intent === 'PAIN' && !d.mainComplaint && !d.mainComplaintOther?.trim()) {
+        this.error.set('Please choose what bothers you most on step 3 — or pick '
+          + '"I am not sure" there if you cannot say.');
+        return;
+      }
 
       // Keep the saved id: the assistant needs a real Forms row to read the
       // pain points and the ServiceProtocol rules from.
@@ -103,7 +116,13 @@ export class Review {
       // that is where a completed assessment goes.
       await this.router.navigateByUrl(saved?.id ? `/book?formId=${saved.id}` : '/book');
     } catch (e: unknown) {
+      // The BODY, not just the wrapper. e.error is where Spring puts the
+      // reason, and it was being swallowed by the default console rendering.
       console.error('[review] submit failed', e);
+      console.error('[review] server said:',
+        JSON.stringify((e as { error?: unknown })?.error, null, 2));
+      console.error('[review] we sent:',
+        JSON.stringify(this.store.toFormsModel(usedBranch), null, 2));
       this.error.set(describeHttpError(e, 'We could not save your assessment.'));
     } finally {
       this.busy.set(false);

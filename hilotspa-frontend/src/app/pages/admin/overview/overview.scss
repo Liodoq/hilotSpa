@@ -1,6 +1,25 @@
+/* The console vocabulary is in styles.scss under `.dash`. Only what is true of
+   THIS page lives here.
+
+   A1 is the one screen that answers "is the system fit to be evaluated?", so
+   its order is deliberate: the counts, then readiness, then the nodes, then the
+   evidence. Readiness sits second because this system degrades QUIETLY by
+   design — when Vertex or n8n dies the client still gets a sensible answer, and
+   nothing else on this page would say so. */
 :host { display: block; }
 .stack { display: flex; flex-direction: column; gap: 20px; }
 .cols { display: grid; grid-template-columns: minmax(0, 1fr) 460px; gap: 20px; align-items: start; }
-.figN { font-size: 32px; font-weight: 600; color: var(--color-forest-900); line-height: 1.1; }
-.figN.stale { color: var(--color-ink-600); }
-@media (max-width: 1400px) { .cols, .grid2 { grid-template-columns: 1fr; } .tiles { grid-template-columns: repeat(2, 1fr); } }
+
+.t-s.sub { font-size: 22px; }
+.start { align-self: flex-start; }
+
+.hsummary { font-size: 19px; }
+.runline { font-size: 18px; color: var(--color-ink-600); }
+
+.nodecard { border-width: 2.5px; border-color: var(--color-forest-700); }
+.nodename { font-size: 24px; font-weight: 600; color: var(--color-forest-900); }
+
+@media (max-width: 1400px) {
+  .cols, .grid2 { grid-template-columns: 1fr; }
+  .tiles { grid-template-columns: repeat(2, 1fr); }
+}

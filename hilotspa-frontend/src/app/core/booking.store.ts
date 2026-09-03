@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { FormsApi } from './forms.api';
-import { BookingModel, FormsModel, PRESSURES, safetyFlagLabel } from './models';
+import { AssessmentIntent, BookingModel, FormsModel, PRESSURES, safetyFlagLabel } from './models';
 import { PainPoint } from './assessment.store';
 
 /**
@@ -32,6 +32,16 @@ export interface UpcomingVisit {
 
 export interface SessionLog {
   id: string;
+  /**
+   * PAIN or LEISURE — why the client came, as they answered it themselves.
+   *
+   * It was dropped in toLog(), which is why the booking assistant greeted a
+   * client who had tapped "I am here to relax" with "Based on your assessment":
+   * the only record the screen had of them no longer said which path they took.
+   * `complaint` already encodes it as the string "Here to relax", but reading
+   * intent back out of a display label is how a UI ends up matching on prose.
+   */
+  intent: AssessmentIntent;
   /** H9 - the safety checklist as ticked, so the record and the printed sheet
    *  can show what the practitioner was working around. */
   flags: string[];
@@ -227,6 +237,7 @@ function toLog(f: FormsModel): SessionLog {
         after: p.painScoreAfter ?? null,
       })),
     id: f.id ?? '',
+    intent: f.intent,
     flags: (f.safetyFlags ?? []).map(safetyFlagLabel),
     pressure: f.pressurePreference
       ? (PRESSURES.find(p => p.value === f.pressurePreference)?.label ?? null)

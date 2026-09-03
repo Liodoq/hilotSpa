@@ -358,23 +358,26 @@ public class BookingServiceImpl implements BookingService {
         return toDto(saved);
     }
 
+    /**
+     * The CALLER'S OWN appointments. Never anyone else's, whatever their role.
+     *
+     * This used to branch: an ADMIN got findAll() and STAFF got their whole
+     * branch. That contradicted the method's own name and its controller's own
+     * comment, and it had a visible consequence - /booking is a CLIENT screen
+     * and renders this list as "You have 2 visits booked", so an administrator
+     * signing in was shown a named client's visit, therapist and room labelled
+     * as their own. (B101, reported by Liodoq with both windows side by side.)
+     *
+     * Staff and administrators have schedule() and schedule/month for the
+     * branch view; those are the routes with the branch rules on them. Role
+     * must never widen a query whose name says "mine".
+     */
     @Override
     public List<Booking> mine() {
         UUID me = CurrentUser.id().orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.UNAUTHORIZED, "Not authenticated"));
 
-        List<Appointment> found;
-        if (CurrentUser.isAdmin()) {
-            found = appointmentRepository.findAll();
-        } else if (CurrentUser.hasRole(Role.STAFF)) {
-            UUID branch = CurrentUser.branchId().orElseThrow(() ->
-                    new ResponseStatusException(HttpStatus.FORBIDDEN,
-                            "Staff account has no branch assigned"));
-            found = appointmentRepository.findByBranchId(branch);
-        } else {
-            // A customer sees their own and nothing else. Same rule as forms.
-            found = appointmentRepository.findByCustomerId(me);
-        }
+        List<Appointment> found = appointmentRepository.findByCustomerId(me);
 
         return found.stream()
                 .sorted((a, b) -> b.getStartTime().compareTo(a.getStartTime()))

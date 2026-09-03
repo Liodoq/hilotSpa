@@ -1,7 +1,13 @@
 :host { display: block; min-height: 100dvh; background: var(--color-cream); }
 .split { display: grid; grid-template-columns: minmax(0, 1fr) 500px;
   height: calc(100dvh - 96px); min-height: 0; }
-.chatcol { display: flex; flex-direction: column; min-width: 0; padding: 24px 36px 22px; gap: 16px; }
+/* min-height: 0 is load-bearing. A grid item defaults to min-height: auto,
+   which means it REFUSES to shrink below its content — so .thread's
+   overflow-y: auto never engaged, the column grew to fit every message, and
+   the composer was pushed off the bottom of the page. */
+.chatcol { display: flex; flex-direction: column; min-width: 0; min-height: 0;
+           padding: 24px 36px 22px; gap: 16px; }
+.composer { flex: 0 0 auto; }
 .thread { flex: 1; min-height: 0; overflow-y: auto; }
 .composer { display: flex; gap: 14px; align-items: center; }
 .context { background: #fff; border-left: 1.5px solid var(--color-line); padding: 24px 26px;
@@ -12,8 +18,35 @@
 }
 
 /* ---- 2.6 voice + subtitles ------------------------------------------------
-   The band is always present so the layout never jumps between speaking and
-   silent; .live only brightens it. .cap b is the part already spoken. */
+   The band used to be permanent, on the argument that a fixed row means the
+   layout never jumps. That was the wrong trade: it left the last sentence the
+   assistant said sitting on screen indefinitely, so a client reading it had no
+   way to tell live speech from a leftover.
+
+   It collapses now — grid rows 0fr to 1fr, which animates to the content's own
+   height without anyone having to guess a pixel value. The negative margin is
+   the load-bearing part: .chatcol lays its children out with `gap: 16px`, so a
+   zero-height child still costs a gap on each side. -16px when shut cancels
+   one of them, and the row leaves no trace.
+
+   It stays in the DOM rather than behind an @if because an aria-live region
+   that is removed and re-added does not announce reliably. */
+.capslot {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin-bottom: -16px;
+  transition: grid-template-rows .3s var(--ease),
+              opacity .18s ease,
+              margin-bottom .3s var(--ease);
+}
+.capslot.open { grid-template-rows: 1fr; opacity: 1; margin-bottom: 0; }
+.capclip { overflow: hidden; min-height: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .capslot { transition: none; }
+}
+
 .subtitle { transition: background .2s ease; }
 .subtitle.live { background: var(--color-forest-700); }
 .subtitle .cap { min-height: 1.4em; }
@@ -116,3 +149,140 @@
   background: var(--color-line);
 }
 .chip.time { font-variant-numeric: tabular-nums; }
+
+.bookedprice { font-size: 21px; font-weight: 600; color: var(--color-forest-900); margin-top: 8px; }
+
+/* A turn where the assistant never reached the model. Marked, not hidden: it
+   sits above a real answer and must not read as one. */
+.bub.failed { border-style: dashed; border-color: var(--color-gold-500); background: #FDFBF4; }
+.bub.failed .meta { color: var(--color-gold-700); }
+
+/* ===========================================================================
+   The vocabulary, 2026-09-02
+   ---------------------------------------------------------------------------
+   Forty-seven inline style attributes lived in this template, at five
+   different font sizes for what turned out to be three roles. The content was
+   never the problem — nothing could be adjusted without editing HTML in a
+   dozen places, and nothing lined up because nothing shared a definition.
+
+   Names are deliberately specific to this screen. `row`, `grid`, `panel` and
+   friends are already taken globally or by Tailwind, and a short name in a
+   stylesheet eventually means two things (B96, B108).
+   =========================================================================== */
+
+/* ------------------------------------------------------- the offer blocks
+   Reuse a previous assessment, refer to the practitioner, or explain why the
+   assistant cannot suggest anything yet. Three states, one shape. */
+.offer-line { font-size: 19px; }
+.offer-sub  { font-size: 17px; color: var(--color-ink-600); }
+.offer-acts { display: flex; gap: 12px; flex-wrap: wrap; }
+/* holdw / fillrow / leftalign, and the ugly names are the point.
+   These were `.fixed`, `.grow` and `.start`. `fixed` and `grow` are TAILWIND
+   UTILITIES, and in Tailwind 4 the generator scans templates — so writing
+   class="btn fixed" did not merely risk colliding with an existing rule, it
+   MADE Tailwind emit `position: fixed` and every "See times" button escaped
+   the layout and stacked over the composer. Third time this class of bug has
+   landed (B96, B108). See the audit added in scripts/. */
+.leftalign { align-self: flex-start; }
+.holdw   { flex: 0 0 auto; }
+.fillrow { flex: 1; min-width: 0; }
+.errline { color: var(--color-danger-600); }
+.flush { margin: 0; }
+
+/* --------------------------------------------------- a ranked suggestion
+   Rank, then what it is, then why — in that order, because "why" is the part
+   a client actually weighs and it should be the last thing read. */
+.reco { display: flex; gap: 14px; align-items: flex-start; padding: 10px 0; }
+.reco .datechip.rank { flex: 0 0 44px; padding: 8px; }
+.reco .datechip.rank .d { font-size: 22px; }
+.reco-body { flex: 1; min-width: 0; }
+.reco-name { font-size: 21px; font-weight: 600; color: var(--color-forest-900); }
+.reco-sub  { font-size: 17px; color: var(--color-ink-600); }
+.reco-why  { font-size: 17px; color: var(--color-ink-600); margin-top: 2px; }
+
+.cardhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+
+/* ------------------------------------------- choosing a therapist and room
+   Offered only after a time is settled, because who is free depends on when.
+   Nothing is held while the client decides — a choice that has just gone
+   returns an honest refusal rather than a lock nobody asked for. */
+.checking { margin-top: 10px; }
+.pickgroup { margin-top: 12px; }
+.pickgroup + .pickgroup { margin-top: 14px; }
+.pickgroup-h { font-size: 18px; font-weight: 600; color: var(--color-forest-900); }
+.pickchips { margin-top: 6px; }
+.chip-sex { color: var(--color-ink-600); }
+.confirmbtn { margin-top: 16px; }
+
+/* --------------------------------------------------------- the booked card */
+.booked-svc  { font-size: 23px; font-weight: 600; color: var(--color-forest-900); }
+.booked-meta { font-size: 19px; color: var(--color-ink-600); margin-top: 4px; }
+.again { margin-top: 8px; }
+
+/* ------------------------------------------------------------- the rail
+   What the assistant is working from. This column IS the safety argument
+   made visible: the model never sees a free medical question, only these
+   three panels, and it cannot offer a time that is not on that list. */
+.ctx-title { font-size: 23px; }
+.ctx-why { margin-top: 6px; }
+.ctxpanel { padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.ctx-line { font-size: 18px; }
+.ctx-dim  { font-size: 18px; color: var(--color-ink-600); }
+.ctx-dim.sm { font-size: 17px; }
+.ctx-bad  { font-size: 17px; color: var(--color-danger-600); }
+.pushdown { margin-top: auto; }
+
+@media (max-width: 720px) {
+  .reco { flex-wrap: wrap; }
+  .reco .btn { width: 100%; }
+}
+
+/* The confirm summary — a definition list, because that is what it is: five
+   labelled facts, not a table and not a paragraph. Grid keeps the values on one
+   optical column without a wrapper element per row. */
+.sums {
+  display: grid;
+  grid-template-columns: minmax(0, 8.5rem) 1fr;
+  gap: 10px 18px;
+  align-items: baseline;
+  margin: 4px 0 16px;
+}
+.sums dt {
+  font-size: 15px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-ink-600);
+}
+.sums dd { margin: 0; font-size: 19px; color: var(--color-ink-900); }
+
+/* The way out to the chips. Quiet on purpose: it is the minority path, and a
+   second button of equal weight beside Confirm would reintroduce the choice
+   this stage exists to remove. */
+.pickopen { display: block; margin-top: 12px; }
+
+@media (max-width: 640px) {
+  .sums { grid-template-columns: 1fr; gap: 2px 0; }
+  .sums dd { margin-bottom: 10px; }
+}
+
+/* The replying indicator. Three dots on the assistant's own bubble, in the slot
+   the reply will occupy, so nothing shifts when it lands. */
+.bub.typing { display: inline-flex; align-items: center; min-height: 0;
+  padding-top: 18px; padding-bottom: 18px; }
+.dots { display: inline-flex; gap: 6px; align-items: center; }
+.dots i {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--color-sage-300);
+  animation: bubdot 1.2s ease-in-out infinite;
+}
+.dots i:nth-child(2) { animation-delay: .18s; }
+.dots i:nth-child(3) { animation-delay: .36s; }
+@keyframes bubdot {
+  0%, 60%, 100% { opacity: .35; transform: translateY(0); }
+  30%           { opacity: 1;   transform: translateY(-3px); }
+}
+
+/* Motion here is decoration; the bubble alone already says "replying". */
+@media (prefers-reduced-motion: reduce) {
+  .dots i { animation: none; opacity: .6; }
+}

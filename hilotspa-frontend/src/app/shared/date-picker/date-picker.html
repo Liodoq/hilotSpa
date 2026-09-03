@@ -24,7 +24,7 @@
       @for (d of dow; track d) { <span>{{ d }}</span> }
     </div>
 
-    <div class="grid">
+    <div class="daygrid">
       @for (c of cells(); track $index) {
         @if (c === null) { <span class="pad"></span> }
         @else {

@@ -1,7 +1,7 @@
 /* Almost nothing lives here on purpose.
 
    /account and /profile are one surface with two routes, and the surface is
-   defined once in styles.scss under `.me`. Component styles are scoped, so a
+   defined once in styles.scss under `.myinfo`. Component styles are scoped, so a
    rule written here could never reach /profile — which is exactly how the two
    pages drifted apart in the first place.
 
@@ -9,4 +9,4 @@
 
 /* The skeletons stand in for the two grids while /me is in flight. Without a
    height they collapse and the page still jumps, which defeats them. */
-.me .skel + .skel { margin-top: 10px; }
+.myinfo .skel + .skel { margin-top: 10px; }

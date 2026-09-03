@@ -120,6 +120,30 @@ export class AssessmentStore {
   }
 
   /** Maps the draft onto the exact shape FormsController expects. */
+  /**
+   * "I am not sure" — a first-class answer, not a gap.
+   *
+   * Step 2 already recorded WHERE it hurts, with severity and quality. Step 3
+   * asks WHAT the condition is, and a client who cannot pick between
+   * Spondylosis and Radiculopathy is not failing to fill in a form: they are
+   * being asked to self-diagnose by a system that says, on the same screen,
+   * that it does not diagnose. B75 puts a number on it - "Others" is 28 of 137
+   * real archived records, tied with Lower Back Pain as the commonest entry.
+   *
+   * Recorded as OTHER with the words "Not stated" rather than left null, so the
+   * record can tell "they could not say" from "we never asked". Null would also
+   * be refused by the server, and correctly: a chief complaint of nothing is
+   * what the contraindication filter has nothing to check against.
+   */
+  setUnsure(): void {
+    this.draft.update(d => ({
+      ...d,
+      complaints: d.complaints.includes('OTHER') ? d.complaints : [...d.complaints, 'OTHER'],
+      mainComplaint: 'OTHER',
+      mainComplaintOther: d.mainComplaintOther?.trim() || 'Not stated',
+    }));
+  }
+
   toFormsModel(branchId: string | null): FormsModel {
     const d = this.draft();
     const points: PatientIntakeModel[] = d.points.map(p => ({

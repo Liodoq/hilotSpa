@@ -11,3 +11,12 @@
 .menu .danger:hover { background: #F7E7E3; }
 .menu .hr { margin: 6px 10px; }
 .scrim { position: fixed; inset: 0; z-index: 10; background: transparent; border: 0; cursor: default; }
+
+/* The signed-in person's name. Was an inline style; it is now beside a
+   "back to the console" button on the public pages, so it needs to hold its
+   own width rather than be re-declared at each call site. */
+.whoami { font-size: 19px; font-weight: 500; white-space: nowrap; }
+
+@media (max-width: 900px) {
+  .account .btn-quiet { display: none; }   /* the avatar menu still has it */
+}
