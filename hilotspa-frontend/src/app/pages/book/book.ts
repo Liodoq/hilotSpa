@@ -351,9 +351,24 @@ export class Book implements OnDestroy {
     this.toast.show(on ? 'The assistant will speak' : 'The assistant will stay quiet');
   }
 
+  /**
+   * The language the assistant must WRITE in, from the same chip that sets the
+   * voice.
+   *
+   * Task 59. The chip only ever configured speech synthesis and recognition,
+   * so it could read "English" while the reply came back in Filipino - the
+   * agent was mirroring the client's last message and nothing had ever told it
+   * otherwise. A setting the client can see must be the setting that applies.
+   */
+  protected wantLang(): 'en' | 'fil' {
+    return this.speech.lang() === 'fil-PH' ? 'fil' : 'en';
+  }
+
   toggleLang(): void {
     const next = this.speech.toggleLang();
-    this.toast.show(next === 'fil-PH' ? 'Filipino / Taglish' : 'English');
+    this.toast.show(next === 'fil-PH'
+      ? 'Filipino / Taglish - the assistant will write and speak in Filipino'
+      : 'English - the assistant will write and speak in English');
   }
 
   /** Say the last line again from the start. */
@@ -462,7 +477,7 @@ export class Book implements OnDestroy {
 
     this.thinking.set(true);
     try {
-      const res = await this.api.chat(id, v, this.focus());
+      const res = await this.api.chat(id, v, this.focus(), this.wantLang());
       this.slots.set(res.slots ?? []);
       if (res.replyServiceId) this.focus.set(res.replyServiceId);
       // An empty reply is not a silent assistant - it is the server declining to
@@ -652,7 +667,8 @@ export class Book implements OnDestroy {
   /** Re-ask the assistant for this treatment's calendar, without a new message. */
   private async refreshTimes(formId: string, serviceId: string): Promise<void> {
     try {
-      const res = await this.api.chat(formId, 'What times are still open?', serviceId);
+      const res = await this.api.chat(formId, 'What times are still open?', serviceId,
+                                     this.wantLang());
       this.slots.set(res.slots ?? []);
     } catch {
       // The times on screen are now stale but harmless: every one of them is

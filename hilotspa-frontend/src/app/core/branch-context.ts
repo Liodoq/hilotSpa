@@ -11,14 +11,42 @@ import { Branch } from './models';
  * signed token on the server, so there is nothing here for them to set and
  * nothing a request could carry that would change it.
  *
- * Held in memory on purpose. Persisting it would mean an administrator returns
- * tomorrow still silently scoped to one branch, and every figure they read
- * would be a subset they did not ask for.
+ * Kept in sessionStorage, which is the distinction that matters.
+ *
+ * This was held in memory only, with the reasoning that persisting it would
+ * mean "an administrator returns tomorrow still silently scoped to one branch,
+ * and every figure they read would be a subset they did not ask for". That is
+ * right about TOMORROW and wrong about ten seconds later: any reload dropped
+ * the branch mid-task, and the screens then made no sense - the header still
+ * read BRANCH VIEW while Record a walk-in said there was no branch to record
+ * against. Losing state silently is its own kind of wrong answer.
+ *
+ * sessionStorage separates the two cases exactly: it survives a reload and a
+ * navigation, and it is gone when the tab or the browser closes. So a refresh
+ * keeps you where you were, and coming back tomorrow starts at all branches.
+ *
+ * Not a secret, and not a permission. The SERVER ignores branchId for any
+ * caller who is not an administrator, so a tampered value buys nothing - which
+ * is what BranchScopingTest covers.
  */
+const KEY = 'hilotspa.branchctx';
+
+function restore(): Branch | null {
+  try {
+    const raw = sessionStorage.getItem(KEY);
+    return raw ? JSON.parse(raw) as Branch : null;
+  } catch {
+    // Private mode, or a value from an older shape. Starting at all branches is
+    // the safe default: it shows MORE than the administrator is entitled to see
+    // nowhere, and hides nothing.
+    return null;
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class BranchContext {
-  readonly branchId = signal<string | null>(null);
-  readonly branch = signal<Branch | null>(null);
+  readonly branch = signal<Branch | null>(restore());
+  readonly branchId = signal<string | null>(restore()?.id ?? null);
 
   /**
    * True when a branch has been entered.
@@ -47,11 +75,13 @@ export class BranchContext {
   enter(branch: Branch): void {
     this.branchId.set(branch.id);
     this.branch.set(branch);
+    try { sessionStorage.setItem(KEY, JSON.stringify(branch)); } catch { /* private mode */ }
   }
 
   leave(): void {
     this.branchId.set(null);
     this.branch.set(null);
+    try { sessionStorage.removeItem(KEY); } catch { /* private mode */ }
   }
 
   /** Appended to a request only when it would actually mean something. */

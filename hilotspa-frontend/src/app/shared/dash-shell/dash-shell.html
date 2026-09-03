@@ -31,6 +31,18 @@
       <!-- Figure 3.3 "context switching". An administrator who opened a branch
            used to lose every admin link on arrival, with no way back but the
            browser button. A switch you cannot switch back from is a dead end. -->
+      <!-- Still inside a branch, but looking at a global screen. Say which
+           branch, and offer the way back into it. -->
+      @if (inBranch()) {
+        <div class="navsplit">STILL OPEN</div>
+        <a class="navitem back" routerLink="/staff/dashboard"><i></i>← {{ ctx.name() }}</a>
+        <!-- Opening a branch is a mode. A mode you cannot see the end of is one
+             people leave running by accident, and the next thing they record
+             goes somewhere they did not choose. -->
+        <button type="button" class="navitem close" (click)="closeBranch()">
+          <i></i>Close {{ ctx.name() }}</button>
+      }
+
       @if (returnNav().length) {
         <div class="navsplit">ADMINISTRATION</div>
         @for (item of returnNav(); track item.path) {
@@ -63,6 +75,9 @@
                 @if (visiting()) {
                   <button type="button" role="menuitem" (click)="leaveBranch()">
                     Back to administration</button>
+                } @else if (inBranch()) {
+                  <button type="button" role="menuitem" (click)="closeBranch()">
+                    Close {{ ctx.name() }}</button>
                 }
                 <button type="button" role="menuitem" class="danger" (click)="signOut()">Sign out</button>
               </div>

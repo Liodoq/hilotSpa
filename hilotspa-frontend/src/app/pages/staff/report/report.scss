@@ -14,7 +14,6 @@
 .thumbs ::ng-deep .figure { width: 140px; }
 .thumbs ::ng-deep .figure svg { width: 140px; height: 298px; }
 .thumbs ::ng-deep .mk { width: 30px; height: 30px; font-size: 14px; border-width: 2px; }
-.thumbs ::ng-deep .halo { display: none; }
 .findings th { font-size: 13px; letter-spacing: .4px; padding: 0 6px 10px; }
 .findings td { font-size: 17px; padding: 10px 6px; }
 .qcell { width: 44px; height: 40px; border: 1.5px solid var(--color-line); border-radius: 8px;
@@ -23,3 +22,111 @@
 .qcell:hover:not(.on) { border-color: var(--color-forest-500); }
 .qcell:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 2px; }
 @media (max-width: 1500px) { .cols { grid-template-columns: 1fr; } }
+
+/* ------------------------------------------------------------ the visit log */
+.loghead { display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap; margin-bottom: 14px; }
+.tight { margin: 0 0 4px; }
+.nomar { margin: 0; max-width: 70ch; }
+.weeknav { display: flex; gap: 8px; align-items: center; }
+.weekpick { min-width: 190px; }
+
+.logbar { display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  padding: 14px 20px; background: #fff; border: 1px solid var(--color-sage-200);
+  border-radius: 14px; margin-bottom: 16px; }
+.logbar .stat { display: flex; align-items: baseline; gap: 8px; }
+.logbar .stat b { font-size: 28px; color: var(--color-forest-900); }
+.logbar .stat span { font-size: 16px; color: var(--color-ink-600); }
+.logbar .stat.owed b { color: var(--color-gold-700); }
+.logbar .vr { width: 1px; align-self: stretch; background: var(--color-sage-200); }
+
+.logday { margin-top: 18px; }
+.dayhead { display: flex; align-items: center; gap: 10px; margin: 0 0 8px;
+  font-size: 20px; font-weight: 600; color: var(--color-forest-900); }
+.logcard { padding: 4px 20px; }
+
+/* One row per visit. Grid rather than flex so the time and the outcome line up
+   down the whole day instead of drifting with the length of each name. */
+.logrow {
+  display: grid;
+  /* The status column is a fixed 168px so the pills sit on one optical line
+     down the whole day — centring inside a max-content column does nothing,
+     because the column hugs the pill and there is no room to centre within.
+     The link column still asks the browser, since "Open assessment →" and
+     "No assessment" differ in width and neither should wrap. */
+  grid-template-columns: 92px minmax(0, 1fr) 168px max-content;
+  gap: 16px;
+  align-items: center;
+  /* The negative margin lets the hover wash reach the card's own padding.
+     Without it the highlight stops 20px short of each edge and reads as a
+     misaligned box rather than a row. */
+  margin: 0 -20px;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--color-sage-200);
+  transition: background-color .12s ease;
+}
+.logrow:last-child { border-bottom: 0; }
+
+/* Deliberately a quiet wash, not a button highlight. Only the link in the row
+   is clickable, and a strong hover on the whole row would promise otherwise —
+   this is a reading aid for tracking one visit across four columns, which is
+   what a long day needs. */
+.logrow:hover { background: var(--color-cream); }
+.logrow:first-child:hover { border-radius: 10px 10px 0 0; }
+.logrow:last-child:hover { border-radius: 0 0 10px 10px; }
+
+/* Centred in its column so the eye can run straight down the outcomes without
+   re-finding the left edge on every row. */
+.logrow > .pill { justify-self: center; }
+
+@media (prefers-reduced-motion: reduce) { .logrow { transition: none; } }
+.lwhen { font-size: 17px; font-weight: 600; color: var(--color-forest-900); }
+.lwho { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lwho b { font-size: 18px; color: var(--color-forest-900); }
+.lwho .help { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.noass { font-style: normal; }
+
+/* Neither of these ever wraps. A status that breaks across two lines reads as
+   two statuses, and an arrow left behind on the second line reads as debris. */
+.logrow > .pill, .logrow > .link-go, .logrow > .noass { white-space: nowrap; }
+
+@media (max-width: 900px) {
+  .logrow { grid-template-columns: 76px minmax(0, 1fr); }
+  .logrow > .pill, .logrow > .link-go, .logrow > .noass { grid-column: 2; justify-self: start; }
+}
+
+/* ----------------------------------------------------------- the week menu */
+.weekpick { position: relative; min-width: 210px; }
+
+.weekpick .trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; text-align: left; cursor: pointer; font-family: var(--font-sans);
+}
+.weekpick .trigger > span:first-child {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+/* Drawn, not a glyph — a text caret sits on the baseline and looks like a typo
+   at this size, and an emoji arrow would not take the ink colour. */
+.chev {
+  width: 9px; height: 9px; flex: 0 0 auto;
+  border-right: 2.5px solid var(--color-ink-600);
+  border-bottom: 2.5px solid var(--color-ink-600);
+  transform: translateY(-3px) rotate(45deg);
+}
+
+.weekmenu {
+  position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; right: 0;
+  margin: 0; padding: 6px; list-style: none;
+  background: #fff; border: 1px solid var(--color-sage-200);
+  border-radius: 12px; box-shadow: 0 10px 30px rgb(0 0 0 / 12%);
+  max-height: 340px; overflow-y: auto;
+}
+.wopt {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  border: 0; background: none; border-radius: 8px;
+  padding: 10px 12px; font: 400 17px/1.2 var(--font-sans);
+  color: var(--color-ink-900);
+}
+.wopt:hover { background: var(--color-cream); }
+.wopt.on { background: var(--color-sage-100); color: var(--color-forest-900); font-weight: 600; }
+.wopt:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: -3px; }

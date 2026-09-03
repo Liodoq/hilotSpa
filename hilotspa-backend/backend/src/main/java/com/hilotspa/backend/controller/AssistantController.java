@@ -53,7 +53,8 @@ public class AssistantController {
     public ResponseEntity<ChatResponse> chat(@PathVariable UUID formId,
                                              @RequestBody ChatRequest body) {
         return ResponseEntity.ok(
-                assistantService.chat(formId, body.message(), body.focusServiceId()));
+                assistantService.chat(formId, body.message(), body.focusServiceId(),
+                                      body.language()));
     }
 
     /**

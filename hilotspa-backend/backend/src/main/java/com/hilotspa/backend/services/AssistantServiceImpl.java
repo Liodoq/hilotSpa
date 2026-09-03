@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -95,8 +96,12 @@ public class AssistantServiceImpl implements AssistantService {
     @Value("${hilotspa.n8n.url:http://localhost:5678}")
     private String n8nUrl;
 
-    @Value("${hilotspa.n8n.timeout-ms:5000}")
+    @Value("${hilotspa.n8n.timeout-ms:25000}")
     private int timeoutMs;
+
+    /** Connecting is either instant or n8n is down; only READING is slow. */
+    @Value("${hilotspa.n8n.connect-timeout-ms:3000}")
+    private int connectTimeoutMs;
 
     /** Task 2.17 - shared secret sent on every webhook call. Blank = no header. */
     @Value("${hilotspa.n8n.auth-header:X-HilotSpa-Key}")
@@ -113,6 +118,21 @@ public class AssistantServiceImpl implements AssistantService {
 
     @Value("${spring.profiles.active:}")
     private String activeProfile;
+
+    /**
+     * Whether a fallback may say WHY it fell back, in the response the browser
+     * reads.
+     *
+     * This exists because the profile check below never once fired. Nothing in
+     * compose.yaml or application.properties sets spring.profiles.active - the
+     * dev profile is a TEST-time thing here (@ActiveProfiles on the suites, and
+     * DevDataSeeder) and has never been on in the running container. So `debug`
+     * has been null on every response since it was written, and three separate
+     * debugging sessions were spent asking for a field that could not exist.
+     * A diagnostic nobody can switch on is not a diagnostic.
+     */
+    @Value("${hilotspa.assistant.expose-debug:false}")
+    private boolean exposeDebug;
 
     /** Slots offered per service. Enough choice to be useful, short enough to
      *  keep the prompt readable and cheap. */
@@ -306,8 +326,31 @@ public class AssistantServiceImpl implements AssistantService {
 
     // ------------------------------------------------------------------ chat
 
+    /**
+     * The client's chosen language, or null to let the agent mirror them.
+     *
+     * Anything else is dropped. The value is interpolated into a system prompt,
+     * so an unrecognised string is not a harmless typo - it is a sentence
+     * someone else chose appearing in our instructions to the model.
+     */
+    private static String normaliseLanguage(String language) {
+        if (language == null) {
+            return null;
+        }
+        String v = language.trim().toLowerCase(Locale.ROOT);
+        if (v.startsWith("fil") || v.startsWith("tl")) {
+            return "fil";
+        }
+        if (v.startsWith("en")) {
+            return "en";
+        }
+        return null;
+    }
+
+
     @Override
-    public ChatResponse chat(UUID formId, String message, UUID focusServiceId) {
+    public ChatResponse chat(UUID formId, String message, UUID focusServiceId,
+                             String language) {
         if (message == null || message.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Message is required");
         }
@@ -335,6 +378,9 @@ public class AssistantServiceImpl implements AssistantService {
                 clip(message.trim(), 1000),
                 LocalDateTime.now(ZoneId.of(timezone)).toString(),
                 timezone,
+                // Normalised here rather than trusted: this string is pasted
+                // into a prompt, and only two values may ever reach it.
+                normaliseLanguage(language),
                 base.intent(),
                 base.chiefComplaint(),
                 base.chiefComplaintDuration(),
@@ -415,8 +461,30 @@ public class AssistantServiceImpl implements AssistantService {
         // returns CHOOSE, which opens the therapist-and-room card the client
         // still has to confirm. A wrong match is therefore visible and
         // cancellable rather than silent.
+        //
+        // B120. Which treatment the sentence is about has to be settled BEFORE
+        // the slot lookup, and it has to be settled the same way here as it is
+        // for the panel. It was not: this passed raw.serviceId() while the panel
+        // used a resolved value, so the two disagreed on the turn it mattered.
+        //
+        // "Opo, na-hold na po ang Therapeutic Massage for you on Sunday,
+        // September 6, at 3:30 PM" carries no MINUTES, so serviceNamedIn cannot
+        // identify it either - it requires name and duration together, because
+        // Signature Massage exists at both 60 and 90. With no service to filter
+        // by, the lookup scanned every service's slots; the two-a-day sample the
+        // other treatments get happens to be 9:00 AM and 3:30 PM, so three
+        // different services all answered to "Sunday 3:30 PM", the ambiguity
+        // guard did its job, and the hold was refused for being too well
+        // described.
+        //
+        // focusServiceId is the honest fallback: it is the treatment the
+        // conversation has already narrowed to and the one whose calendar is on
+        // screen while the client is reading this sentence.
+        UUID about = raw.serviceId() != null ? raw.serviceId() : serviceNamedIn(reply, allowed);
+        UUID within = about != null ? about : focusServiceId;
+
         if (raw.slotId() == null && claimsHold(reply)) {
-            ChatSlot settled = slotNamedIn(reply, raw.serviceId(), slotsById);
+            ChatSlot settled = slotNamedIn(reply, within, slotsById);
             if (settled != null) {
                 log.warn("Assistant settled a time with book=false, form {}; recovered "
                         + "slot {} from the reply text", form.getId(), settled.slotId());
@@ -430,13 +498,14 @@ public class AssistantServiceImpl implements AssistantService {
                     form.getId(), reply);
         }
 
-        // The model is now ASKED to report serviceId, and Spring works it out
-        // anyway when it does not. The first version of this trusted the field
-        // alone and the panel never moved once: serviceId has always been in the
-        // reply schema, and nothing in the prompt had ever told the model to set
-        // it, so it was null on every turn. Reading a field nobody was asked to
-        // fill is the same mistake as B115 in the other direction.
-        UUID about = raw.serviceId() != null ? raw.serviceId() : serviceNamedIn(reply, allowed);
+        // `about` is resolved above, before the hold check, so the panel and the
+        // hold recovery can never disagree about which treatment is being
+        // discussed. The model is ASKED to report serviceId and Spring works it
+        // out anyway when it does not: the first version of this trusted the
+        // field alone and the panel never moved once, because serviceId had
+        // always been in the reply schema and nothing in the prompt had ever
+        // told the model to set it. Reading a field nobody was asked to fill is
+        // the same mistake as B115 in the other direction.
         return new ChatResponse(reply, raw.status() == null ? "OK" : raw.status(), null, null,
                 List.copyOf(slotsById.values()), null, about);
     }
@@ -478,11 +547,25 @@ public class AssistantServiceImpl implements AssistantService {
      */
     private static final java.util.regex.Pattern HOLD_CLAIM =
             java.util.regex.Pattern.compile(
-                "\\bna-?hold\\b|\\bhold(ed)? na\\b"           // na-hold na po namin
-              + "|\\bay held na\\b|\\bheld na po\\b"
+                // Filipino marks the completed aspect several ways, and the
+                // first version of this only knew ONE of them: it matched
+                // "na-hold" and missed "naka-hold", which is the form the model
+                // actually used. The conversation then dead-ended pointing at a
+                // screen that never changed. A verb-form list is not a place to
+                // guess - "na", "naka", "ni" and "ini" are all ordinary here.
+                "\\b(na|naka|ni|ini)-?hold\\b"
+              + "|\\bhold(ed)? na\\b|\\bnakahold\\b"
+              + "|\\bay held na\\b|\\bheld na po\\b|\\bis held\\b"
               + "|\\b(i have|i've|we have|we've) held\\b"
               + "|\\byour time is (held|set|reserved)\\b"
-              + "|\\bnaka-?reserve na\\b",
+              + "|\\b(na|naka|ni|ini)-?reserve\\b"
+                // Rule 7b tells the model to follow a hold by saying the client
+                // chooses their therapist and room next. That sentence is
+                // therefore evidence a time was settled, whatever verb carried
+                // it - and it is the half the model reproduces most reliably.
+              + "|pagpili (ninyo |niyo )?ng therapist"
+              + "|makakapili (na )?kayo ng therapist"
+              + "|choose (your |a )?therapist and room",
                 java.util.regex.Pattern.CASE_INSENSITIVE);
 
     private boolean claimsHold(String reply) {
@@ -545,8 +628,20 @@ public class AssistantServiceImpl implements AssistantService {
             if (serviceId != null && !serviceId.equals(slot.serviceId())) {
                 continue;
             }
-            if (slot.dayLabel() == null || slot.timeLabel() == null
-                    || !reply.contains(slot.dayLabel()) || !reply.contains(slot.timeLabel())) {
+            // B118. This used to be reply.contains(slot.dayLabel()). The day
+            // label is rendered in English - "Sun 6 Sep" - and the assistant
+            // mirrors the client's language, so a Filipino sentence that named
+            // the day perfectly well ("sa Linggo, September 6, 3:30 PM") matched
+            // nothing and the hold was refused. The client had agreed, Spring
+            // had the slot in its hand, and the panel sat on OPEN TIMES.
+            //
+            // Matching a DATE rather than a STRING fixes it in both languages at
+            // once, and keeps the guarantee that made the original narrow: the
+            // day and the hour must BOTH be named, and two slots answering to
+            // the same sentence still refuse.
+            LocalDateTime when = slotStart(slot);
+            if (when == null || !dayNamedIn(reply, when.toLocalDate())
+                    || !timeNamedIn(reply, when)) {
                 continue;
             }
             if (found != null) {
@@ -557,6 +652,95 @@ public class AssistantServiceImpl implements AssistantService {
             found = slot;
         }
         return found;
+    }
+
+    /** ChatSlot carries the start as an ISO string so the browser need not parse a slotId. */
+    private static LocalDateTime slotStart(ChatSlot slot) {
+        try {
+            return slot.start() == null ? null : LocalDateTime.parse(slot.start());
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Filipino weekday names, indexed by DayOfWeek.getValue() - 1 (1 = Monday).
+     *
+     * Hard-coded rather than taken from a Locale: the JDK's tl/fil data is not
+     * guaranteed present in a slim container image, and a missing locale would
+     * degrade to English silently - which is the exact failure being fixed.
+     */
+    private static final String[] TL_DAYS = {
+            "lunes", "martes", "miyerkules", "huwebes", "biyernes", "sabado", "linggo"
+    };
+
+    private static final DateTimeFormatter D_MMMM =
+            DateTimeFormatter.ofPattern("d MMMM", Locale.ENGLISH);
+    private static final DateTimeFormatter MMMM_D =
+            DateTimeFormatter.ofPattern("MMMM d", Locale.ENGLISH);
+    private static final DateTimeFormatter D_MMM =
+            DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH);
+    private static final DateTimeFormatter MMM_D =
+            DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH);
+    private static final DateTimeFormatter BARE_TIME =
+            DateTimeFormatter.ofPattern("h:mm", Locale.ENGLISH);
+
+    /**
+     * Did this sentence name this day, in either language the assistant speaks?
+     *
+     * A weekday name alone is enough because the slot list is one week long, so
+     * "Linggo" picks out exactly one date. Anything looser is still safe: two
+     * slots matching the same sentence makes slotNamedIn refuse rather than
+     * guess, and the caller only ever opens a card the client must still
+     * confirm - nothing is written on the strength of a match here.
+     */
+    private boolean dayNamedIn(String reply, LocalDate day) {
+        LocalDate today = LocalDate.now(ZoneId.of(timezone));
+        List<String> tokens = new ArrayList<>();
+        tokens.add(day.format(DAY_FMT));          // "Sun 6 Sep" - Spring's own chip
+        tokens.add(day.format(MMMM_D));           // "September 6"
+        tokens.add(day.format(D_MMMM));           // "6 September"
+        tokens.add(day.format(MMM_D));            // "Sep 6"
+        tokens.add(day.format(D_MMM));            // "6 Sep"
+        tokens.add(day.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH));
+        tokens.add(TL_DAYS[day.getDayOfWeek().getValue() - 1]);
+        if (day.equals(today)) {
+            tokens.add("today");
+            tokens.add("ngayon");
+        }
+        if (day.equals(today.plusDays(1))) {
+            tokens.add("tomorrow");
+            tokens.add("bukas");
+        }
+        return namesAnyOf(reply, tokens);
+    }
+
+    /**
+     * "3:30 PM", or a bare "3:30" for a sentence that ends in ng hapon.
+     *
+     * The bare form is bounded on both sides so it cannot be found inside
+     * 13:30 - a substring match here would hold an hour nobody said.
+     */
+    private boolean timeNamedIn(String reply, LocalDateTime start) {
+        return namesAnyOf(reply, List.of(start.format(TIME_FMT), start.format(BARE_TIME)));
+    }
+
+    /** Whole-token search: contains() would find "Sun" inside "susunod". */
+    private static boolean namesAnyOf(String haystack, List<String> needles) {
+        for (String n : needles) {
+            if (n == null || n.isBlank()) {
+                continue;
+            }
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                    "(?<![\\p{L}\\p{N}])" + java.util.regex.Pattern.quote(n)
+                            + "(?![\\p{L}\\p{N}])",
+                    java.util.regex.Pattern.CASE_INSENSITIVE
+                            | java.util.regex.Pattern.UNICODE_CASE);
+            if (p.matcher(haystack).find()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -899,9 +1083,20 @@ public class AssistantServiceImpl implements AssistantService {
       */
     private List<String> myBookingSummaries() {
         try {
+            // B122. The therapist and the room belong in this line. Without
+            // them the agent could see that the client HAD a visit but not who
+            // it was with, so when a booked client asked "can I assign a
+            // different therapist?" it had nothing true to say and invented
+            // something: it told them a picker was open on their screen. Naming
+            // Lito Fernandez and Treatment Room 2 costs nothing here - this list
+            // is the caller's OWN bookings and never anyone else's.
             return bookingService.mine().stream()
                     .map(b -> b.label() + " - " + b.serviceName()
-                            + " (" + b.durationMinutes() + " min, " + b.status() + ")")
+                            + " (" + b.durationMinutes() + " min, " + b.status() + ")"
+                            + (b.therapist() == null || b.therapist().isBlank()
+                                    ? "" : " with " + b.therapist())
+                            + (b.room() == null || b.room().isBlank()
+                                    ? "" : " in " + b.room()))
                     .limit(10)
                     .toList();
         } catch (Exception e) {
@@ -918,7 +1113,7 @@ public class AssistantServiceImpl implements AssistantService {
      * this returns null and the client sees only the polite line.
      */
     private String devOnly(String detail) {
-        return "dev".equalsIgnoreCase(activeProfile) ? detail : null;
+        return exposeDebug || "dev".equalsIgnoreCase(activeProfile) ? detail : null;
     }
 
     private static String frontDesk() {
@@ -1000,12 +1195,15 @@ public class AssistantServiceImpl implements AssistantService {
     /**
      * The only place this application talks to n8n.
      *
-     * The timeout is the point: a hanging model call must never hold a booking
-     * screen open. Whatever goes wrong here, the caller falls back.
+     * Two timeouts, because they answer different questions. A connect that
+     * takes longer than a moment means n8n is not there - fail fast and say so.
+     * A read that takes fifteen seconds means the model is thinking, and cutting
+     * it off there is how the assistant came to answer "I am having trouble"
+     * every time the conversation got interesting enough to be slow.
      */
     private <T> T postToN8n(String path, Object body, Class<T> type) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofMillis(timeoutMs));
+        factory.setConnectTimeout(Duration.ofMillis(connectTimeoutMs));
         factory.setReadTimeout(Duration.ofMillis(timeoutMs));
 
         RestClient.RequestBodySpec request = RestClient.builder()

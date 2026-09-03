@@ -146,6 +146,69 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
+    public Openings counterOpenings(UUID serviceId, LocalDateTime start, UUID wantBranch) {
+        if (serviceId == null || start == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "serviceId and start are required");
+        }
+
+        // The branch is the whole question here, not a detail.
+        //
+        // The first version of this took branchRepository.findAll().first() for
+        // an administrator, which is not a branch anybody chose - it is
+        // whichever row the database returned. With two branches it meant a
+        // therapist from the OTHER one could never appear free at any time, so
+        // the walk-in screen showed a Sorsogon therapist permanently "booked" on
+        // a Bulan form. Arbitrary is worse than absent: absent asks, arbitrary
+        // answers confidently and wrongly.
+        //
+        // Same shape as schedule(): an administrator may NAME a branch
+        // (Figure 3.3's context switch) and must when there is more than one;
+        // staff never get the choice and take theirs from the token.
+        UUID branchId;
+        if (CurrentUser.isAdmin()) {
+            if (wantBranch != null) {
+                branchId = wantBranch;
+            } else {
+                List<Branch> all = branchRepository.findAll();
+                if (all.size() != 1) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "Open a branch first - a walk-in is recorded against one branch, "
+                            + "and its therapists and rooms belong to that branch alone.");
+                }
+                branchId = all.get(0).getId();
+            }
+        } else {
+            branchId = CurrentUser.branchId().orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "Staff account has no branch assigned"));
+        }
+
+        Massage service = massageRepository.findById(serviceId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Service not found"));
+        LocalDateTime end = start.plusMinutes(service.getDurationMinute());
+
+        // A past time is NOT refused here, unlike openings(). A walk-in is
+        // routinely typed in after the session has started, and the booking
+        // path already allows it - refusing to say who was free would make the
+        // picker useless in exactly the case the front desk uses most.
+
+        // No sex preference: nobody has answered that question at the counter.
+        // Every free therapist is shown and staff ask the client out loud.
+        List<OpenTherapist> therapists = freeTherapists(branchId, start, end, null).stream()
+                .map(t -> new OpenTherapist(t.getId(), t.getFirstName(),
+                        t.getSex() == null ? null : t.getSex().getDisplayName()))
+                .toList();
+
+        List<OpenRoom> rooms = freeRooms(branchId, start, end).stream()
+                .map(r -> new OpenRoom(r.getId(), r.getName(), r.getImageName()))
+                .toList();
+
+        return new Openings(start, start.format(LABEL), therapists, rooms);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Availability availability(UUID formId, UUID serviceId, LocalDate from, int days) {
         Forms form = loadAndAuthorise(formId);
         Massage service = massageRepository.findById(serviceId)
@@ -919,10 +982,18 @@ public class BookingServiceImpl implements BookingService {
                     "A name is required - it is the only thing identifying this visit");
         }
 
-        UUID branchId = CurrentUser.isAdmin()
-                ? branchOfSingleOr(req)
-                : CurrentUser.branchId().orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.FORBIDDEN, "Staff account has no branch assigned"));
+        // An administrator writes to the branch they have OPENED; staff write to
+        // the one in their token and are never asked. req.branchId() is read
+        // only on the administrator path - a staff account naming a branch is
+        // ignored rather than honoured, because a request field that can widen
+        // a staff query is the whole shape of B101.
+        UUID branchId;
+        if (CurrentUser.isAdmin()) {
+            branchId = req.branchId() != null ? req.branchId() : branchOfSingleOr(req);
+        } else {
+            branchId = CurrentUser.branchId().orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "Staff account has no branch assigned"));
+        }
 
         Branch branch = branchRepository.findById(branchId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.BAD_REQUEST, "Branch not found"));
@@ -961,11 +1032,14 @@ public class BookingServiceImpl implements BookingService {
         }
 
         // A walk-in assessed at the counter may have stated a preference too.
-        // Staff assign at the counter by talking to the client, so the walk-in
-        // path passes no explicit pick - it keeps the original behaviour.
+        // The counter may now also name a therapist and a room outright - the
+        // front desk can see who is standing there and who is free, which is
+        // knowledge the server does not have. Passed straight into the SAME
+        // assign() the online path uses, so a pick that has gone in the meantime
+        // is refused inside the same transaction rather than swapped silently.
         Assignment assignment = assign(branchId, start, end,
                 walkInForm == null ? null : walkInForm.getTherapistPreference(),
-                null, null);
+                req.therapistId(), req.roomId());
 
         Appointment a = new Appointment();
         a.setBranch(branch);
@@ -991,14 +1065,21 @@ public class BookingServiceImpl implements BookingService {
         return toDto(saved);
     }
 
-    /** An administrator has no branch of their own, so one branch or say which. */
+    /**
+     * An administrator who named no branch: fine with one, ambiguous with more.
+     *
+     * The message used to say "record it from the branch's own account", which
+     * described a workaround rather than the actual fix - the administrator can
+     * open a branch and record it there, which is what Figure 3.3 exists for.
+     */
     private UUID branchOfSingleOr(WalkInRequest req) {
         List<Branch> all = branchRepository.findAll();
         if (all.size() == 1) {
             return all.get(0).getId();
         }
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "An administrator must record a walk-in from the branch's own account");
+                "Open a branch first. A walk-in is recorded against one branch, and its "
+                + "therapists and rooms belong to that branch alone.");
     }
 
     private static String blankToNull(String v) {

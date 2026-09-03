@@ -7,7 +7,7 @@
   <!-- A detail page opened from a list needs a way back to that list. The
        sidebar re-enters the section from the top, which is not the same thing. -->
   @if (form()) {
-    <button type="button" class="link-go back" (click)="load(null)">All pre-assessments</button>
+    <button type="button" class="link-go back" (click)="load(null)">All visits</button>
     <a class="link-go" style="margin-left:20px" [routerLink]="['/staff/queue']">Back to the queue</a>
   }
 
@@ -21,26 +21,91 @@
   <!-- Choose whose record to open. A medical record is not something a screen
        should pick on your behalf. -->
   @if (!loading() && !form()) {
-    <h2 class="t-s" style="margin-bottom:6px">Today's pre-assessments</h2>
-    <p class="help" style="margin:0 0 14px">
-      Open the one you need. Nothing is shown until you choose.
-    </p>
-    <div class="grid3 stagger">
-      @for (s of choices(); track s.id) {
-        <button type="button" class="card"
-                style="text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:6px"
-                (click)="load(s.formId)">
-          <div style="font-size:21px;font-weight:600;color:var(--color-forest-900)">{{ s.client }}</div>
-          <div class="help">{{ s.time }} · {{ s.serviceName }} · {{ s.durationMinutes }} min</div>
-          <div class="help">{{ s.therapist }} · {{ s.room }}</div>
-          <span class="pill mute" style="align-self:flex-start">{{ s.status }}</span>
-        </button>
-      } @empty {
-        <div class="note"><span class="b"></span>
-          <span>No session booked today at this branch has a pre-assessment attached.
-            Assessments taken at the counter appear here once the visit is recorded.</span></div>
+    <header class="loghead">
+      <div>
+        <h2 class="t-s tight">Visit log</h2>
+        <p class="help nomar">Every visit this branch recorded, and how it ended.
+          Open a row to read the client's own pre-assessment, where there is one.</p>
+      </div>
+      <div class="weeknav">
+        <button type="button" class="btn btn-quiet btn-sm" (click)="shiftWeek(-1)"
+                aria-label="Previous week">←</button>
+        <div class="weekpick">
+          <button type="button" class="input trigger" aria-haspopup="listbox"
+                  [attr.aria-expanded]="weekMenu()" (click)="toggleWeekMenu($event)">
+            <span>{{ weekOptions()[0].value === weekStart() ? 'This week' : weekLabel() }}</span>
+            <span class="chev" aria-hidden="true"></span>
+          </button>
+          @if (weekMenu()) {
+            <ul class="weekmenu" role="listbox" (click)="$event.stopPropagation()">
+              @for (w of weekOptions(); track w.value) {
+                <li>
+                  <button type="button" role="option" class="wopt"
+                          [class.on]="w.value === weekStart()"
+                          [attr.aria-selected]="w.value === weekStart()"
+                          (click)="pickWeek(w.value)">{{ w.label }}</button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+        <button type="button" class="btn btn-quiet btn-sm" [disabled]="isThisWeek()"
+                (click)="shiftWeek(1)" aria-label="Next week">→</button>
+      </div>
+    </header>
+
+    <div class="logbar">
+      <span class="stat"><b>{{ weekCounts().total }}</b><span>{{ weekLabel() }}</span></span>
+      <span class="vr"></span>
+      <span class="stat"><b>{{ weekCounts().done }}</b><span>completed</span></span>
+      <span class="vr"></span>
+      <span class="stat"><b>{{ weekCounts().off }}</b><span>cancelled or missed</span></span>
+      @if (weekCounts().owed) {
+        <span class="vr"></span>
+        <span class="stat owed"><b>{{ weekCounts().owed }}</b><span>not recorded yet</span></span>
       }
     </div>
+
+    <!-- A visit whose time has passed and which nobody closed off produces no
+         outcome and no after-score. Until this screen existed those rows were
+         unreachable from anywhere in the app. -->
+    @if (weekCounts().owed) {
+      <div class="note warm"><span class="b"></span>
+        <span><b>{{ weekCounts().owed }} visit{{ weekCounts().owed === 1 ? '' : 's' }}</b>
+          in this week finished without being marked completed or missed. Until someone
+          says which, the client cannot score how it feels now and the visit counts towards
+          nothing.</span></div>
+    }
+
+    @for (d of logDays(); track d.iso) {
+      <section class="logday">
+        <h3 class="dayhead">{{ d.label }}
+          @if (d.isToday) { <span class="pill mute">Today</span> }
+        </h3>
+        <div class="card logcard">
+          @for (r of d.rows; track r.id) {
+            <div class="logrow">
+              <span class="lwhen">{{ r.time }}</span>
+              <div class="lwho">
+                <b>{{ r.client }}</b>
+                <span class="help">{{ r.serviceName }} · {{ r.durationMinutes }} min ·
+                  {{ r.therapist }} · {{ r.room }}</span>
+              </div>
+              <span class="pill" [class]="'pill ' + outcomeTone(r)">{{ outcome(r) }}</span>
+              @if (r.hasAssessment && r.formId) {
+                <button type="button" class="link-go" (click)="load(r.formId)">Open assessment →</button>
+              } @else {
+                <span class="help noass">No assessment</span>
+              }
+            </div>
+          }
+        </div>
+      </section>
+    } @empty {
+      <div class="note"><span class="b"></span>
+        <span>Nothing was booked at this branch in {{ weekLabel() }}. Use the arrows or the
+          list above to look at another week.</span></div>
+    }
   }
 
   @if (form(); as f) {

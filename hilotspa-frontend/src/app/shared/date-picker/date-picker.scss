@@ -3,6 +3,22 @@
 .trigger { display: flex; align-items: center; justify-content: space-between; text-align: left;
   cursor: pointer; font-family: var(--font-sans); }
 .trigger .ph { color: var(--color-ink-600); }
+
+/* The label is one line, always.
+
+   "3 September 2026" wrapped to three lines and burst out of the button the
+   first time this component was put anywhere narrower than the profile form it
+   was written for. A control that only holds its shape at one width is not
+   reusable, so the constraint belongs HERE rather than as a width on each page
+   that adopts it: the text stays on one line and is trimmed if it must be, and
+   the calendar glyph never gets pushed off the end. */
+.trigger > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.trigger .cal { flex: 0 0 auto; }
 .trigger.ro { background: var(--color-sage-100); cursor: default; }
 .cal { width: 22px; height: 22px; border: 2px solid var(--color-ink-600); border-radius: 6px;
   position: relative; flex: 0 0 auto; }

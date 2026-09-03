@@ -49,6 +49,9 @@ services:
       # it can be switched without rebuilding the image. B105.
       SERVER_ERROR_INCLUDE_MESSAGE: ${ERROR_INCLUDE_MESSAGE:-always}
       N8N_WEBHOOK_URL: http://n8n:5678
+      # Let a chat fallback carry its reason to the browser. Development
+      # machine only - remove this line before the system runs at the spa.
+      HILOTSPA_ASSISTANT_EXPOSE_DEBUG: ${ASSISTANT_EXPOSE_DEBUG:-true}
 
     depends_on:
       db:

@@ -18,3 +18,19 @@
 /* Divider above the administration links when an admin is visiting a branch. */
 .navsplit { margin: 18px 0 6px; padding: 0 18px; font: 600 14px/1 var(--font-sans);
   letter-spacing: 2px; color: var(--color-sage-300); }
+
+/* The return-to-branch link. Marked, because it is a change of scope rather
+   than another page in the same list. */
+.navitem.back { color: var(--color-gold-500); }
+
+/* Closing the branch is a button, not a link: it changes state rather than
+   going anywhere, and it should not look like a destination. */
+.navitem.close {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  color: var(--color-sage-300);
+}

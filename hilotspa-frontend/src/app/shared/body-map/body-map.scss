@@ -1,5 +1,22 @@
 :host { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
+/**
+ * The component establishes its own containing block.
+ *
+ * Everything this component positions - the pins, the hover ghost, its label,
+ * and the numbered marker - is `position: absolute`, and every one of them was
+ * relying on `.figure { position: relative }` living in the GLOBAL stylesheet.
+ * A component whose children are positioned against a rule it does not own is
+ * one specificity accident away from scattering them across the page, which is
+ * exactly what a severity marker did on the staff report: it left the body map
+ * and landed in a paragraph two cards away.
+ *
+ * Declared here as well, deliberately. Component styles carry the
+ * [_ngcontent] attribute, so this outranks the bare global selector and the
+ * marker cannot be detached by anything a page adds later.
+ */
+.figure { position: relative; }
+
 /* the markable positions, faint until you come near them */
 .pin { position: absolute; transform: translate(-50%, -50%); width: 13px; height: 13px;
   border-radius: 50%; background: var(--color-sage-300); opacity: .5;
@@ -19,3 +36,55 @@
 .figure.locked { cursor: not-allowed; }
 
 @media (prefers-reduced-motion: reduce) { .pin { transition: none; } }
+
+/* ---------------------------------------------------------------------------
+   The numbered marks, drawn in the svg rather than layered over it.
+
+   Sizes are svg units against a 300x640 viewBox, so a mark is the same
+   fraction of the body whether the figure is 234px wide on the assessment
+   screen or 92px in a homepage thumbnail. The per-page `.mk { width: 24px }`
+   overrides existed only to undo that mismatch.
+--------------------------------------------------------------------------- */
+.mark { cursor: pointer; }
+.figure.ro .mark { cursor: default; }
+
+.mark .dot { stroke: #fff; stroke-width: 5; }
+.mark text {
+  fill: #fff; font-family: var(--font-sans); font-size: 27px; font-weight: 700;
+  text-anchor: middle; dominant-baseline: central;
+  /* the number is decoration on top of the dot; clicks belong to the group */
+  pointer-events: none; user-select: none;
+}
+
+.mark.s-low  .dot { fill: var(--color-forest-500); }
+.mark.s-mid  .dot { fill: var(--color-gold-700); }
+.mark.s-high .dot { fill: var(--color-danger-600); }
+
+/* The selected mark, in the same forest ring the DOM marker used. */
+.mark.sel .dot { stroke: var(--color-forest-700); stroke-width: 8; }
+
+.mark .mhalo { pointer-events: none; stroke-dasharray: 7 6; stroke-width: 3; }
+.mark.s-low  .mhalo { stroke: rgba(95,127,69,.85);  fill: rgba(95,127,69,.16); }
+.mark.s-mid  .mhalo { stroke: rgba(138,109,31,.9);  fill: rgba(200,160,53,.20); }
+.mark.s-high .mhalo { stroke: rgba(163,59,39,.85);  fill: rgba(163,59,39,.16); }
+
+/* Read-only figures are thumbnails - a halo at that size is a smudge. Every
+   page that embeds one was already hiding it by hand; this makes the component
+   responsible for its own appearance instead. */
+.figure.ro .mark .mhalo { display: none; }
+
+.mark:focus-visible { outline: none; }
+.mark:focus-visible .dot { stroke: var(--color-forest-700); stroke-width: 8; }
+
+/* Named `mhalo`, not `halo`, and that is the whole point.
+
+   styles.scss carried a global `.halo { position: absolute; transform:
+   translate(-50%, -50%) }` from when the marks were DOM nodes. Reusing the name
+   on an svg circle looked harmless - `position` is meaningless inside an svg -
+   but `transform` is NOT: on an svg element those percentages resolve against
+   the VIEWPORT, so the halo was thrown up and left by half of 300x640 and
+   floated near the figure's head while its dot sat correctly on the wrist.
+
+   Same family as B96, B108 and B111: a class name that already means something
+   somewhere else. The global rule is now deleted, but the distinct name stays -
+   a name nothing else can claim is cheaper than remembering why. */

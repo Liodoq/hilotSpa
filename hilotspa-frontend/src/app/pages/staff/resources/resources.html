@@ -45,10 +45,92 @@
       <div class="rosterbar">
         <span class="stat"><b>{{ available() }}</b><span>free to take a client</span></span>
         <span class="vr"></span>
-        <span class="stat"><b>{{ onBreakCount() }}</b><span>busy or on break</span></span>
+        <span class="stat"><b>{{ onBreakCount() }}</b><span>with a client now</span></span>
         <span class="vr"></span>
         <span class="stat"><b>{{ roomsOpen() }}</b><span>{{ roomsOpen() === 1 ? 'room open' : 'rooms open' }}</span></span>
       </div>
+    }
+
+    <!-- ===================================================================
+         The day sheet. One column per therapist, time down the side.
+         "Who can take this client at half past two" is answered by reading
+         ACROSS a row, which is why this is a day and not a week.
+         =================================================================== -->
+    @if (!loading() && staff().length) {
+      <section class="sheet">
+        <header class="sheethead">
+          <div class="daynav">
+            <button type="button" class="btn btn-quiet btn-sm" (click)="shiftDay(-1)"
+                    aria-label="Previous day">←</button>
+            <button type="button" class="btn btn-quiet btn-sm" [disabled]="isToday()"
+                    (click)="goToday()">Today</button>
+            <button type="button" class="btn btn-quiet btn-sm" (click)="shiftDay(1)"
+                    aria-label="Next day">→</button>
+            <!-- The app's own picker, not <input type="date">. That popup is
+                 browser chrome - blue accents, system font, its own "Clear" and
+                 "Today" links - and no stylesheet can reach inside it. This
+                 component exists precisely for that reason and was already
+                 built; I reached for the native input without looking. -->
+            <div class="daypick">
+              <app-date-picker [value]="day()" [minYear]="2024"
+                               placeholder="Choose a day"
+                               (changed)="pickDay($event ?? '')" />
+            </div>
+          </div>
+          <div class="dayname">
+            <b>{{ dayLabel().long }}</b>
+            @if (dayLabel().rel) { <span class="pill mute">{{ dayLabel().rel }}</span> }
+          </div>
+        </header>
+
+        <div class="gridwrap">
+          <div class="tcol">
+            <div class="chead"></div>
+            <div class="tscale">
+              @for (h of hours(); track h.label) {
+                <span class="tlab" [style.top.%]="h.topPct">{{ h.label }}</span>
+              }
+            </div>
+          </div>
+
+          @for (c of columns(); track c.id) {
+            <div class="pcol" [class.offduty]="c.off">
+              <div class="chead">
+                <span class="av">{{ c.initials }}</span>
+                <span class="pname">{{ c.name }}</span>
+                @if (c.off) { <span class="pill mute">Off duty</span> }
+              </div>
+
+              <!-- The column owns the containing block for its own blocks. -->
+              <div class="lane">
+                @for (h of hours(); track h.label) {
+                  <span class="rule" [style.top.%]="h.topPct"></span>
+                }
+                @for (b of c.blocks; track b.id) {
+                  <div class="ev" [style.top.%]="b.topPct" [style.height.%]="b.heightPct"
+                       [attr.title]="b.client + ' · ' + b.serviceName + ' · ' + b.room">
+                    <b class="evwho">{{ b.client }}</b>
+                    <span class="evwhen">{{ b.time }}</span>
+                    <span class="evroom">{{ b.room }}</span>
+                  </div>
+                }
+                @if (!c.blocks.length && !c.off) {
+                  <span class="freeall">Free all day</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (orphaned().length) {
+          <div class="note bad"><span class="b"></span>
+            <span><b>{{ orphaned().length }} booking{{ orphaned().length === 1 ? '' : 's' }}</b>
+              on this day name a therapist who is not on the roster, so
+              {{ orphaned().length === 1 ? 'it has' : 'they have' }} no column above. They are
+              still in the database — a booking is never dropped just because a screen cannot
+              place it.</span></div>
+        }
+      </section>
     }
 
     <!-- A therapist is a ROW, not a card. Three cards across a wide monitor left

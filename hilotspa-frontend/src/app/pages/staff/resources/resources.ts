@@ -1,11 +1,49 @@
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { DashShell } from '../../../shared/dash-shell/dash-shell';
+import { DatePicker } from '../../../shared/date-picker/date-picker';
 import { BranchContext } from '../../../core/branch-context';
 import { ToastService } from '../../../core/toast.service';
 import { describeHttpError } from '../../../core/http-error';
 import { OpsApi, RoomDto, ScheduleRow, TherapistDto } from '../../../core/ops.api';
 
 type Status = TherapistDto['status'];
+
+/**
+ * Local-date helpers.
+ *
+ * toISOString() is UTC, and Manila is UTC+8 - so a day taken from it is the
+ * PREVIOUS day for every booking before 8am local. The staff day sheet showing
+ * yesterday's rows every morning is exactly the kind of bug that gets blamed on
+ * the database.
+ */
+function toIsoDay(d: Date): string {
+  const m = `${d.getMonth() + 1}`.padStart(2, '0');
+  const day = `${d.getDate()}`.padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+function fromIsoDay(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function addDays(d: Date, n: number): Date {
+  const out = new Date(d);
+  out.setDate(out.getDate() + n);
+  return out;
+}
+
+function minutesOf(iso: string): number {
+  const d = new Date(iso);
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+function hourLabel(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const suffix = h < 12 ? 'AM' : 'PM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12} ${suffix}`;
+}
 
 /**
  * S3 — therapist and room status, read from and written to the database.
@@ -20,7 +58,7 @@ type Status = TherapistDto['status'];
  */
 @Component({
   selector: 'app-staff-resources',
-  imports: [DashShell],
+  imports: [DashShell, DatePicker],
   templateUrl: './resources.html',
   styleUrl: './resources.scss',
 })
@@ -31,7 +69,22 @@ export class StaffResources implements OnInit {
   protected ctx = inject(BranchContext);
   protected toast = inject(ToastService);
 
-  protected statuses: Status[] = ['AVAILABLE', 'BUSY', 'ON_BREAK', 'OFF_DUTY'];
+  /**
+   * Two statuses, not four.
+   *
+   * BUSY and ON_BREAK are still valid in the database enum - removing enum
+   * values means a migration and orphans every row already carrying one - but
+   * they are no longer offered here, because they were a second source of truth
+   * for something this screen already derives. Whether a therapist is with a
+   * client is a fact about today's bookings, and the calendar below reads those
+   * rows directly; a button someone has to remember to press can only ever
+   * disagree with them. The same argument the rooms already used ("occupied is
+   * worked out from today's bookings, not stored as a flag") now applies to
+   * people as well.
+   *
+   * What is left is the one thing only a person knows: whether they are here.
+   */
+  protected statuses: Status[] = ['AVAILABLE', 'OFF_DUTY'];
 
   /** Clients may ask for a woman or a man, and the booking rules honour it — so
    *  a therapist with no sex recorded is offered ONLY to clients who expressed
@@ -66,9 +119,136 @@ export class StaffResources implements OnInit {
    * this page is asking who can take a client right now, so it goes at the top
    * at a size you can read from a step back.
    */
-  onBreakCount = computed(() =>
-    this.staff().filter(s => s.active && (s.status === 'ON_BREAK' || s.status === 'BUSY')).length);
+  /**
+   * With a client RIGHT NOW - counted from the bookings, not from a flag.
+   *
+   * This used to count therapists whose status said BUSY or ON_BREAK, which
+   * nobody can set any more and which was stale whenever they forgot to clear
+   * it. Same number, honest source.
+   */
+  onBreakCount = computed(() => {
+    const now = Date.now();
+    const busy = new Set(this.today()
+      .filter(r => r.status !== 'CANCELLED')
+      .filter(r => new Date(r.start).getTime() <= now && new Date(r.end).getTime() > now)
+      .map(r => r.therapist));
+    return this.staff().filter(s => s.active && busy.has(this.name(s))).length;
+  });
   roomsOpen = computed(() => this.rooms().filter(r => r.active).length);
+
+  // ------------------------------------------------------------ the day sheet
+  //
+  // One day, one column per therapist, time down the side. Deliberately not the
+  // week-across-the-top shape a mail calendar uses: the question this screen
+  // exists to answer is "somebody is standing at the counter, who can take
+  // them at half past two", and that is a question you answer by reading ACROSS
+  // one row. In a week view two therapists' bookings share a day column and you
+  // have to disentangle them by name.
+
+  /** yyyy-MM-dd, the day being shown. */
+  protected day = signal(toIsoDay(new Date()));
+
+  protected dayLabel = computed(() => {
+    const d = fromIsoDay(this.day());
+    const today = toIsoDay(new Date());
+    const rel = this.day() === today ? 'Today'
+      : this.day() === toIsoDay(addDays(new Date(), 1)) ? 'Tomorrow'
+      : this.day() === toIsoDay(addDays(new Date(), -1)) ? 'Yesterday' : '';
+    return { long: d.toLocaleDateString(undefined,
+      { weekday: 'long', day: 'numeric', month: 'long' }), rel };
+  });
+
+  protected isToday = computed(() => this.day() === toIsoDay(new Date()));
+
+  /**
+   * The window the grid draws, in minutes from midnight.
+   *
+   * Nine to seven covers the spa's hours, but a booking outside them must never
+   * be invisible - a row the grid cannot draw is a client nobody sees. So the
+   * window stretches to contain whatever the day actually holds.
+   */
+  private span = computed(() => {
+    // 9am to 11pm is the spa's actual trading day.
+    let from = 9 * 60;
+    let to = 23 * 60;
+    for (const r of this.rowsForDay()) {
+      from = Math.min(from, minutesOf(r.start));
+      to = Math.max(to, minutesOf(r.end));
+    }
+    return { from: Math.floor(from / 60) * 60, to: Math.ceil(to / 60) * 60 };
+  });
+
+  private rowsForDay = computed(() =>
+    this.today().filter(r => r.status !== 'CANCELLED'));
+
+  /** One label per hour, positioned as a percentage down the grid. */
+  protected hours = computed(() => {
+    const { from, to } = this.span();
+    const out: { label: string; topPct: number }[] = [];
+    for (let m = from; m <= to; m += 60) {
+      out.push({ label: hourLabel(m), topPct: ((m - from) / (to - from)) * 100 });
+    }
+    return out;
+  });
+
+  /**
+   * A column per working therapist, each carrying its own bookings.
+   *
+   * Matched on the rendered name because that is what the schedule endpoint
+   * returns - it is a day sheet for reading, not a join key. A therapist with
+   * no bookings still gets a column: an empty column is the answer to "who is
+   * free", and dropping it would hide exactly the person you are looking for.
+   */
+  protected columns = computed(() => {
+    const { from, to } = this.span();
+    const total = to - from;
+    return this.staff().filter(t => t.active).map(t => {
+      const who = this.name(t);
+      return {
+        id: t.id,
+        name: who,
+        initials: this.initials(t),
+        off: t.status === 'OFF_DUTY',
+        blocks: this.rowsForDay().filter(r => r.therapist === who).map(r => {
+          const s = minutesOf(r.start);
+          const e = minutesOf(r.end);
+          return {
+            id: r.id,
+            client: r.client,
+            room: r.room,
+            serviceName: r.serviceName,
+            time: r.time,
+            status: r.status,
+            topPct: ((s - from) / total) * 100,
+            heightPct: (Math.max(e - s, 20) / total) * 100,
+          };
+        }),
+      };
+    });
+  });
+
+  /** Bookings on this day that name a therapist no longer on the roster. */
+  protected orphaned = computed(() => {
+    const known = new Set(this.staff().filter(t => t.active).map(t => this.name(t)));
+    return this.rowsForDay().filter(r => !known.has(r.therapist));
+  });
+
+  async shiftDay(days: number): Promise<void> {
+    this.day.set(toIsoDay(addDays(fromIsoDay(this.day()), days)));
+    await this.load();
+  }
+
+  async goToday(): Promise<void> {
+    if (this.isToday()) return;
+    this.day.set(toIsoDay(new Date()));
+    await this.load();
+  }
+
+  async pickDay(value: string): Promise<void> {
+    if (!value) return;
+    this.day.set(value);
+    await this.load();
+  }
 
   // ------------------------------------------------------------ adding people
   //
@@ -341,7 +521,7 @@ export class StaffResources implements OnInit {
     try {
       const b = this.ctx.branchId();
       const [t, r, s] = await Promise.all([
-        this.api.therapists(b), this.api.rooms(b), this.api.schedule(undefined, b),
+        this.api.therapists(b), this.api.rooms(b), this.api.schedule(this.day(), b),
       ]);
       this.staff.set(t);
       this.rooms.set(r);

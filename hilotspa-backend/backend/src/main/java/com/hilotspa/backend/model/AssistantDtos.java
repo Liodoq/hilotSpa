@@ -100,7 +100,12 @@ public final class AssistantDtos {
      * sampled so the request does not grow with the length of the menu. Null
      * before the client has chosen, which is when breadth is what they need.
      */
-    public record ChatRequest(String message, UUID focusServiceId) {
+    /**
+     * `language` is the chip the client can see: "en" or "fil", or null to let
+     * the agent mirror them. Task 59 - the chip used to configure the VOICE
+     * only, so it could read English while the reply came back in Filipino.
+     */
+    public record ChatRequest(String message, UUID focusServiceId, String language) {
     }
 
     /** Sent to the n8n chat workflow. Same principle as the recommendation
@@ -111,6 +116,8 @@ public final class AssistantDtos {
             /** The model has no clock. Without these, "tomorrow" is a guess. */
             String now,
             String timezone,
+            /** "en", "fil", or null for mirror-the-client. */
+            String language,
             String intent,
             String chiefComplaint,
             String chiefComplaintDuration,

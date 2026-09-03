@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE } from './api.config';
-import { Branch } from './models';
+import { Branch, Openings } from './models';
 
 /**
  * Operational data for the staff and administrator screens.
@@ -73,6 +73,12 @@ export interface WalkInRequest {
   name: string;
   contact?: string | null;
   notes?: string | null;
+  /** Null means "whoever is free" — the server assigns, exactly as before. */
+  therapistId?: string | null;
+  roomId?: string | null;
+  /** ADMIN only: the branch they have opened. Ignored for staff, whose branch
+   *  comes from the token and can never be named by the request. */
+  branchId?: string | null;
   idempotencyKey?: string | null;
 }
 
@@ -144,6 +150,20 @@ export class OpsApi {
   /** S5 — record a walk-in. The branch comes from the token, never from here. */
   bookWalkIn(body: WalkInRequest): Promise<ScheduleRow | unknown> {
     return firstValueFrom(this.http.post(`${API_BASE}/appointments/walk-in`, body));
+  }
+
+  /**
+   * Who and what is free at the counter for a treatment at a time.
+   *
+   * Not the assistant's /openings/{formId}: that one authorises against a
+   * client's assessment and narrows by the sex they asked for, and a walk-in
+   * has no assessment to authorise against.
+   */
+  counterOpenings(serviceId: string, start: string, branchId?: string | null): Promise<Openings> {
+    const q = `serviceId=${encodeURIComponent(serviceId)}&start=${encodeURIComponent(start)}`
+      + (branchId ? `&branchId=${encodeURIComponent(branchId)}` : '');
+    return firstValueFrom(this.http.get<Openings>(
+      `${API_BASE}/appointments/openings?${q}`));
   }
 
   /** The branch day sheet. `date` is yyyy-MM-dd; omitted means today. */

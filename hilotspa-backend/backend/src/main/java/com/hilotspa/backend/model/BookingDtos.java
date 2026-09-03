@@ -176,6 +176,29 @@ public final class BookingDtos {
              * makes a walk-in's pain scores usable in Chapter IV. B85.
              */
             UUID formId,
+            /**
+             * Who and where, when the counter chose rather than leaving it to
+             * the server. Both nullable, and null stays the default: most
+             * walk-ins do not care, and the server picking is what has always
+             * made the two booking channels unable to award the same therapist.
+             *
+             * A pick that is no longer free is REFUSED, not quietly swapped.
+             * Staff standing in front of the client have just told them a name.
+             */
+            UUID therapistId,
+            UUID roomId,
+            /**
+             * Which branch this walk-in belongs to. ADMINISTRATORS ONLY.
+             *
+             * Staff never get to name a branch - theirs comes from the token,
+             * which is the rule every staff query follows and the reason a front
+             * desk cannot write to another branch. An administrator has no
+             * branch of their own, so context switching (Figure 3.3) is the only
+             * way they can record one, and until now that was impossible with
+             * two branches on file: the resolver threw unless exactly one
+             * existed.
+             */
+            UUID branchId,
             /** Front desks double-tap. Same idea as the agent retry guard. */
             String idempotencyKey) {
     }

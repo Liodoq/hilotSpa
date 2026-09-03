@@ -12,7 +12,7 @@ const STAFF_NAV: NavItem[] = [
   { path: '/staff/dashboard', label: 'Dashboard' },
   { path: '/staff/queue',     label: 'Queue' },
   { path: '/staff/resources', label: 'Therapists & rooms' },
-  { path: '/staff/report',    label: 'Pre-assessments' },
+  { path: '/staff/report',    label: 'Visit log' },
   { path: '/staff/walkin',    label: 'Record walk-in' },
 ];
 const ADMIN_NAV: NavItem[] = [
@@ -73,6 +73,32 @@ export class DashShell {
   /** Shown under a divider when an administrator is visiting a branch. */
   returnNav = computed<NavItem[]>(() => this.visiting() ? ADMIN_NAV : []);
 
+  /**
+   * The way BACK into a branch you are still inside.
+   *
+   * The template already fixed one half of this: an administrator who opened a
+   * branch used to lose every admin link, "and a switch you cannot switch back
+   * from is a dead end". The other half was left standing. Clicking Overview
+   * does not clear the branch - nothing here calls leave() - but every
+   * branch-scoped screen disappears from the sidebar, so it reads exactly as if
+   * it had, and the only route back is Branches and choosing again.
+   *
+   * The branch survives; the sidebar now says so and offers the door.
+   */
+  /**
+   * Set by a screen that already shows the branch state itself.
+   *
+   * Only Branches does: it marks the open branch "Currently open", scopes a
+   * panel to it and offers "Leave branch view". Repeating that in the sidebar
+   * put three controls for one thing on one screen, and three ways to do
+   * something reads as three different things.
+   */
+  ownsBranchControls = input(false);
+
+  protected inBranch = computed(() =>
+    this.isAdmin() && this.role() === 'ADMIN'
+    && this.ctx.active() && !this.ownsBranchControls());
+
   roleLabel = computed(() => {
     if (this.isAdmin()) {
       if (!this.visiting()) return 'Administrator · all branches';
@@ -89,7 +115,10 @@ export class DashShell {
     // comes from the context they switched into rather than from their token.
     if (this.isAdmin()) {
       const ctxName = this.ctx.name();
-      return ctxName ? ctxName.toUpperCase() : 'BRANCH VIEW';
+      // "BRANCH VIEW" with no branch behind it is the header asserting
+      // something the rest of the screen then contradicts. If there is no
+      // branch, say so - that is a state, not a failure to load.
+      return ctxName ? ctxName.toUpperCase() : 'ALL BRANCHES';
     }
     const branch = this.auth.branchName();
     return branch ? short(branch).toUpperCase() : 'NO BRANCH ASSIGNED';
@@ -109,6 +138,21 @@ export class DashShell {
   leaveBranch(): void {
     this.ctx.leave();
     this.go('/admin/overview');
+  }
+
+  /**
+   * Close the branch without going anywhere.
+   *
+   * leaveBranch() sends you to Overview, which is right when you are LEAVING a
+   * branch-scoped screen - there is nothing left to look at. From an
+   * administrator screen you are already somewhere global, so the same jump
+   * would move you off the page you were reading for no reason. Closing a scope
+   * and navigating are two different intentions and now have two different
+   * buttons.
+   */
+  closeBranch(): void {
+    this.open.set(false);
+    this.ctx.leave();
   }
 
   signOut(): void {

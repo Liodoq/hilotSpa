@@ -86,6 +86,7 @@ public class SecurityConfig {
                 // could count a branch's bookings. The service refuses them too;
                 // this is the outer wall.
                 .requestMatchers(HttpMethod.GET, "/api/v1/appointments/schedule/month").hasAnyRole("STAFF", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/v1/appointments/openings").hasAnyRole("STAFF", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/appointments/walk-in").hasAnyRole("STAFF", "ADMIN")
                 // Only the spa says a visit happened. The service enforces this too;
                 // this is the outer wall, so a routing mistake cannot expose it.

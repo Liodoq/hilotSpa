@@ -31,6 +31,35 @@
         <path d="M126 214 C138 222 162 222 174 214" />
       </g>
     }
+
+    <!--
+      The markers live INSIDE the svg, in its own 300x640 coordinates.
+
+      They used to be absolutely positioned DOM nodes laid over the figure, and
+      twice they escaped it - floating to the bottom of the homepage card and
+      beside the note on the admin assessment view, because their percentages
+      were being resolved against some ancestor other than .figure. The third
+      attempt is not another positioning rule to compete with whatever was
+      winning: a child of an svg cannot be laid out anywhere but inside that
+      svg's viewBox, so the failure has nowhere left to happen.
+
+      It also earns something the old markers never had - the marks scale WITH
+      the figure. Every page that showed a thumbnail had to hand-tune .mk down
+      to 24px to stop a 50px marker swallowing a 92px body. None of that is
+      needed now.
+    -->
+    @for (p of visible(); track p.key) {
+      <g class="mark" [class]="'mark ' + sev(p.score) + (p.key === selectedKey() ? ' sel' : '')"
+         [attr.role]="interactive() ? 'button' : null"
+         [attr.tabindex]="interactive() ? 0 : null"
+         [attr.aria-label]="'Spot ' + indexOf(p.key) + ', severity ' + p.score"
+         (click)="onSelect($event, p.key)">
+        <circle class="mhalo" [attr.cx]="p.x * 3" [attr.cy]="p.y * 6.4"
+                [attr.r]="haloSize(p.score) / 2" />
+        <circle class="dot" [attr.cx]="p.x * 3" [attr.cy]="p.y * 6.4" r="24" />
+        <text [attr.x]="p.x * 3" [attr.y]="p.y * 6.4">{{ indexOf(p.key) }}</text>
+      </g>
+    }
   </svg>
 
   <!-- the positions you may mark, shown faintly so the map is discoverable -->
@@ -49,16 +78,4 @@
     }
   }
 
-  @for (p of visible(); track p.key) {
-    <span class="halo" [class]="'halo ' + sev(p.score)"
-          [style.left.%]="p.x" [style.top.%]="p.y"
-          [style.width.px]="haloSize(p.score)" [style.height.px]="haloSize(p.score)"></span>
-
-    <button type="button" class="mk"
-            [class]="'mk ' + sev(p.score) + (p.key === selectedKey() ? ' sel' : '')"
-            [disabled]="!interactive()"
-            [style.left.%]="p.x" [style.top.%]="p.y"
-            [attr.aria-label]="'Spot ' + indexOf(p.key) + ', severity ' + p.score"
-            (click)="onSelect($event, p.key)">{{ indexOf(p.key) }}</button>
-  }
 </div>

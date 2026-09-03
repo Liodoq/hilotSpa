@@ -1,4 +1,4 @@
-<app-dash-shell role="ADMIN" scopeNote="Administrator context"
+<app-dash-shell role="ADMIN" [ownsBranchControls]="true" scopeNote="Administrator context"
   [banner]="ctx.active()
     ? 'You are viewing ' + ctx.name() + ' as an administrator. Anything you change is written to that branch’s node.'
     : null"
@@ -39,8 +39,21 @@
             <span class="bmeta">{{ n.therapists }}
               {{ n.therapists === 1 ? 'therapist' : 'therapists' }} · {{ n.rooms }}
               {{ n.rooms === 1 ? 'room' : 'rooms' }} · {{ n.bookingsToday }} booked today</span>
+            <!-- The node id is a fact about the PROCESS, not about the branch.
+                 There is one backend, so every card printed the same badge -
+                 Sorsogon City claimed to be served by bulan-01 too, on the one
+                 screen whose job is to show that branches are separate nodes.
+                 A label that is identical everywhere is not identifying
+                 anything; it just looks like it is. Say which branch this
+                 process actually serves, and say plainly that the others are
+                 not running yet, which is Sprint 3 and already stated at the
+                 bottom of this screen. -->
             <span class="chips bnode">
-              <span class="pill ok"><i class="dotx"></i>{{ n.nodeId }}</span>
+              @if (n.thisNode) {
+                <span class="pill ok"><i class="dotx"></i>{{ n.nodeId }} · this node</span>
+              } @else {
+                <span class="pill mute">no node running here yet</span>
+              }
             </span>
           </span>
           <span class="btn btn-sm"

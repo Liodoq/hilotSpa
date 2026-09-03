@@ -20,7 +20,19 @@
           <a class="link" routerLink="/staff/resources">Change statuses</a></span></div>
     }
 
-    <div class="cols">
+    <!-- An administrator in the all-branches view has no branch to record
+       against, and the server refuses. Say so BEFORE the form rather than
+       after it is filled in - the missing step is one click away. -->
+  @if (needsBranch()) {
+    <div class="card needbranch">
+      <h2 class="t-s">Open a branch first</h2>
+      <p class="help">A walk-in is recorded against one branch, and the therapist and
+        room it uses belong to that branch alone. You are viewing every branch at once,
+        so there is nothing to record it against.</p>
+      <a class="btn btn-primary" routerLink="/admin/branches">Choose a branch</a>
+    </div>
+  } @else {
+  <div class="cols">
       <div class="card" style="display:flex;flex-direction:column;gap:16px;min-width:0">
         <div>
           <label class="help" for="wname">CLIENT NAME <span style="color:var(--color-danger-600)">*</span></label>
@@ -52,16 +64,86 @@
         <div style="display:flex;gap:14px;flex-wrap:wrap">
           <div style="flex:1;min-width:180px">
             <label class="help" for="wdate">DATE <span style="color:var(--color-danger-600)">*</span></label>
-            <input id="wdate" class="input" type="date" [value]="date()" (input)="date.set(val($event))">
+            <app-date-picker [value]="date()" [minYear]="2024" placeholder="Choose a date"
+                             (changed)="date.set($event ?? date())" />
           </div>
           <div style="flex:1;min-width:150px">
             <label class="help" for="wtime">START <span style="color:var(--color-danger-600)">*</span></label>
-            <input id="wtime" class="input" type="time" step="900" [value]="time()"
-                   (input)="time.set(val($event))">
+            <div class="timepick">
+              <button type="button" class="input trigger" aria-haspopup="listbox"
+                      [attr.aria-expanded]="timeMenu()" (click)="toggleTimeMenu($event)">
+                <span>{{ timeLabel() }}</span>
+                <span class="chev" aria-hidden="true"></span>
+              </button>
+              @if (timeMenu()) {
+                <ul class="timemenu" role="listbox" (click)="$event.stopPropagation()">
+                  @for (t of timeOptions; track t.value) {
+                    <li><button type="button" role="option" class="topt"
+                                [class.on]="t.value === time()"
+                                [attr.aria-selected]="t.value === time()"
+                                (click)="pickTime(t.value)">{{ t.label }}</button></li>
+                  }
+                </ul>
+              }
+            </div>
           </div>
         </div>
         <p class="help">A time already past is allowed here — a walk-in is often typed in after the
           session has started. The online path forbids it, because a client cannot book yesterday.</p>
+
+        <!-- ==============================================================
+             Who and where. Optional: "Whoever is free" is selected from the
+             start, so a front desk with no reason to care is unaffected. A
+             name that is not free at this time cannot be tapped — greyed
+             rather than hidden, because a vanished name reads as a mistake.
+             ============================================================== -->
+        <div class="pickblock">
+          <div class="pickhead">
+            <span class="help">THERAPIST</span>
+            <!-- Say WHICH time the greying describes. A stale list that looks
+                 current is how a client gets turned away for nothing. -->
+            @if (checking()) { <span class="help">checking…</span> }
+            @else if (checkedFor(); as when) { <span class="help">free at {{ when }}</span> }
+            @else { <span class="help">could not check — the server will assign</span> }
+          </div>
+          <div class="chips">
+            <button type="button" class="chip" [class.on]="pickedTherapist() === null"
+                    [disabled]="saving()" (click)="pickedTherapist.set(null)">Whoever is free</button>
+            @for (t of therapistChoices(); track t.id) {
+              <button type="button" class="chip" [class.on]="pickedTherapist() === t.id"
+                      [disabled]="!t.free || saving()"
+                      [attr.aria-label]="t.name + (t.free ? '' : ' — not free at this time')"
+                      (click)="pickedTherapist.set(t.id)">
+                {{ t.name }}@if (!t.free) { <span class="taken">· {{ t.why }}</span> }
+              </button>
+            }
+          </div>
+
+          <div class="pickhead">
+            <span class="help">ROOM</span>
+          </div>
+          <div class="chips">
+            <button type="button" class="chip" [class.on]="pickedRoom() === null"
+                    [disabled]="saving()" (click)="pickedRoom.set(null)">Any open room</button>
+            @for (r of roomChoices(); track r.id) {
+              <button type="button" class="chip" [class.on]="pickedRoom() === r.id"
+                      [disabled]="!r.free || saving()"
+                      [attr.aria-label]="r.name + (r.free ? '' : ' — not free at this time')"
+                      (click)="pickedRoom.set(r.id)">
+                {{ r.name }}@if (!r.free) { <span class="taken">· booked</span> }
+              </button>
+            }
+          </div>
+          <p class="help">Greyed out means unavailable for this treatment's length at this time.
+            Leave both as they are and the server assigns.</p>
+          @if (blockedByStatus().length) {
+            <p class="help">
+              @for (t of blockedByStatus(); track t.id) { <b>{{ t.name }}</b> is {{ t.why }}. }
+              That is a roster setting, not a booking — change it on
+              <a class="link" routerLink="/staff/resources">Therapists &amp; rooms</a>
+              and they become selectable here.</p>
+          }
+        </div>
 
         <div>
           <label class="help" for="wnotes">NOTES</label>
@@ -77,7 +159,7 @@
 
       <aside style="display:flex;flex-direction:column;gap:16px">
         <div class="card" style="display:flex;flex-direction:column;gap:10px">
-          <h2 class="t-s" style="font-size:22px">Free right now</h2>
+          <h2 class="t-s" style="font-size:22px">On duty today</h2>
           <div class="chips">
             @for (t of freeStaff(); track t.id) {
               <span class="chip on">{{ t.firstName }} {{ t.lastName }}</span>
@@ -106,5 +188,6 @@
             logged with your account against it.</span></div>
       </aside>
     </div>
+  }
   </div>
 </app-dash-shell>

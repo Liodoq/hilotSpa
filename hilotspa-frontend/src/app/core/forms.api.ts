@@ -27,11 +27,11 @@ export class FormsApi {
    * question about a specific time can be answered truthfully instead of from
    * a two-a-day sample.
    */
-  chat(formId: string, message: string, focusServiceId?: string | null):
-      Promise<AssistantChatResponse> {
+  chat(formId: string, message: string, focusServiceId?: string | null,
+       language?: 'en' | 'fil' | null): Promise<AssistantChatResponse> {
     return firstValueFrom(this.http.post<AssistantChatResponse>(
       `${API_BASE}/assistant/chat/${formId}`,
-      { message, focusServiceId: focusServiceId ?? null }));
+      { message, focusServiceId: focusServiceId ?? null, language: language ?? null }));
   }
 
   /** Book a time the client tapped. Does not go near the model — the slotId is

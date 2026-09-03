@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { FormsApi } from './forms.api';
 import { AssessmentIntent, BookingModel, FormsModel, PRESSURES, safetyFlagLabel } from './models';
-import { PainPoint } from './assessment.store';
+import { PainPoint, toPainPoint } from './assessment.store';
 
 /**
  * The client's own session history, read from the server.
@@ -203,17 +203,10 @@ function toVisit(b: BookingModel): UpcomingVisit {
 }
 
 function toLog(f: FormsModel): SessionLog {
-  const points = (f.painPoints ?? []).map((p, i) => ({
-    key: `p${i}`,
-    hotspotId: '',
-    view: p.bodyView,
-    x: p.coordinateX,
-    y: p.coordinateY,
-    region: p.anatomicalRegion,
-    side: p.side,
-    score: p.painScoreBefore,
-    qualities: [],
-  })) as unknown as PainPoint[];
+  // Was an inline copy of this mapping that read coordinateX as a percentage
+  // when the server stores 0-1000, so every marker landed ten times too far
+  // right and down (B125). One mapper now, beside the scale it undoes.
+  const points: PainPoint[] = (f.painPoints ?? []).map(toPainPoint);
 
   const befores = (f.painPoints ?? []).map(p => p.painScoreBefore).filter(n => n != null);
   const afters  = (f.painPoints ?? []).map(p => p.painScoreAfter).filter(n => n != null) as number[];

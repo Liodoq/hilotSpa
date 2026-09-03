@@ -37,6 +37,20 @@ public interface BookingService {
     Openings openings(UUID formId, UUID serviceId, LocalDateTime start);
 
     /**
+     * The same question from the counter, where there is no client and no form.
+     *
+     * openings() is keyed to an assessment: it authorises against the form's
+     * owner and narrows by the sex the client asked for. A walk-in has neither,
+     * so it cannot borrow that method - and the front desk still needs to know
+     * who is free at half past two before it promises anybody.
+     *
+     * Branch comes from the token, never the request. That is the same rule
+     * every staff query follows and the reason a front desk cannot read another
+     * branch's roster.
+     */
+    Openings counterOpenings(UUID serviceId, LocalDateTime start, UUID branchId);
+
+    /**
      * Create the appointment.
      *
      * Re-checks availability INSIDE the transaction. Two clients can ask for the

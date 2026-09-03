@@ -1,6 +1,7 @@
 package com.hilotspa.backend.controller;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +24,7 @@ import com.hilotspa.backend.model.BookingDtos.Availability;
 import com.hilotspa.backend.model.BookingDtos.BookRequest;
 import com.hilotspa.backend.model.BookingDtos.Booking;
 import com.hilotspa.backend.model.BookingDtos.DayLoad;
+import com.hilotspa.backend.model.BookingDtos.Openings;
 import com.hilotspa.backend.model.BookingDtos.OutcomeRequest;
 import com.hilotspa.backend.model.BookingDtos.ScheduleRow;
 import com.hilotspa.backend.model.BookingDtos.SlotTaken;
@@ -40,6 +42,23 @@ public class AppointmentController {
     @GetMapping("/mine")
     public ResponseEntity<List<Booking>> mine() {
         return ResponseEntity.ok(bookingService.mine());
+    }
+
+    /**
+     * Who and what is free at the counter, for a treatment at a time.
+     *
+     * Distinct from /assistant/openings/{formId}, which authorises against a
+     * client's assessment and narrows by the sex they asked for. A walk-in has
+     * no assessment, so it cannot use that route - and without this the front
+     * desk had to guess, or let the server assign and then tell the client a
+     * name it had not chosen.
+     */
+    @GetMapping("/openings")
+    public ResponseEntity<Openings> counterOpenings(
+            @RequestParam UUID serviceId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam(required = false) UUID branchId) {
+        return ResponseEntity.ok(bookingService.counterOpenings(serviceId, start, branchId));
     }
 
     /**

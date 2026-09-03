@@ -269,10 +269,12 @@ select.input { appearance: none;
 .mk.s-low  { background: var(--color-forest-500); }
 .mk.s-mid  { background: var(--color-gold-700); }
 .mk.s-high { background: var(--color-danger-600); }
-.halo { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; }
-.halo.s-low  { border: 3px dashed rgba(95,127,69,.85);  background: rgba(95,127,69,.16); }
-.halo.s-mid  { border: 3px dashed rgba(138,109,31,.9);  background: rgba(200,160,53,.20); }
-.halo.s-high { border: 3px dashed rgba(163,59,39,.85);  background: rgba(163,59,39,.16); }
+/* .halo lived here while the pain marks were absolutely positioned DOM nodes
+   over the figure. They are svg children now (B124), the component styles its
+   own halo as .mhalo, and this rule's transform was actively breaking it - on
+   an svg element translate(-50%,-50%) resolves against the VIEWPORT, which
+   threw the halo half a figure up and to the left of its own marker. Deleted
+   rather than left dead: an unused global class name is the next collision. */
 .sev { width: 24px; height: 24px; border-radius: 50%; flex: 0 0 auto; border: 2px solid #fff;
        box-shadow: 0 0 0 1.5px rgba(0,0,0,.12); }
 .sev.s-low { background: var(--color-forest-500); }

@@ -7,6 +7,53 @@ import { ProfileStore } from './profile.store';
 import { Side } from './body-hotspots';
 
 /** One marker on the body map, before it becomes a PatientIntakeModel. */
+/**
+ * The server stores a marker's position as 0-1000, not 0-100.
+ *
+ * B125, and it cost three attempts to find because it never looked like a data
+ * bug. The write scaled up ("resolution-independent") and NOTHING scaled back
+ * down: two separate readers - the homepage wellness card and the admin View
+ * assessment page - both took the stored number for a percentage. A marker at
+ * 35% of the width came back as 350, and `left: 350%` puts it three and a half
+ * figures to the right of the body, which is exactly where Liodoq kept seeing
+ * them: floating at the bottom-right of the card, apparently escaping their
+ * container.
+ *
+ * Two CSS fixes were attempted against that symptom and neither could have
+ * worked - `.figure { position: relative }` had been correct the whole time.
+ * Moving the marks into the svg changed the symptom from "wildly misplaced" to
+ * "invisible", because 350 and 880 fall outside a 300x640 viewBox and the svg
+ * clips them.
+ *
+ * So the scale now lives in ONE place, with its inverse beside it, and every
+ * reader goes through toPainPoint. A unit written on one side of a boundary
+ * and assumed on the other is not a convention, it is a bug waiting for a
+ * second reader.
+ */
+const COORD_SCALE = 10;
+
+/**
+ * One stored marker, in the shape BodyMap draws.
+ *
+ * The single place a PatientIntakeModel becomes a PainPoint. Both readers used
+ * to do this inline, identically, and both got the scale wrong - and the
+ * `as unknown as PainPoint[]` cast each of them carried is what kept the
+ * compiler quiet about it.
+ */
+export function toPainPoint(p: PatientIntakeModel, i: number): PainPoint {
+  return {
+    key: p.id ?? `p${i}`,
+    hotspotId: '',
+    view: p.bodyView,
+    x: (p.coordinateX ?? 0) / COORD_SCALE,
+    y: (p.coordinateY ?? 0) / COORD_SCALE,
+    region: p.anatomicalRegion,
+    side: (p.side ?? 'CENTRE') as Side,
+    score: p.painScoreBefore ?? 0,
+    qualities: [],
+  };
+}
+
 export interface PainPoint {
   key: string;             // client-side only, for tracking in @for
   hotspotId: string;       // which fixed anatomical position was tapped
@@ -150,8 +197,8 @@ export class AssessmentStore {
       anatomicalRegion: p.region,
       side: p.side,
       bodyView: p.view,
-      coordinateX: Math.round(p.x * 10),   // 0-1000, resolution-independent
-      coordinateY: Math.round(p.y * 10),
+      coordinateX: Math.round(p.x * COORD_SCALE),
+      coordinateY: Math.round(p.y * COORD_SCALE),
       painScoreBefore: p.score,
       complaintType: d.mainComplaint,
       // painScoreAfter is never sent from here - it does not exist yet. The
