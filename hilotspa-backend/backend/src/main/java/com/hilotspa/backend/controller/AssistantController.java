@@ -17,6 +17,8 @@ import java.util.List;
 import com.hilotspa.backend.model.AssistantDtos.CatalogueEntry;
 import com.hilotspa.backend.model.AssistantDtos.ChatRequest;
 import com.hilotspa.backend.model.AssistantDtos.ChatResponse;
+import com.hilotspa.backend.model.AssistantDtos.TranscribeRequest;
+import com.hilotspa.backend.model.AssistantDtos.TranscribeResponse;
 import com.hilotspa.backend.model.AssistantDtos.ConfirmRequest;
 import com.hilotspa.backend.model.BookingDtos.Openings;
 import com.hilotspa.backend.model.AssistantDtos.RecommendResponse;
@@ -55,6 +57,20 @@ public class AssistantController {
         return ResponseEntity.ok(
                 assistantService.chat(formId, body.message(), body.focusServiceId(),
                                       body.language()));
+    }
+
+    /**
+     * Exchange a recording for its text. Nothing is booked and nothing is saved.
+     *
+     * Separate from /chat on purpose. The transcript goes back to the browser
+     * and the client sends it themselves - so a misheard sentence is corrected
+     * before it is acted on, and voice never becomes a second way to reach the
+     * booking logic.
+     */
+    @PostMapping("/transcribe/{formId}")
+    public ResponseEntity<TranscribeResponse> transcribe(@PathVariable UUID formId,
+                                                         @RequestBody TranscribeRequest body) {
+        return ResponseEntity.ok(assistantService.transcribe(formId, body));
     }
 
     /**

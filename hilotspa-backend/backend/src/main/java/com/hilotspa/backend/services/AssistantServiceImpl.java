@@ -43,6 +43,10 @@ import com.hilotspa.backend.entities.ServiceProtocol;
 import com.hilotspa.backend.model.AssistantDtos.AllowedService;
 import com.hilotspa.backend.model.AssistantDtos.CatalogueEntry;
 import com.hilotspa.backend.model.AssistantDtos.ChatResponse;
+import com.hilotspa.backend.model.AssistantDtos.N8nTranscribeResponse;
+import com.hilotspa.backend.model.AssistantDtos.TranscribeRequest;
+import com.hilotspa.backend.model.AssistantDtos.TranscribeResponse;
+import com.hilotspa.backend.model.AssistantDtos.TranscribeToN8n;
 import com.hilotspa.backend.model.AssistantDtos.ChatSlot;
 import com.hilotspa.backend.model.AssistantDtos.ChatToN8n;
 import com.hilotspa.backend.model.AssistantDtos.ConfirmRequest;
@@ -322,6 +326,78 @@ public class AssistantServiceImpl implements AssistantService {
                     m.getImageName()));
         }
         return out;
+    }
+
+    // ------------------------------------------------------- speech to text
+
+    /**
+     * About twenty seconds of 16 kHz mono WAV, once base64 has inflated it by a
+     * third. A cap belongs here rather than only in the browser: the browser is
+     * where a caller we do not control decides how much to send.
+     */
+    private static final int MAX_AUDIO_BASE64 = 1_400_000;
+
+    /**
+     * Only these reach Vertex. The browser chooses the container, and a value
+     * from the browser is a value an attacker chooses - it is interpolated into
+     * the request we make on the spa's credential, so it is checked rather than
+     * forwarded.
+     */
+    private static String audioMime(String mime) {
+        if (mime == null) {
+            return "audio/wav";
+        }
+        String v = mime.trim().toLowerCase(Locale.ROOT);
+        return switch (v) {
+            case "audio/wav", "audio/mpeg", "audio/mp3",
+                 "audio/flac", "audio/ogg", "audio/aac" -> v;
+            default -> "audio/wav";
+        };
+    }
+
+    @Override
+    public TranscribeResponse transcribe(UUID formId, TranscribeRequest req) {
+        if (req == null || req.audioBase64() == null || req.audioBase64().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No audio was received");
+        }
+        if (req.audioBase64().length() > MAX_AUDIO_BASE64) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE,
+                    "That recording is too long. Please keep it under about twenty seconds.");
+        }
+
+        Forms form = formsRepository.findById(formId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Form not found"));
+        assertCanAccess(form);
+
+        TranscribeToN8n body = new TranscribeToN8n(
+                "form-" + form.getId(),
+                req.audioBase64(),
+                audioMime(req.mimeType()),
+                normaliseLanguage(req.language()));
+
+        try {
+            N8nTranscribeResponse raw =
+                    postToN8n("/webhook/hilotspa/transcribe", body, N8nTranscribeResponse.class);
+            String text = raw == null || raw.transcript() == null ? "" : raw.transcript().trim();
+
+            // The LENGTH is logged, never the words. This sentence is a client
+            // describing their symptoms out loud; it belongs in the assessment
+            // they choose to send, not in a log file somebody greps later.
+            log.info("Transcribed audio for form {}: {} characters returned",
+                    form.getId(), text.length());
+
+            return new TranscribeResponse(clip(text, 1000));
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Transcription failed for form {} calling {}{}: {}",
+                    form.getId(), n8nUrl, "/webhook/hilotspa/transcribe", e.toString());
+            // Deliberately not a fallback string in the chat window: this is a
+            // failure of ONE feature, and the client still has the keyboard.
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "I could not make out that recording. Please try again, or type it instead.");
+        }
     }
 
     // ------------------------------------------------------------------ chat

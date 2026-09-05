@@ -108,6 +108,37 @@ public final class AssistantDtos {
     public record ChatRequest(String message, UUID focusServiceId, String language) {
     }
 
+    /**
+     * Audio captured in the browser, on its way to becoming text.
+     *
+     * The audio NEVER reaches a booking endpoint. It is exchanged for a
+     * transcript, the transcript is handed back to the browser, and the client
+     * sends it - or edits it first - through the ordinary chat path. Voice
+     * therefore adds no booking route and no validation surface: it is a
+     * different way of filling the same box.
+     */
+    public record TranscribeRequest(String audioBase64, String mimeType, String language) {
+    }
+
+    /** Just the words. Nothing about the audio survives the call. */
+    public record TranscribeResponse(String transcript) {
+    }
+
+    /** Sent to the n8n transcribe workflow. */
+    public record TranscribeToN8n(
+            String sessionKey,
+            String audioBase64,
+            /** Validated against a whitelist before it gets here - it is
+             *  interpolated into a request to Vertex. */
+            String mimeType,
+            /** "en", "fil", or null to let the model decide. */
+            String language) {
+    }
+
+    /** What the transcribe workflow returns. */
+    public record N8nTranscribeResponse(String transcript) {
+    }
+
     /** Sent to the n8n chat workflow. Same principle as the recommendation
      *  request: the agent's entire view of the world is in this object. */
     public record ChatToN8n(

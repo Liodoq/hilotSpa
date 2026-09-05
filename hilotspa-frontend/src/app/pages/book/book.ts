@@ -319,9 +319,14 @@ export class Book implements OnDestroy {
    * then what is being heard now, then the last line. The band is never blank
    * and never lies about which of the three is happening.
    */
-  protected captionKind = computed<'speaking' | 'listening' | 'idle'>(() => {
+  protected captionKind = computed<'speaking' | 'listening' | 'recording' | 'thinking' | 'idle'>(() => {
     if (this.speech.speaking()) return 'speaking';
     if (this.speech.listening()) return 'listening';
+    // The recorded path cannot show words as they arrive - nothing has been
+    // transcribed yet - so it says what it IS doing instead of going quiet.
+    // A band that empties looks like a system that stopped.
+    if (this.speech.recording()) return 'recording';
+    if (this.transcribing()) return 'thinking';
     return 'idle';
   });
 
@@ -340,6 +345,8 @@ export class Book implements OnDestroy {
   protected micNote = computed(() => {
     if (this.speech.micError()) return this.speech.micError();
     if (this.speech.listening()) return this.speech.heard() || 'Listening… speak now.';
+    if (this.speech.recording()) return 'Recording… tap the microphone again when you are done.';
+    if (this.transcribing()) return 'Writing down what you said…';
     return '';
   });
 
@@ -543,16 +550,86 @@ export class Book implements OnDestroy {
    * Browsers without SpeechRecognition (Safari, most of Android) say so once
    * and leave the client on the typed path rather than on a dead button.
    */
-  toggleMic(): void {
+  /** True while the recording is away being turned into words. */
+  protected transcribing = signal(false);
+
+  /**
+   * ?stt=server forces the recorded path; ?stt=browser forces recognition.
+   *
+   * Not a debug hack - it is the only way to exercise or demonstrate the
+   * server path on Chrome, which always has SpeechRecognition and would
+   * otherwise never reach it. Both values land on a supported, working path,
+   * so a client who stumbles on the parameter gets a working microphone
+   * either way.
+   */
+  private sttMode = typeof location === 'undefined'
+    ? null
+    : new URLSearchParams(location.search).get('stt');
+
+  /** The microphone is busy in either mode. */
+  protected micBusy = computed(() =>
+    this.speech.listening() || this.speech.recording() || this.transcribing());
+
+  /**
+   * One button, two ways of hearing.
+   *
+   * Where the browser has SpeechRecognition we use it: it captions the sentence
+   * as it is heard, which is the thing an older client needs in order to catch a
+   * misheard word before it is sent (NFR#4). Where it does not - Safari, Firefox,
+   * most of Android - we record and send the audio to our own workflow, which
+   * transcribes it through the same Vertex project the assistant already uses.
+   *
+   * Either way the result lands in draftText and nowhere else. The client reads
+   * it, edits it if it is wrong, and presses Send. Voice is a way of filling the
+   * box, never a second route into the booking logic.
+   */
+  async toggleMic(): Promise<void> {
     if (this.speech.listening()) { this.speech.stopListening(); return; }
+    if (this.speech.recording()) { await this.finishRecording(); return; }
+    if (this.transcribing()) return;
 
-    const started = this.speech.startListening(said => {
+    if (this.speech.canListen && this.sttMode !== 'server') {
+      const started = this.speech.startListening(said => {
+        this.draftText.set(said);
+        void this.send();
+      });
+      if (started) return;
+      // Recognition exists but refused to start - fall through and record.
+    }
+
+    if (!this.speech.canRecord || this.sttMode === 'browser') {
+      this.toast.show('This browser has no microphone we can use — please type instead.');
+      return;
+    }
+    if (!await this.speech.startRecording()) {
+      this.toast.show('I could not open the microphone. You can type instead.');
+    }
+  }
+
+  /**
+   * Stop recording and put the words in the box - deliberately NOT sending them.
+   *
+   * The recognition path sends straight away because the client watched the
+   * words appear and could stop it. Nobody watched this one, so they read it
+   * first.
+   */
+  private async finishRecording(): Promise<void> {
+    this.transcribing.set(true);
+    try {
+      const clip = await this.speech.stopRecording();
+      if (!clip) { this.toast.show('I did not catch that. Try again, or type it.'); return; }
+
+      const formId = this.formId();
+      if (!formId) { this.toast.show('Start a pre-assessment first.'); return; }
+
+      const res = await this.api.transcribe(formId, clip.base64, clip.mimeType, this.wantLang());
+      const said = (res?.transcript ?? '').trim();
+      if (!said) { this.toast.show('I did not catch that. Try again, or type it.'); return; }
       this.draftText.set(said);
-      void this.send();
-    });
-
-    if (!started) {
-      this.toast.show('This browser cannot listen. Chrome or Edge can — or just type.');
+    } catch (e) {
+      this.toast.show(describeHttpError(e, 'I could not make out that recording.'));
+    } finally {
+      this.transcribing.set(false);
     }
   }
 

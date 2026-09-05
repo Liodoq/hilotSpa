@@ -34,6 +34,20 @@ export class FormsApi {
       { message, focusServiceId: focusServiceId ?? null, language: language ?? null }));
   }
 
+  /**
+   * Exchange a recording for its text. Books nothing, saves nothing.
+   *
+   * The transcript comes back to the browser and the client sends it through
+   * chat() themselves, so a misheard sentence can be corrected before it is
+   * acted on.
+   */
+  transcribe(formId: string, audioBase64: string, mimeType: string,
+             language?: 'en' | 'fil' | null): Promise<{ transcript: string }> {
+    return firstValueFrom(this.http.post<{ transcript: string }>(
+      `${API_BASE}/assistant/transcribe/${formId}`,
+      { audioBase64, mimeType, language: language ?? null }));
+  }
+
   /** Book a time the client tapped. Does not go near the model — the slotId is
    *  revalidated server-side against freshly computed availability. */
   confirmSlot(formId: string, slotId: string,

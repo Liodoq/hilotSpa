@@ -261,13 +261,15 @@
      <div class="capclip">
       <div class="subtitle" [class.live]="captionKind() !== 'idle'"
            role="status" aria-live="polite" aria-atomic="true">
-      <span class="tag">{{ captionKind() === 'listening' ? 'HEARING' : 'SUBTITLE' }}</span>
+      <span class="tag">{{ captionKind() === 'speaking' ? 'SUBTITLE' : 'HEARING' }}</span>
       <span class="cap">
         @switch (captionKind()) {
           @case ('speaking') {
             <b>{{ captionSaid() }}</b><span class="dim">{{ captionRest() }}</span>
           }
           @case ('listening') { {{ micNote() }} }
+          @case ('recording') { {{ micNote() }} }
+          @case ('thinking') { {{ micNote() }} }
           @default { {{ subtitle() }} }
         }
       </span>
@@ -275,7 +277,7 @@
      </div>
     </div>
 
-    @if (speech.canSpeak || speech.canListen) {
+    @if (speech.canSpeak || speech.canListen || speech.canRecord) {
       <div class="voicebar">
         @if (speech.canSpeak) {
           <button type="button" class="vbtn" [class.on]="speech.voiceOn()"
@@ -291,8 +293,8 @@
         <button type="button" class="vbtn" aria-label="Change the assistant's language"
                 (click)="toggleLang()">
           {{ speech.lang() === 'fil-PH' ? 'Filipino' : 'English' }}</button>
-        @if (!speech.canListen) {
-          <span class="help flush">This browser cannot listen — Chrome or Edge can.
+        @if (!speech.canListen && !speech.canRecord) {
+          <span class="help flush">This browser has no microphone we can use.
             Typing works everywhere.</span>
         }
       </div>
@@ -304,14 +306,15 @@
     }
 
     <div class="composer">
-      @if (speech.canListen) {
-        <button type="button" class="mic" [class.live]="listening()" [attr.aria-pressed]="listening()"
-                [attr.aria-label]="listening() ? 'Stop listening' : 'Speak your answer'"
+      @if (speech.canListen || speech.canRecord) {
+        <button type="button" class="mic" [class.live]="micBusy()"
+                [attr.aria-pressed]="micBusy()" [disabled]="transcribing()"
+                [attr.aria-label]="micBusy() ? 'Stop and use what I said' : 'Speak your answer'"
                 (click)="toggleMic()"><i></i></button>
       }
       <input class="input fillrow" [value]="draftText()"
              (input)="draftText.set(val($event))" (keydown.enter)="send()"
-             [placeholder]="speech.canListen
+             [placeholder]="(speech.canListen || speech.canRecord)
                ? 'Type here, or tap the microphone to speak…'
                : 'Type your message here…'"
              aria-label="Message the booking assistant">

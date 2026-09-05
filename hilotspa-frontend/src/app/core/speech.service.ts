@@ -135,6 +135,20 @@ export class SpeechService {
   /** Plain-language reason the microphone stopped. Empty when fine. */
   readonly micError = signal('');
 
+  /** True while the client is being recorded for server-side transcription. */
+  readonly recording = signal(false);
+
+  /**
+   * Every modern browser can capture audio, which is the whole point of this
+   * second path: it works where SpeechRecognition does not exist, and it keeps
+   * the audio inside the spa's own Google Cloud project rather than sending it
+   * to the browser vendor's transcription service.
+   */
+  readonly canRecord =
+    typeof navigator !== 'undefined'
+    && !!navigator.mediaDevices?.getUserMedia
+    && typeof MediaRecorder !== 'undefined';
+
   private queue: string[] = [];
   private current: SpeechSynthesisUtterance | null = null;
   private keepAlive: ReturnType<typeof setInterval> | null = null;
@@ -391,5 +405,144 @@ export class SpeechService {
       default:
         return 'Voice input stopped. You can type instead.';
     }
+  }
+
+  // ------------------------------------------------------------- recording
+  /*
+   * The second voice path: capture here, transcribe on the server.
+   *
+   * SpeechRecognition above is faster and can caption a sentence as it is
+   * heard, so it stays the first choice where the browser has it. This path
+   * exists for two reasons. Safari and Firefox have no SpeechRecognition, so
+   * without it those clients have no microphone at all. And Chrome's
+   * recognition sends the audio to Google's own service - a second route out of
+   * the building that the project's data-handling argument (Vertex AI on Google
+   * Cloud terms) never covered. Recording here and transcribing through n8n
+   * keeps the audio in the same project, region and terms as the assistant.
+   *
+   * What comes back is TEXT, and it is put in the input box for the client to
+   * read before they send it. Voice never becomes a second way into the
+   * booking logic.
+   */
+
+  private media: MediaRecorder | null = null;
+  private chunks: Blob[] = [];
+
+  /** Ask for the microphone and start recording. False if we cannot. */
+  async startRecording(): Promise<boolean> {
+    if (!this.canRecord || this.recording()) return false;
+    this.stopSpeaking();                     // do not record the assistant
+    this.micError.set('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      this.chunks = [];
+      rec.addEventListener('dataavailable', e => { if (e.data.size) this.chunks.push(e.data); });
+      rec.addEventListener('stop', () => stream.getTracks().forEach(t => t.stop()));
+      this.media = rec;
+      rec.start();
+      this.zone.run(() => this.recording.set(true));
+      return true;
+    } catch (e) {
+      // Almost always a denied permission, or a page served over plain http -
+      // getUserMedia needs a secure context, which is why the deployment has TLS.
+      this.zone.run(() => this.micError.set(
+        'I could not open the microphone. Allow it for this site, or type instead.'));
+      return false;
+    }
+  }
+
+  /**
+   * Stop, and return the recording as base64 WAV — or null if nothing was captured.
+   *
+   * WAV rather than the browser's native webm/opus because Vertex accepts wav
+   * and does not document webm. Decoding and re-encoding here costs a moment on
+   * a phone and removes a transcoding step from the server, which is the part
+   * that would have needed ffmpeg in the image.
+   */
+  async stopRecording(): Promise<{ base64: string; mimeType: string } | null> {
+    const rec = this.media;
+    if (!rec) return null;
+    const blob: Blob = await new Promise(resolve => {
+      rec.addEventListener('stop',
+        () => resolve(new Blob(this.chunks, { type: rec.mimeType || 'audio/webm' })),
+        { once: true });
+      rec.stop();
+    });
+    this.media = null;
+    this.chunks = [];
+    this.zone.run(() => this.recording.set(false));
+    if (!blob.size) return null;
+    try {
+      return { base64: await this.toWavBase64(blob), mimeType: 'audio/wav' };
+    } catch {
+      this.zone.run(() => this.micError.set('That recording could not be read. Please type instead.'));
+      return null;
+    }
+  }
+
+  /** Throw the recording away without transcribing it. */
+  cancelRecording(): void {
+    const rec = this.media;
+    this.media = null;
+    this.chunks = [];
+    this.recording.set(false);
+    try { rec?.stop(); } catch { /* already stopped */ }
+  }
+
+  /* Asking for 16 kHz on the AudioContext makes decodeAudioData resample for
+   * us, so there is no hand-written resampler to get subtly wrong. 16 kHz mono
+   * is what speech recognition wants and it is a quarter the bytes of 44.1. */
+  private async toWavBase64(blob: Blob): Promise<string> {
+    const ctx = new AudioContext({ sampleRate: 16000 });
+    try {
+      const decoded = await ctx.decodeAudioData(await blob.arrayBuffer());
+      return SpeechService.wavBase64(SpeechService.mono(decoded), decoded.sampleRate);
+    } finally {
+      void ctx.close();
+    }
+  }
+
+  /** Average the channels. A phone in a spa is one voice, not a stereo image. */
+  private static mono(buf: AudioBuffer): Float32Array {
+    if (buf.numberOfChannels === 1) return buf.getChannelData(0);
+    const out = new Float32Array(buf.length);
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+      const ch = buf.getChannelData(c);
+      for (let i = 0; i < buf.length; i++) out[i] += ch[i] / buf.numberOfChannels;
+    }
+    return out;
+  }
+
+  private static wavBase64(pcm: Float32Array, rate: number): string {
+    const bytes = new ArrayBuffer(44 + pcm.length * 2);
+    const view = new DataView(bytes);
+    const ascii = (at: number, text: string) => {
+      for (let i = 0; i < text.length; i++) view.setUint8(at + i, text.charCodeAt(i));
+    };
+    ascii(0, 'RIFF');
+    view.setUint32(4, 36 + pcm.length * 2, true);
+    ascii(8, 'WAVEfmt ');
+    view.setUint32(16, 16, true);              // PCM header size
+    view.setUint16(20, 1, true);               // format: PCM
+    view.setUint16(22, 1, true);               // channels: mono
+    view.setUint32(24, rate, true);
+    view.setUint32(28, rate * 2, true);        // byte rate
+    view.setUint16(32, 2, true);               // block align
+    view.setUint16(34, 16, true);              // bits per sample
+    ascii(36, 'data');
+    view.setUint32(40, pcm.length * 2, true);
+    for (let i = 0; i < pcm.length; i++) {
+      const v = Math.max(-1, Math.min(1, pcm[i]));
+      view.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7FFF, true);
+    }
+    // Chunked, because String.fromCharCode(...wholeFile) overflows the stack
+    // on anything longer than a second or two.
+    const b = new Uint8Array(bytes);
+    let binary = '';
+    for (let i = 0; i < b.length; i += 0x8000) {
+      binary += String.fromCharCode(...b.subarray(i, i + 0x8000));
+    }
+    return btoa(binary);
   }
 }

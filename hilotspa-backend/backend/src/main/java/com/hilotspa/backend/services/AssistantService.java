@@ -6,6 +6,8 @@ import java.util.List;
 
 import com.hilotspa.backend.model.AssistantDtos.CatalogueEntry;
 import com.hilotspa.backend.model.AssistantDtos.ChatResponse;
+import com.hilotspa.backend.model.AssistantDtos.TranscribeRequest;
+import com.hilotspa.backend.model.AssistantDtos.TranscribeResponse;
 import com.hilotspa.backend.model.AssistantDtos.ConfirmRequest;
 import com.hilotspa.backend.model.BookingDtos.Openings;
 import com.hilotspa.backend.model.AssistantDtos.RecommendResponse;
@@ -37,6 +39,18 @@ public interface AssistantService {
      * nothing else is ever put in front of it.
      */
     ChatResponse chat(UUID formId, String message, UUID focusServiceId, String language);
+
+    /**
+     * Turn a recording into text. Writes nothing, books nothing.
+     *
+     * Exists because the browser's own SpeechRecognition sends audio to the
+     * browser vendor's service, which is a second route to Google that the
+     * project's data-handling argument never covered. This path keeps the audio
+     * inside the same Google Cloud project, region and terms as the assistant
+     * itself - and it gives a microphone to the browsers that have no
+     * SpeechRecognition at all.
+     */
+    TranscribeResponse transcribe(UUID formId, TranscribeRequest req);
 
     /**
      * Book a time the client tapped.
