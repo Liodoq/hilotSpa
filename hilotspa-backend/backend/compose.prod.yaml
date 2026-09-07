@@ -1,0 +1,39 @@
+# Production overlay (task 0.22 / 0.23). Use WITH compose.yaml, never instead:
+#
+#   docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+#
+# What it adds: Caddy in front for TLS, and memory limits that matter because
+# the whole stack shares one small instance.
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: hilotspa_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"     # required for the ACME challenge, even though the site is 443
+      - "443:443"
+    volumes:
+      - ../../Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../../site:/srv:ro
+      - caddy_data:/data        # the certificate lives here - do not delete it
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+  backend:
+    environment:
+      # The JVM assumes it is alone on the machine and takes a quarter of host
+      # RAM for heap. It is not alone: n8n wants roughly as much again, and on
+      # a 2 GB box the kernel resolves that argument by killing something -
+      # usually n8n, which reaches the client as "I am having trouble
+      # answering right now".
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=30 -XX:+UseSerialGC"
+
+  n8n:
+    environment:
+      # Same reasoning, other side of the ceiling.
+      NODE_OPTIONS: "--max-old-space-size=420"
+
+volumes:
+  caddy_data:
+  caddy_config:

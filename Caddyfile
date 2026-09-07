@@ -1,0 +1,38 @@
+# HilotSpa — production reverse proxy (task 0.22)
+#
+# Caddy gets and renews the TLS certificate on its own: no certbot, no cron,
+# no renewal that quietly lapses in the middle of a defence week.
+#
+# TLS is not decoration here. The system carries health data, and two features
+# stop working entirely without a secure context: getUserMedia (the microphone)
+# and SpeechRecognition. On plain http the mic silently does nothing.
+#
+# Replace the hostname with your own before first run. Caddy will try to get a
+# certificate for whatever is on this line, and it must resolve to this server.
+
+hilotspa.duckdns.org {
+	encode gzip
+
+	# The API goes to Spring, on the compose network. Never published publicly.
+	handle /api/* {
+		reverse_proxy backend:8080
+	}
+
+	# Everything else is the Angular bundle.
+	#
+	# try_files is what makes a deep link like /my-bookings survive a refresh:
+	# the browser knows that route, the server does not, and without this line
+	# the server 404s on a URL the application handles perfectly well.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		# The app is same-origin only; nothing embeds it.
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}
