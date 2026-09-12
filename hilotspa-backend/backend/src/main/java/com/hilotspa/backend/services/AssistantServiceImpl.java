@@ -62,6 +62,7 @@ import com.hilotspa.backend.repository.AuditLogRepository;
 import com.hilotspa.backend.repository.FormsRepository;
 import com.hilotspa.backend.repository.MassageRepository;
 import com.hilotspa.backend.model.BookingDtos.BookRequest;
+import com.hilotspa.backend.model.BookingDtos.Booking;
 import com.hilotspa.backend.model.BookingDtos.Slot;
 import com.hilotspa.backend.repository.ServiceProtocolRepository;
 
@@ -582,8 +583,68 @@ public class AssistantServiceImpl implements AssistantService {
         // always been in the reply schema and nothing in the prompt had ever
         // told the model to set it. Reading a field nobody was asked to fill is
         // the same mistake as B115 in the other direction.
+        // B128. See refocus(): the panel must show the calendar of the treatment
+        // the REPLY settled on, not of the focus the request happened to carry.
         return new ChatResponse(reply, raw.status() == null ? "OK" : raw.status(), null, null,
-                List.copyOf(slotsById.values()), null, about);
+                List.copyOf(refocus(formId, allowed, focusServiceId, about, slotsById).values()),
+                null, about);
+    }
+
+    /**
+     * The slot list this response should DRAW, which is not always the one the
+     * model was shown.
+     *
+     * B128. bookableSlots gives the focused treatment its whole calendar and
+     * every other treatment a two-a-day sample - one 9:00 AM, one mid-afternoon.
+     * That is the right economy for a prompt: it keeps the request cheap while
+     * still letting the agent answer truthfully about any day in the window
+     * (B89).
+     *
+     * But the browser draws OPEN TIMES from this same list, and it focuses
+     * whichever treatment the reply named. On the turn where the client says
+     * "I would like the Signature Massage" without having tapped a chip first,
+     * the request carried no focus, so what the panel then drew for a
+     * ninety-minute treatment with twenty-six open times a day was seven day
+     * chips reading "2 times", offering 9:00 AM and 3:30 PM and nothing else.
+     * The times existed. The client was simply never shown them - and a client
+     * who needs 11:00 AM concludes the spa is full, which is the same false
+     * answer B89 was about, arriving by a different route.
+     *
+     * Only the tap path was ever right, because only the tap sets the focus
+     * before the message goes. Typing the treatment's name - and the voice
+     * path, which can only type - always landed here.
+     *
+     * Recomputed rather than re-asked: the browser could send a second chat
+     * turn to get this list, and that is what refreshTimes() does elsewhere,
+     * but it would spend another model call answering a question Spring can
+     * answer from the database on a turn the client is already waiting on.
+     *
+     * The model's own sentence stays as it was. It answered from the sample and
+     * may name fewer times than the panel now shows; a panel offering MORE than
+     * the sentence is a client discovering a real opening, which is the right
+     * way round. The next turn carries the focus and the two agree again.
+     *
+     * Not applied to the hold-recovery return above. That one carries a
+     * pendingSlotId the browser opens a confirmation card for, and the focused
+     * calendar is capped at SLOTS_FOR_FOCUS from the start of the window while
+     * the sample deliberately reaches the last day - so refocusing there could
+     * drop the very slot being confirmed. It does not need this: the card is
+     * about one time, not the calendar behind it.
+     */
+    private Map<String, ChatSlot> refocus(UUID formId, List<AllowedService> allowed,
+                                          UUID focusServiceId, UUID about,
+                                          Map<String, ChatSlot> shown) {
+        if (about == null || about.equals(focusServiceId)) {
+            return shown;
+        }
+        try {
+            return bookableSlots(formId, allowed, about);
+        } catch (Exception e) {
+            // Never let a widened calendar cost the client the answer they
+            // already have. The sample is narrow, not wrong.
+            log.warn("Could not widen the calendar to service {}: {}", about, e.toString());
+            return shown;
+        }
     }
 
     /**
@@ -1166,19 +1227,82 @@ public class AssistantServiceImpl implements AssistantService {
             // something: it told them a picker was open on their screen. Naming
             // Lito Fernandez and Treatment Room 2 costs nothing here - this list
             // is the caller's OWN bookings and never anyone else's.
-            return bookingService.mine().stream()
-                    .map(b -> b.label() + " - " + b.serviceName()
-                            + " (" + b.durationMinutes() + " min, " + b.status() + ")"
-                            + (b.therapist() == null || b.therapist().isBlank()
-                                    ? "" : " with " + b.therapist())
-                            + (b.room() == null || b.room().isBlank()
-                                    ? "" : " in " + b.room()))
-                    .limit(10)
-                    .toList();
+            //
+            // B130. Two things were wrong with the flat list this used to be.
+            //
+            // It drew no line between a visit still to come and one that has
+            // already happened, so "ano po ang bookings ko" asked on the 9th was
+            // answered with seven lines reaching back to the 3rd - a NO_SHOW
+            // among them - every one of them offered as current. The client's
+            // question had exactly one true answer that day: Thursday.
+            //
+            // And it printed the status as the enum. CONFIRMED and NO_SHOW are
+            // values for a database column, not words to say to a client, and
+            // this reply is READ OUT LOUD as well as shown. Nobody should hear
+            // their missed appointment described as "NO_SHOW".
+            //
+            // Soonest first, still-to-come before already-happened, six lines at
+            // most: the agent needs enough to recognise a visit it is being
+            // asked about (rule 7e), not the client's whole history.
+            LocalDateTime now = LocalDateTime.now(ZoneId.of(timezone));
+            List<Booking> ahead = new ArrayList<>();
+            List<Booking> behind = new ArrayList<>();
+            for (Booking b : bookingService.mine()) {
+                (b.start() != null && b.start().isAfter(now) ? ahead : behind).add(b);
+            }
+            ahead.sort(Comparator.comparing(Booking::start,
+                    Comparator.nullsLast(Comparator.naturalOrder())));
+            behind.sort(Comparator.comparing(Booking::start,
+                    Comparator.nullsLast(Comparator.reverseOrder())));
+
+            List<String> out = new ArrayList<>();
+            for (Booking b : ahead) {
+                if (out.size() >= MY_BOOKINGS_SHOWN) break;
+                out.add("still to come: " + describeVisit(b));
+            }
+            for (Booking b : behind) {
+                if (out.size() >= MY_BOOKINGS_SHOWN) break;
+                out.add("already happened: " + describeVisit(b));
+            }
+            return out;
         } catch (Exception e) {
             log.warn("Could not read the caller's bookings for chat context: {}", e.toString());
             return List.of();
         }
+    }
+
+    /** Enough for the agent to recognise the visit being asked about. Not a history. */
+    private static final int MY_BOOKINGS_SHOWN = 6;
+
+    private static String describeVisit(Booking b) {
+        return b.label() + " - " + b.serviceName()
+                + " (" + b.durationMinutes() + " min, " + sayStatus(b.status()) + ")"
+                + (b.therapist() == null || b.therapist().isBlank()
+                        ? "" : " with " + b.therapist())
+                + (b.room() == null || b.room().isBlank()
+                        ? "" : " in " + b.room());
+    }
+
+    /**
+     * The status in words a client can hear.
+     *
+     * The default deliberately still says something rather than dropping an
+     * unknown status: a new value added to the enum later should degrade to
+     * "on hold", not vanish and leave the agent describing a cancelled visit as
+     * though it were on.
+     */
+    private static String sayStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return "booked";
+        }
+        return switch (status.toUpperCase(Locale.ROOT)) {
+            case "CONFIRMED", "BOOKED" -> "confirmed";
+            case "PENDING", "HELD" -> "not confirmed yet";
+            case "COMPLETED", "DONE" -> "completed";
+            case "CANCELLED", "CANCELED" -> "cancelled";
+            case "NO_SHOW" -> "missed";
+            default -> status.toLowerCase(Locale.ROOT).replace('_', ' ');
+        };
     }
 
     /**
