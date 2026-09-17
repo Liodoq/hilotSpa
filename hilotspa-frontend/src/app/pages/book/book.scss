@@ -286,3 +286,77 @@
 @media (prefers-reduced-motion: reduce) {
   .dots i { animation: none; opacity: .6; }
 }
+
+/* ===========================================================================
+   PHONES - messenger layout, added 2026-09-17.
+
+   The 1200px rule collapses .split to one column and sets height: auto, which
+   is right for a tablet and wrong for a phone: with no fixed height .thread's
+   overflow never engages, the column grows to fit every message, and the
+   composer ends up wherever the conversation happens to end - with the whole
+   context panel dumped below it. On a 375px screen that means scrolling past
+   the entire chat to reach the box you type in.
+
+   Sticky rather than a calc() height: the app bar wraps to two or three rows
+   on a phone now, so its height is no longer a number this file can know.
+   position: sticky needs no such number - the composer simply stays at the
+   bottom edge of the viewport while the page scrolls behind it, which is what
+   Messenger does and what a thumb expects.
+
+   .context is hidden outright here. It is the integrity panel - what the
+   assistant was allowed to see - and it belongs to a defence, not to a client
+   on a phone. Desktop keeps it.
+   =========================================================================== */
+@media (max-width: 720px) {
+
+  .split { height: auto; min-height: 0; }
+  .chatcol { padding: 14px 14px 0; gap: 12px; }
+
+  /* Let the PAGE scroll, not an inner box. Two nested scroll regions on a
+     touch screen is how you get a thread that refuses to move because your
+     thumb started on the wrong element. */
+  .thread { overflow-y: visible; flex: 0 1 auto; }
+
+  /* The composer rides the bottom edge. The padding keeps it clear of the
+     iPhone home indicator; the shadow stops messages appearing to run into
+     it as they scroll underneath. */
+  .composer {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: var(--color-cream);
+    padding: 10px 0 max(10px, env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 16px -8px rgba(46, 66, 32, .18);
+    gap: 10px;
+  }
+
+  /* iOS zooms the whole page when a focused input is under 16px. It reads as
+     the layout breaking on tap; it is Safari being helpful. */
+  .composer input, .composer textarea { font-size: 16px; }
+
+  /* The voice row sits above the composer and should not take two lines. */
+  .voicebar { gap: 8px; }
+  .vbtn { font-size: 15px; padding: 7px 12px; }
+
+  /* Bubbles get the width back that the 500px panel used to take. */
+  .bub { max-width: 88%; }
+
+  /* The composer is a ROW: microphone, text box, Send. Each keeps its own
+     size and the text box takes what is left. Without this the global
+     full-width button rule claims the whole row for Send. */
+  .composer > * { flex: 0 0 auto; }
+  .composer .btn { width: auto; min-width: 0; }
+  .composer input, .composer textarea, .composer .in {
+    flex: 1 1 auto; min-width: 0; width: auto;
+  }
+
+  /* No page taller than its content. :host carries min-height: 100dvh so the
+     cream never runs out mid-screen; without this the chat column ALSO
+     stretched and left a screen of empty page under the last message. */
+  :host { min-height: 100dvh; }
+  .split { min-height: 0; height: auto; }
+  .chatcol { min-height: 0; height: auto; }
+
+  /* Not a client's screen. See the note above. */
+  .context { display: none; }
+}

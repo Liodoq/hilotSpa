@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { CatalogueEntry, OpsApi } from './ops.api';
 import { BookingStore } from './booking.store';
 import { AuthService } from './auth.service';
@@ -20,6 +20,38 @@ export class CatalogueStore {
   private pub = inject(PublicApi);
   private auth = inject(AuthService);
   private bookings = inject(BookingStore);
+
+  /**
+   * The token this menu was judged for.
+   *
+   * B133. `loaded` is set by BOTH load paths, and load() returns early while it
+   * is true - so once a visitor's public menu has been cached, the token is
+   * never consulted again for the rest of the session. `force` and clear() were
+   * both written for exactly this and neither was ever called by anything.
+   *
+   * The consequence is worse than the button that exposed it. Every entry
+   * carries `suitable`, and the service page tells the client it "says plainly
+   * whether this treatment is advised for you". Judged against nobody and then
+   * served to a signed-in client, that is a claim about a judgement that was
+   * never made - the same class of untruth as B91, which the comment above
+   * warns about, arriving through the one door nothing was watching.
+   *
+   * Invalidate only; do not re-fetch here. Every screen that needs the menu
+   * calls load() on init, and an effect that fires requests on a token change
+   * turns into a mystery double-load later.
+   */
+  private judgedForToken: string | null | undefined;
+
+  constructor() {
+    effect(() => {
+      const token = this.auth.token();
+      if (token === this.judgedForToken) {
+        return;
+      }
+      this.judgedForToken = token;
+      this.clear();
+    });
+  }
 
   /**
    * True when the menu came from the PUBLIC endpoint — a visitor who has not

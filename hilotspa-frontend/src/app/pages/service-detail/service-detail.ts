@@ -7,6 +7,7 @@ import { AssessmentStore } from '../../core/assessment.store';
 import { ProfileStore } from '../../core/profile.store';
 import { CatalogueStore, priceLabel } from '../../core/catalogue.store';
 import { CatalogueEntry } from '../../core/ops.api';
+import { AuthService } from '../../core/auth.service';
 
 /**
  * A service on its own page.
@@ -28,6 +29,7 @@ export class ServiceDetail implements OnInit {
   private profile = inject(ProfileStore);
   private toast = inject(ToastService);
   protected cat = inject(CatalogueStore);
+  private auth = inject(AuthService);
 
   protected priceLabel = priceLabel;
 
@@ -48,7 +50,14 @@ export class ServiceDetail implements OnInit {
     // A visitor can read the whole menu, but booking needs an account and an
     // assessment - Process Rule #2 is not relaxed for the public site. Send
     // them to register and remember what they were looking at.
-    if (this.cat.anonymous()) {
+    //
+    // B133. Ask the SESSION whether there is a client, never the catalogue.
+    // cat.anonymous() describes how the menu was FETCHED, not who is reading
+    // it. A visitor who browses the menu, then registers, then taps this
+    // button still carries a catalogue marked anonymous - and was sent to
+    // register an account he had created sixty seconds earlier. Found by a
+    // real client on the live site, on the primary path, in five minutes.
+    if (!this.auth.token()) {
       this.store.wantedService.set(s.name);
       this.toast.show(`${s.name} chosen — create an account to book it`, 3200);
       this.router.navigateByUrl('/register');

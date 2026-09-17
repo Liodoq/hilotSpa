@@ -943,3 +943,89 @@ select.input { appearance: none;
   white-space: nowrap;
   border: 0;
 }
+
+/* ===========================================================================
+   PHONES - one breakpoint, added 2026-09-17.
+
+   Everything above was written at a laptop and the global primitives carry
+   desktop measurements as hard floors: .appbar is a 96px flex row with 48px
+   of side padding and NO flex-wrap, .navlinks spaces four links 38px apart,
+   .btn-primary cannot go under 280px, .figure is exactly 234px, and .sidebar
+   is flex: 0 0 288px - forbidden to shrink at all.
+
+   On a 375px screen the top bar alone asks for roughly 820px inside 279px of
+   usable width. A flex row that cannot wrap does not clip; it OVERLAPS. The
+   brand, the links and the avatar end up stacked on the same pixels, so taps
+   land on whichever happens to be on top. That is why the site read as "not
+   interactive" rather than merely cramped: the controls were there and
+   something else was sitting on them.
+
+   Scoped entirely to <=720px. Nothing a laptop renders changes.
+   =========================================================================== */
+@media (max-width: 720px) {
+
+  /* ---- customer top bar: allow it to wrap and to be shorter ---- */
+  .appbar { height: auto; min-height: 68px; padding: 10px 16px; flex-wrap: wrap;
+            gap: 8px 12px; row-gap: 8px; }
+  .appbar .brand { gap: 10px; min-width: 0; flex: 1 1 auto; }
+  .appbar .brand b { font-size: 17px; }
+  .appbar .brand small { font-size: 13px; }
+
+  /* The links become their own full-width row under the brand. They scroll
+     sideways rather than wrapping onto three lines, so the bar keeps one
+     predictable height and nothing below it moves as you navigate. */
+  .navlinks { order: 3; flex: 1 0 100%; gap: 20px; font-size: 15px;
+              letter-spacing: .6px; overflow-x: auto; padding-bottom: 2px;
+              -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .navlinks::-webkit-scrollbar { display: none; }
+  .navlinks a { white-space: nowrap; padding-bottom: 4px; }
+
+  .avatar { width: 42px; height: 42px; font-size: 16px; flex: 0 0 auto; }
+
+  /* ---- buttons: a 280px floor does not fit a 327px content box ---- */
+  .btn { font-size: 19px; }
+
+  /* Full width is right for a button that OWNS its line and wrong for one
+     sitting in a flex row: width: 100% on a flex item means 100% of the
+     container, so Send grew to the width of the composer and shoved the text
+     box and the microphone off the screen. The page then scrolled sideways,
+     and because .appbar spans the VIEWPORT rather than the document, the
+     white bar appeared to stop three-quarters of the way across. One wrong
+     rule, two symptoms that look unrelated. */
+  .btn-primary, .btn-ghost { min-width: 0; width: 100%; }
+  .row > .btn, .rowbar .btn, .composer .btn, .voicebar .btn,
+  .appbar .btn, .acts.inline .btn { width: auto; }
+
+  /* Belt and braces. Nothing should overflow after the rules above, but a
+     single wide element anywhere turns the whole site sideways, and a demo
+     is not the moment to find the next one. */
+  html, body { max-width: 100%; overflow-x: hidden; }
+
+  /* ---- layout primitives that never collapsed ---- */
+  .grid3, .grid4 { grid-template-columns: 1fr; }
+  .row { flex-direction: column; gap: 16px; }
+  .kv { gap: 6px 18px; font-size: 17px; }
+
+  /* ---- body map: scale with the container instead of a fixed 234px.
+         The svg carries a viewBox and the marks are svg children (B124), so
+         they scale with it - which is exactly why B124 mattered. ---- */
+  .figure { width: 100%; max-width: 234px; margin: 0 auto; }
+  .figure svg { width: 100%; height: auto; }
+
+  /* ---- staff/admin shell: let the sidebar become a top strip ---- */
+  .dash { flex-direction: column; }
+  .sidebar { width: 100%; flex: 0 0 auto; flex-direction: row; flex-wrap: wrap;
+             padding: 10px 12px; gap: 6px; }
+  .sidebrand { flex: 1 0 100%; padding: 0 4px 8px; }
+  .navitem { width: auto; min-height: 44px; padding: 0 12px; font-size: 16px; }
+  .mainbar { height: auto; min-height: 64px; padding: 10px 16px; }
+
+  /* ---- panels and headings ---- */
+  .dash .phead .t { font-size: 26px; }
+  .dash .phead .s { font-size: 17px; }
+  .side { padding: 20px; }
+  .consent { padding: 16px; gap: 12px; }
+  .rev { padding: 16px 18px; }
+
+  /* ---- the drawer is already width: min(560px, 100%) and correct ---- */
+}
