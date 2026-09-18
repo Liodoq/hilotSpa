@@ -7,10 +7,29 @@
 # stop working entirely without a secure context: getUserMedia (the microphone)
 # and SpeechRecognition. On plain http the mic silently does nothing.
 #
-# Replace the hostname with your own before first run. Caddy will try to get a
-# certificate for whatever is on this line, and it must resolve to this server.
+# THE HOSTNAME COMES FROM THE ENVIRONMENT, not from this file.
+#
+# It was written here literally, and that was wrong for two reasons that both
+# bit on 2026-09-18:
+#
+#   1. This file is tracked in git and shared by every node. Node 2 answers on
+#      a different name, so a literal hostname means one node is permanently
+#      editing a tracked file - and `git pull` silently reverts its TLS config.
+#   2. Editing it on the server is the failure that actually happened: the edit
+#      was never saved, `caddy reload` reported success, and the log said
+#      "config is unchanged". A reload of an unchanged config looks exactly
+#      like a reload that worked.
+#
+# SITE_HOST accepts a comma-separated list, which is how a node serves an old
+# and a new name while a rename settles:
+#
+#   SITE_HOST=hilotspa.duckdns.org, hilotspa-bulan.duckdns.org
+#
+# Whatever is set must RESOLVE TO THIS SERVER before Caddy starts. It asks
+# Let's Encrypt for a certificate for each name, and failed attempts against a
+# name pointing somewhere else are rate-limited.
 
-hilotspa.duckdns.org {
+{$SITE_HOST} {
 	encode gzip
 
 	# The API goes to Spring, on the compose network. Never published publicly.

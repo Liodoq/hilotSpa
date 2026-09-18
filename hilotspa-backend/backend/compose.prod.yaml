@@ -9,6 +9,11 @@ services:
     image: caddy:2-alpine
     container_name: hilotspa_caddy
     restart: unless-stopped
+    environment:
+      # The hostname(s) this node answers on. Comma-separated for a rename.
+      # Falls back to the original name so an un-set .env still boots the way
+      # it did before, rather than failing with an empty site block.
+      SITE_HOST: ${SITE_HOST:-hilotspa.duckdns.org}
     ports:
       - "80:80"     # required for the ACME challenge, even though the site is 443
       - "443:443"
