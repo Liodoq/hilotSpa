@@ -35,7 +35,7 @@ export class Landing implements OnInit {
   private api = inject(PublicApi);
   private router = inject(Router);
   protected auth = inject(AuthService);
-  /** 3.5 - the branch THIS node serves, rather than the one that was typed
+  /** 3.31 - the branch THIS node serves, rather than the one that was typed
    *  into the template while only one node existed. */
   protected site = inject(NodeStore);
 

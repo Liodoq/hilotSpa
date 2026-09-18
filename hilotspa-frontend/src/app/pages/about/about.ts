@@ -23,6 +23,6 @@ import { NodeStore } from '../../core/node.store';
   styleUrl: './about.scss',
 })
 export class About {
-  /** 3.5 - which branch this node speaks for. */
+  /** 3.31 - which branch this node speaks for. */
   protected site = inject(NodeStore);
 }

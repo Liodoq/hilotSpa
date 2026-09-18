@@ -29,7 +29,7 @@ interface Group { service: string; rows: ProtocolRow[]; }
 export class ProtocolSheet implements OnInit {
   private api = inject(AdminApi);
   /**
-   * 3.5 - which branch this sheet belongs to.
+   * 3.31 - which branch this sheet belongs to.
    *
    * This one matters more than the others on the page. A practitioner signs
    * this document, and a signed protocol table that names the wrong branch is

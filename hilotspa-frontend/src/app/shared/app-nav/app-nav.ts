@@ -18,7 +18,7 @@ export class AppNav {
   /** 3.7 - the client's own connection, stated plainly rather than left to be
    *  inferred from a screen that has quietly stopped updating. */
   protected net = inject(Connectivity);
-  /** 3.5 - the bar names the branch this NODE serves. It used to be a literal
+  /** 3.31 - the bar names the branch this NODE serves. It used to be a literal
    *  string in the template, which was true while one node existed and became
    *  a lie the moment a second one did. */
   protected site = inject(NodeStore);

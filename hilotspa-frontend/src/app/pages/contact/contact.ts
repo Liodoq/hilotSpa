@@ -24,7 +24,7 @@ import { NodeStore } from '../../core/node.store';
 })
 export class Contact implements OnInit {
   private api = inject(PublicApi);
-  /** 3.5 - the branch this node serves, used when SPA_ADDRESS has not been
+  /** 3.31 - the branch this node serves, used when SPA_ADDRESS has not been
    *  set for this deployment. Naming a branch in the fallback is what made
    *  the Daraga node say Bulan. */
   protected site = inject(NodeStore);

@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { NodeIdentity, PublicApi } from './public.api';
 
 /**
- * Which node is this browser talking to (task 3.5).
+ * Which node is this browser talking to (task 3.31).
  *
  * Fetched once and shared, because two very different screens need the same
  * answer: the top bar, which has to name the branch instead of the hardcoded

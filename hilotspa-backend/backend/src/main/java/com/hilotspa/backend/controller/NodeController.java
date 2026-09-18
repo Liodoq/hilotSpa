@@ -17,7 +17,7 @@ import com.hilotspa.backend.repository.BranchRepository;
 import jakarta.annotation.PostConstruct;
 
 /**
- * Which node am I, and which branch do I write for? (task 3.5)
+ * Which node am I, and which branch do I write for? (task 3.31)
  *
  * Unauthenticated, and under /api/v1/public because a visitor who has not
  * signed in still needs the answer: the page they are looking at has to name
