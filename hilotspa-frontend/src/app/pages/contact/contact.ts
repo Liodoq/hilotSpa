@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AppNav } from '../../shared/app-nav/app-nav';
 import { PublicApi, PublicSpa } from '../../core/public.api';
+import { NodeStore } from '../../core/node.store';
 
 /**
  * Contact details, and deliberately not a contact form.
@@ -23,6 +24,10 @@ import { PublicApi, PublicSpa } from '../../core/public.api';
 })
 export class Contact implements OnInit {
   private api = inject(PublicApi);
+  /** 3.5 - the branch this node serves, used when SPA_ADDRESS has not been
+   *  set for this deployment. Naming a branch in the fallback is what made
+   *  the Daraga node say Bulan. */
+  protected site = inject(NodeStore);
   protected spa = signal<PublicSpa | null>(null);
   protected loading = signal(true);
 

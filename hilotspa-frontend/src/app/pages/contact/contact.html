@@ -3,7 +3,7 @@
 <main class="pub contact">
 
   <header class="chead">
-    <p class="eyebrow">{{ spa()?.address || 'Bulan, Sorsogon' }}</p>
+    <p class="eyebrow">{{ spa()?.address || site.label() }}</p>
     <h1 class="display">Come in, or call ahead.</h1>
     <p class="lead">
       Walk-ins are always welcome — the front desk can book you without an account. If you
@@ -32,7 +32,7 @@
     <div class="row2">
       <h2 class="sec-head">Where to find us</h2>
       <div>
-        <p class="big">{{ spa()?.address || 'Bulan, Sorsogon' }}</p>
+        <p class="big">{{ spa()?.address || site.label() }}</p>
         @if (spa()?.mapsUrl) {
           <a class="btn btn-ghost" [href]="spa()?.mapsUrl" target="_blank" rel="noopener">
             Open in Maps</a>

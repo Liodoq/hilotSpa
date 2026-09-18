@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Location } from '@angular/common';
 import { AdminApi, ProtocolRow } from '../../../core/admin.api';
+import { NodeStore } from '../../../core/node.store';
 
 interface Group { service: string; rows: ProtocolRow[]; }
 
@@ -27,7 +28,18 @@ interface Group { service: string; rows: ProtocolRow[]; }
 })
 export class ProtocolSheet implements OnInit {
   private api = inject(AdminApi);
+  /**
+   * 3.5 - which branch this sheet belongs to.
+   *
+   * This one matters more than the others on the page. A practitioner signs
+   * this document, and a signed protocol table that names the wrong branch is
+   * not a clerical slip - it is a record asserting that somebody approved
+   * rules for a place they never approved them for.
+   */
+  protected site = inject(NodeStore);
   private location = inject(Location);
+
+  constructor() { this.site.ensure(); }
 
   rules = signal<ProtocolRow[]>([]);
   loading = signal(true);

@@ -41,7 +41,7 @@
         <div class="row">
           <div class="field">
             <label class="lab" for="ad">Address<span class="req" [class.done]="address().trim()" aria-hidden="true">*</span></label>
-            <input id="ad" class="input" placeholder="Purok, Barangay, Bulan, Sorsogon"
+            <input id="ad" class="input" placeholder="Purok, Barangay, Municipality"
                    autocomplete="street-address"
                    [value]="address()" (input)="address.set(val($event))">
           </div>

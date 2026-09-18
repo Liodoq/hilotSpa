@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AppNav } from '../../shared/app-nav/app-nav';
+import { NodeStore } from '../../core/node.store';
 
 /**
  * About — the page where a stranger decides whether to trust these hands.
@@ -21,4 +22,7 @@ import { AppNav } from '../../shared/app-nav/app-nav';
   templateUrl: './about.html',
   styleUrl: './about.scss',
 })
-export class About {}
+export class About {
+  /** 3.5 - which branch this node speaks for. */
+  protected site = inject(NodeStore);
+}

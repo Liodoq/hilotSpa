@@ -4,6 +4,7 @@ import { AppNav } from '../../shared/app-nav/app-nav';
 import { BodyMap } from '../../shared/body-map/body-map';
 import { AuthService } from '../../core/auth.service';
 import { PublicApi, PublicSpa } from '../../core/public.api';
+import { NodeStore } from '../../core/node.store';
 import { priceLabel } from '../../core/catalogue.store';
 import { PainPoint } from '../../core/assessment.store';
 import { Hotspot, sideLabel } from '../../core/body-hotspots';
@@ -34,6 +35,9 @@ export class Landing implements OnInit {
   private api = inject(PublicApi);
   private router = inject(Router);
   protected auth = inject(AuthService);
+  /** 3.5 - the branch THIS node serves, rather than the one that was typed
+   *  into the template while only one node existed. */
+  protected site = inject(NodeStore);
 
   protected priceLabel = priceLabel;
 

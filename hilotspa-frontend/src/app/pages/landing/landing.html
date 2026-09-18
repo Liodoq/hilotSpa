@@ -12,7 +12,7 @@
        ================================================================== -->
   <header class="hero">
     <div class="hero-say">
-      <p class="eyebrow">Bulan, Sorsogon</p>
+      <p class="eyebrow">{{ site.label() }}</p>
       <h1 class="display">We ask what hurts before we decide what helps.</h1>
       <p class="lead">
         Traditional hilot and bone setting. Tell us where it hurts before you arrive, and your
@@ -151,7 +151,7 @@
     <div class="find">
       <div>
         <h2 class="sec-head">Find us</h2>
-        <p class="findline">{{ spa()?.address || 'Bulan, Sorsogon' }}</p>
+        <p class="findline">{{ spa()?.address || site.label() }}</p>
         <p class="findline">{{ spa()?.hours || 'Open daily' }}</p>
         @if (spa()?.phone) {
           <p class="findline"><a class="link" [href]="'tel:' + spa()?.phone">{{ spa()?.phone }}</a></p>

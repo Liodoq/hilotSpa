@@ -20,15 +20,34 @@ import { NodeIdentity, PublicApi } from './public.api';
  * answered, and a value cached from the last node the browser spoke to would
  * be wrong in exactly the case two nodes exist for.
  */
+/** "Knead Wellness Spa - Daraga, Albay" -> "Daraga, Albay". A name with no
+ *  separator is returned unchanged, so an unconventionally named branch is
+ *  shown as it was typed rather than mangled. */
+function shortBranch(full: string): string {
+  const cut = full.lastIndexOf(' - ');
+  return (cut >= 0 ? full.slice(cut + 3) : full).trim();
+}
+
 @Injectable({ providedIn: 'root' })
 export class NodeStore {
   private api = inject(PublicApi);
 
   readonly node = signal<NodeIdentity | null>(null);
 
-  /** The branch to show in the bar. Empty until the call lands, and empty
-   *  forever on a node that declares none - never a guess. */
-  readonly label = computed(() => this.node()?.branchName ?? '');
+  /**
+   * The branch as a heading shows it: "Daraga, Albay", not
+   * "Knead Wellness Spa - Daraga, Albay".
+   *
+   * Branches are named with the business in front because that is what an
+   * administrator needs in a list of branches. A page that already says Knead
+   * Wellness Spa in the line above does not need it twice, so the leading
+   * business name is dropped for display only. node().branchName keeps the
+   * full name for anywhere the branch must be identified rather than labelled.
+   *
+   * Empty until the call lands, and empty forever on a node that declares no
+   * branch - never a guess.
+   */
+  readonly label = computed(() => shortBranch(this.node()?.branchName ?? ''));
 
   private pending: Promise<NodeIdentity | null> | null = null;
 
