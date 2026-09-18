@@ -49,6 +49,11 @@ services:
       # it can be switched without rebuilding the image. B105.
       SERVER_ERROR_INCLUDE_MESSAGE: ${ERROR_INCLUDE_MESSAGE:-always}
       N8N_WEBHOOK_URL: http://n8n:5678
+      # Same trap, third time. .env says localhost, which is right for run.ps1
+      # and is the BACKEND ITSELF inside the compose network - so every hold
+      # was a refused connection, swallowed, and invisible.
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       # Let a chat fallback carry its reason to the browser. Development
       # machine only - remove this line before the system runs at the spa.
       HILOTSPA_ASSISTANT_EXPOSE_DEBUG: ${ASSISTANT_EXPOSE_DEBUG:-true}
@@ -70,6 +75,37 @@ services:
   # n8n never connects to Postgres. Spring sends it everything it is allowed to
   # know and n8n sends back a ranked list. See n8n/README.md.
   # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # Redis - the SLOT HOLD, and nothing else (task 2.1, revisited 2026-09-18).
+  #
+  # It does NOT guard the booking write. `V2__no_overlapping_appointments.sql`
+  # already makes a double booking impossible with EXCLUDE constraints enforced
+  # inside the writing transaction, and an advisory lock in front of that would
+  # be a weaker second mechanism for an invariant that is already absolute.
+  #
+  # What it does is cover the gap a constraint CANNOT: the minutes between the
+  # assistant settling a time and the client choosing a therapist, when no row
+  # exists yet and there is therefore nothing to constrain. The assistant has
+  # been telling clients "na-hold na po ang time" that whole while, and nothing
+  # was holding it.
+  #
+  # Ephemeral, high-churn, self-expiring data. Putting it in Postgres would mean
+  # a cleanup job and rows that mean nothing five minutes later.
+  #
+  # NOT persisted on purpose (no volume, no appendonly). Every hold is worth at
+  # most a few minutes and the system is correct without any of them; surviving
+  # a restart would only resurrect stale ones.
+  redis:
+    image: redis:7-alpine
+    container_name: hilotspa_redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb", "--maxmemory-policy", "volatile-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   n8n:
     # PINNED. 0.13 / B99. This tag is the version the n8n_data volume has
     # already been migrated to - confirmed with `docker compose exec n8n n8n

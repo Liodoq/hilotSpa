@@ -102,6 +102,7 @@ public class BookingServiceImpl implements BookingService {
     @Autowired private RoomRepository roomRepository;
     @Autowired private AuditLogRepository auditLogRepository;
     @Autowired private NotificationLogRepository notificationLogRepository;
+    @Autowired private SlotHoldService holds;
 
     @Value("${hilotspa.booking.timezone:Asia/Manila}") private String timezone;
     @Value("${hilotspa.booking.open-hour:9}")          private int openHour;
@@ -156,6 +157,23 @@ public class BookingServiceImpl implements BookingService {
         List<OpenRoom> rooms = freeRooms(branchId, start, end, null).stream()
                 .map(r -> new OpenRoom(r.getId(), r.getName(), r.getImageName()))
                 .toList();
+
+        // THE HOLD GOES HERE, and only here on the client path.
+        //
+        // This method is called at exactly one moment: a time has been settled
+        // and the client is being shown who is free for it. That is the window
+        // the assistant has always described as "na-hold na po" and which
+        // nothing was holding - between a settled time and a written row there
+        // is no appointment for the EXCLUDE constraints to protect.
+        //
+        // counterOpenings() deliberately does NOT hold: it has no form, so no
+        // holder identity, and a front desk completes a walk-in in one sitting
+        // rather than wandering off mid-choice.
+        //
+        // Placed AFTER the lists are built, so a time with nobody free is never
+        // held. It gates nothing: if it fails, the client races for the slot
+        // exactly as they always have.
+        holds.hold(branchId, start, formId);
 
         return new Openings(start, start.format(LABEL), therapists, rooms);
     }
@@ -313,7 +331,16 @@ public class BookingServiceImpl implements BookingService {
                 LocalDateTime slotEnd = cursor.plusMinutes(duration);
 
                 // Never offer a time that has already passed today.
-                if (cursor.isAfter(now) && anyFree(pool, rooms, booked, cursor, slotEnd)) {
+                //
+                // Capacity minus the holds OTHER clients are sitting on. Their
+                // own hold is excluded inside heldByOthers - a client must not
+                // be blocked by the time they are in the middle of taking.
+                //
+                // With Redis unreachable heldByOthers is 0 and this reads
+                // exactly as it did before holds existed.
+                if (cursor.isAfter(now)
+                        && capacityAt(pool, rooms, booked, cursor, slotEnd)
+                           > holds.heldByOthers(branchId, cursor, formId)) {
                     slots.add(new Slot(cursor.toString(), cursor, cursor.format(LABEL)));
                 }
                 cursor = cursor.plusMinutes(slotMinutes);
@@ -336,23 +363,36 @@ public class BookingServiceImpl implements BookingService {
         return t.getStatus() == null || t.getStatus() == TherapistStatus.AVAILABLE;
     }
 
-    /** A slot is open only when BOTH a therapist and a room are free for it. */
-    private boolean anyFree(List<Therapist> therapists, List<Room> rooms,
-                            List<Appointment> booked,
-                            LocalDateTime start, LocalDateTime end) {
-        boolean therapistFree = therapists.stream().anyMatch(t ->
+    /**
+     * How many visits could still START here - a COUNT, not a yes or no.
+     *
+     * It was a boolean, and a boolean cannot answer the question the slot hold
+     * asks. A branch with five therapists and one client hesitating over 10:00
+     * still has four; a boolean would have to report the hour either wholly
+     * free (and let a sixth client take the last therapist out from under the
+     * hold) or wholly taken (and empty the calendar for everyone because one
+     * person paused).
+     *
+     * A visit needs BOTH a therapist and a room, so capacity is the smaller of
+     * the two counts.
+     */
+    private int capacityAt(List<Therapist> therapists, List<Room> rooms,
+                           List<Appointment> booked,
+                           LocalDateTime start, LocalDateTime end) {
+        long freeTherapists = therapists.stream().filter(t ->
                 booked.stream().noneMatch(a ->
                         a.getTherapist() != null
                         && a.getTherapist().getId().equals(t.getId())
-                        && overlaps(a, start, end)));
-        if (!therapistFree) {
-            return false;
+                        && overlaps(a, start, end))).count();
+        if (freeTherapists == 0) {
+            return 0;
         }
-        return rooms.stream().anyMatch(r ->
+        long freeRooms = rooms.stream().filter(r ->
                 booked.stream().noneMatch(a ->
                         a.getRoom() != null
                         && a.getRoom().getId().equals(r.getId())
-                        && overlaps(a, start, end)));
+                        && overlaps(a, start, end))).count();
+        return (int) Math.min(freeTherapists, freeRooms);
     }
 
     /** Half-open intervals: a 3 PM finish and a 3 PM start do not collide. */
@@ -446,6 +486,18 @@ public class BookingServiceImpl implements BookingService {
         a.setOriginNodeId(nodeId);
 
         Appointment saved = writeOrConflict(a);
+
+        // The row exists, so the EXCLUDE constraints protect it now and the
+        // hold has nothing left to do. Released rather than left to expire so
+        // the slot's capacity goes back to the calendar immediately - the
+        // client is not going to book it twice.
+        //
+        // Any OTHER times this client was shown stay held until their TTL runs
+        // out. Tracking every time a client looked at, to release the ones they
+        // did not take, would mean keeping a list per assessment for the sake
+        // of a few minutes of one therapist's calendar.
+        holds.release(branchId, start, form.getId());
+
         audit(saved, req.consentText());
         return toDto(saved);
     }
