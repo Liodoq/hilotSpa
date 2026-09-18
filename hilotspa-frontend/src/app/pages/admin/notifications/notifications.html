@@ -1,0 +1,171 @@
+<app-dash-shell [role]="area"
+  scopeNote="One row per notification this system tried to send — including the ones it did not.">
+  <span bar style="font-size:18px">Reminders</span>
+
+  <div class="stack">
+
+    @if (error(); as e) {
+      <div class="note bad"><span class="b"></span>
+        <span>{{ e }} <button type="button" class="link" (click)="load()">Try again</button></span></div>
+    }
+
+    <!-- WHO IS DUE, above the log. The log cannot answer this: a client nobody
+         has attempted has no row in it, so they are invisible in exactly the
+         list you would use to notice them. -->
+    <div class="card">
+      <!-- NOT class="head": there is a global `.head { flex-direction: column }`
+           in styles.scss, and combined with .rowbar's align-items:center it
+           stacked this row and centred it in the middle of the card. -->
+      <div class="duebar">
+        <h2 class="t-s">Who is due</h2>
+        <div class="fields">
+          <app-date-field label="VISITS ON" placeholder="Tomorrow"
+                          [value]="day()" (valueChange)="pickDay($event)" />
+          @if (canPickBranch) {
+            <label class="f">
+              <span class="lbl">BRANCH</span>
+              <select class="ctl" [ngModel]="pickedBranch()"
+                      (ngModelChange)="pickBranch($event)">
+                <option value="">All branches</option>
+                @for (b of branches(); track b.id) {
+                  <option [value]="b.id">{{ b.name || b.branchName }}</option>
+                }
+              </select>
+            </label>
+          }
+        </div>
+      </div>
+
+      <!-- Said in words, above the list. The badge in the header states the
+           console's context; this states what THESE ROWS are, which is not the
+           same thing once a branch can be chosen on the page itself. -->
+      <p class="scopeline">
+        <span class="pill mute">{{ scopeLabel() }}</span>
+        <span class="help">Leave the date empty for tomorrow.</span>
+      </p>
+
+      @if (due().length) {
+        @if (untold()) {
+          <p class="help untold"><b>{{ untold() }}</b>
+            {{ untold() === 1 ? ' client has' : ' clients have' }} not been written to yet.</p>
+        }
+        <table class="tbl">
+          <tr><th class="c-when">TIME</th><th>CLIENT</th>
+              <th class="c-stat">REMINDER</th><th class="c-act"></th></tr>
+          @for (d of due(); track d.appointmentId) {
+            <tr>
+              <td>{{ d.visitAt | date:'h:mm a' }}
+                <span class="help">{{ d.visitAt | date:'EEE d MMM' }}</span></td>
+              <td><b>{{ d.client }}</b>
+                <span class="help">{{ d.serviceName }} · {{ d.branchName }}</span>
+                @if (d.recipient) { <span class="help mono">{{ d.recipient }}</span> }
+              </td>
+              <td>
+                <span class="pill" [class]="'pill ' + tone(d.status)">{{ label(d.status) }}</span>
+                @if (d.attempts > 1) { <span class="help">{{ d.attempts }} attempts</span> }
+                @if (d.sentAt) { <span class="help">{{ d.sentAt | date:'d MMM, h:mm a' }}</span> }
+                @if (d.detail) { <span class="help why">{{ d.detail }}</span> }
+              </td>
+              <td class="c-act">
+                <!-- Sendable even when already SENT. Re-sending to a client who
+                     says they never got it is the reason this list exists. -->
+                @if (d.sendable) {
+                  <button type="button" class="btn btn-sm"
+                          [class.btn-primary]="!d.status" [class.btn-quiet]="d.status"
+                          [disabled]="sendingOne() || running()" (click)="sendOne(d)">
+                    {{ sendingOne() === d.appointmentId ? 'Sending…'
+                       : (d.status === 'SENT' ? 'Send again' : 'Send') }}</button>
+                } @else {
+                  <span class="help block">{{ d.blockedReason }}</span>
+                }
+              </td>
+            </tr>
+          }
+        </table>
+      } @else {
+        <p class="help">Nothing is booked that day, so there is nobody to remind.</p>
+      }
+
+      <hr class="hr">
+
+      <div class="rowbar bulk">
+        <button type="button" class="btn btn-quiet btn-sm" [disabled]="running() || sendingOne()"
+                (click)="run()">{{ running() ? 'Sending…' : 'Send to everyone not yet told' }}</button>
+        <span class="help">Reminders go out on their own at 9 AM for the following day. This is for a
+          morning that was missed — it never writes to anybody twice, which is why the buttons above
+          exist for the one client who says nothing arrived.</span>
+      </div>
+
+      @if (runNote(); as n) {
+        <p class="note-line help"><b>{{ n }}</b></p>
+      }
+    </div>
+
+    @if (loading() && !rows().length) {
+      <div class="skel" style="height:220px"></div>
+    }
+
+    @if (rows().length) {
+      <h2 class="t-s">What has been sent</h2>
+
+      <div class="tiles">
+        <div class="stat lead"><div class="n">{{ sent() }}</div><div class="k">Sent</div></div>
+        <div class="stat" [class.warn]="skipped() > 0">
+          <div class="n">{{ skipped() }}</div><div class="k">Not sent, with a reason</div></div>
+        <div class="stat" [class.bad]="failed() > 0">
+          <div class="n">{{ failed() }}</div><div class="k">Refused by the mail server</div></div>
+        <div class="stat" [class.warn]="stuck() > 0">
+          <div class="n">{{ stuck() }}</div><div class="k">Claimed but unanswered</div></div>
+      </div>
+
+      @if (stuck() > 0) {
+        <div class="note warm"><span class="b"></span>
+          <span>{{ stuck() }} {{ stuck() === 1 ? 'row was' : 'rows were' }} claimed and never
+            answered for. That is a send that died mid-flight — the only state in this table
+            that points at a fault in this system rather than at the mail server or a missing
+            address.</span></div>
+      }
+
+      <div class="card">
+        <table class="tbl">
+          <tr>
+            <th class="c-stat">STATUS</th>
+            <th>CLIENT</th>
+            <th>VISIT</th>
+            <th>SENT TO</th>
+            <th class="c-when">RECORDED</th>
+          </tr>
+          @for (r of rows(); track r.id) {
+            <tr>
+              <td><span class="pill" [class]="'pill ' + tone(r.status)">{{ label(r.status) }}</span>
+                @if (r.attempts > 1) { <span class="help tries">{{ r.attempts }} tries</span> }
+              </td>
+              <td><b>{{ r.client }}</b>
+                <span class="help">{{ r.branchName }}</span></td>
+              <td>{{ r.serviceName }}
+                <span class="help">{{ r.visitAt | date:'EEE d MMM, h:mm a' }}</span></td>
+              <td>
+                @if (r.recipient) { <span class="mono">{{ r.recipient }}</span> }
+                @else { <span class="help">no address on file</span> }
+                <!-- The reason is shown in the row, not behind a tooltip. It is
+                     the whole value of a skipped row: "not sent" alone is the
+                     same silence the log exists to replace. -->
+                @if (r.detail) { <span class="help why">{{ r.detail }}</span> }
+              </td>
+              <td>{{ r.createdAt | date:'d MMM, h:mm a' }}
+                <span class="help mono">{{ r.originNodeId }}</span></td>
+            </tr>
+          }
+        </table>
+        <p class="help">The 200 most recent. Every row is one attempt, written before
+          the mail server was called — so a send that hung is still here.</p>
+      </div>
+    } @else if (!loading()) {
+      <div class="card empty">
+        <h2 class="t-s">Nothing sent yet</h2>
+        <p class="help">No reminder has been attempted on this node. Book a visit for
+          tomorrow and it will appear above, ready to send.</p>
+      </div>
+    }
+  </div>
+</app-dash-shell>

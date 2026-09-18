@@ -1,16 +1,22 @@
 package com.hilotspa.backend.entities;
 
+import com.hilotspa.backend.config.SyncAudited;
+
 import java.math.BigDecimal;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
 @Data
+@EntityListeners(SyncAudited.class)
 @Entity
 @Table(name = "massage")
 public class Massage {
@@ -59,6 +65,22 @@ public class Massage {
      */
     @Column
     private String imageName;
+
+    /**
+     * The skill this treatment requires, or null if it needs no particular one.
+     *
+     * NULL MEANS ANYONE MAY PERFORM IT. Read the other way round - null meaning
+     * "nobody qualifies" - adding this column would empty the calendar for
+     * every treatment the spa has already entered, silently and with no error
+     * anywhere. The same trap Massage.active documents above, and the reason V6
+     * only sets this where the treatment's own name makes the answer obvious.
+     *
+     * A restriction that exists is therefore one somebody chose, in the admin,
+     * on purpose.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column
+    private Specialty requiredSpecialty;
 
     /** Null means "yes" - see the field comment. */
     public boolean isOnSale() {

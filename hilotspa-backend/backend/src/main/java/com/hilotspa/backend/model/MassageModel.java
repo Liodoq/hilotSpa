@@ -18,4 +18,13 @@ public class MassageModel {
      *  spa has not supplied one. Set from the A6 service menu screen. */
     private String imageName;
 
+    /**
+     * Enum name of the skill this treatment requires, or null for "anyone".
+     *
+     * Null is the permissive answer on purpose. V6 only set this where the
+     * treatment's own name settled it, so most services arrive here unrestricted
+     * and stay that way until an admin says otherwise on this screen.
+     */
+    private String requiredSpecialty;
+
 }

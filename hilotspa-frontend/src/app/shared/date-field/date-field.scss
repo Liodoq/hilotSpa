@@ -1,0 +1,141 @@
+/* The spa's own calendar.
+
+   Every colour, radius and border here is a token from styles.scss — the whole
+   reason this component exists is that the browser's popup could not be reached
+   by them. If it stops matching the console, it has failed at its only job. */
+:host { display: inline-block; min-width: 0; }
+
+.df { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+.lbl {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: var(--color-ink-600);
+}
+
+.dfbox {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  padding: 0 4px 0 14px;
+  transition: border-color .12s ease;
+}
+.dfbox:hover { border-color: var(--color-sage-300); }
+.dfbox:focus-within, .dfbox.on {
+  border-color: var(--color-forest-700);
+  outline: 3px solid var(--color-forest-500);
+  outline-offset: 1px;
+}
+
+.dfin {
+  flex: 1;
+  min-width: 0;
+  width: 112px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: 400 17px/1.4 var(--font-sans);
+  color: var(--color-ink-900);
+}
+.dfin::placeholder { color: var(--color-ink-600); }
+
+.dfbtn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-ink-600);
+  cursor: pointer;
+}
+.dfbtn:hover { background: var(--color-sage-100); color: var(--color-forest-700); }
+.dfbtn:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 2px; }
+
+/* The typed value is yyyy-MM-dd because that is what the API speaks. This is
+   the same date said the way a person reads it, so nobody has to decode it. */
+.dfread { font-size: 14px; color: var(--color-ink-600); }
+
+.cal {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 274px;
+  padding: 14px;
+  background: #fff;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 14px 34px rgba(43, 42, 38, .16);
+}
+
+.calhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.calm { font-size: 17px; font-weight: 600; color: var(--color-forest-900); }
+.calnav {
+  width: 32px; height: 32px;
+  border: 1.5px solid var(--color-line);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 19px; line-height: 1;
+  color: var(--color-ink-900);
+  cursor: pointer;
+}
+.calnav:hover { border-color: var(--color-forest-700); color: var(--color-forest-700); }
+.calnav:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: 2px; }
+
+.caldow, .calrow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.caldow {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  color: var(--color-ink-600);
+  text-align: center;
+}
+
+.calday {
+  height: 34px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  font: 400 15px/1 var(--font-sans);
+  color: var(--color-ink-900);
+  cursor: pointer;
+}
+.calday:hover { background: var(--color-sage-100); }
+.calday:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: -2px; }
+/* Days spilling in from the neighbouring months are shown, not blanked: a date
+   at the start of a week is easier to find when the row is whole. */
+.calday.out { color: color-mix(in srgb, var(--color-ink-600) 45%, transparent); }
+/* Today is an outline, the chosen day is a fill. Two different facts, so they
+   have to survive being true at once. */
+.calday.now { box-shadow: inset 0 0 0 1.5px var(--color-sage-300); }
+.calday.on {
+  background: var(--color-forest-700);
+  color: #fff;
+  font-weight: 600;
+}
+.calday.on:hover { background: var(--color-forest-900); }
+
+.calfoot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-line);
+  font-size: 15px;
+}
+
+@media (max-width: 560px) {
+  .cal { width: min(274px, calc(100vw - 48px)); }
+}

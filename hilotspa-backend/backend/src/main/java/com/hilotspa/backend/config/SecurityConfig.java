@@ -79,6 +79,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/protocols/**").hasAnyRole("STAFF", "ADMIN")
                 .requestMatchers("/api/v1/protocols/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                // Reports and reminders exist for BOTH roles. The service forces
+                // a STAFF caller to their own branch and ignores any branchId
+                // they send, so this outer rule can be the wider one - the same
+                // shape as /appointments/schedule.
+                .requestMatchers("/api/v1/reports/**").hasAnyRole("STAFF", "ADMIN")
+                .requestMatchers("/api/v1/notifications/**").hasAnyRole("STAFF", "ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/v1/appointments/schedule").hasAnyRole("STAFF", "ADMIN")
                 // /schedule/month is a SEPARATE path - the matcher above is exact
                 // and does not cover it. Without this line the month grid would

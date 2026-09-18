@@ -1,5 +1,7 @@
 package com.hilotspa.backend.entities;
 
+import com.hilotspa.backend.config.SyncAudited;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -10,6 +12,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -23,6 +26,7 @@ import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 @Data
+@EntityListeners(SyncAudited.class)
 @Entity
 // One of the two must identify the client. Enforced in the service AND here, so
 // a row that names nobody cannot be written by any path, including psql.

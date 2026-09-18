@@ -1,9 +1,11 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { DashShell } from '../../../shared/dash-shell/dash-shell';
 import { BranchContext } from '../../../core/branch-context';
 import { DayLoad, OpsApi, ScheduleRow, TherapistDto } from '../../../core/ops.api';
 import { FormsApi } from '../../../core/forms.api';
+import { describeHttpError } from '../../../core/http-error';
 
 /** One square of the rendered grid. Leading blanks are cells too, so the
  *  template never has to run two loops over one row of a calendar. */
@@ -52,7 +54,7 @@ function iso(d: Date): string {
  */
 @Component({
   selector: 'app-staff-queue',
-  imports: [DashShell, RouterLink],
+  imports: [DashShell, RouterLink, FormsModule],
   templateUrl: './queue.html',
   styleUrl: './queue.scss',
 })
@@ -147,6 +149,71 @@ export class StaffQueue implements OnInit {
 
   /** The row whose cancel is armed and waiting for a second tap. */
   confirmCancel = signal<string | null>(null);
+
+  // ------------------------------------------------------ move a visit (B5)
+
+  /** The row whose Move panel is open. One at a time, keyed by id. */
+  moving = signal<string | null>(null);
+  moveWhen = signal('');
+  moveTherapist = signal('');
+  moveError = signal<string | null>(null);
+  saving = signal<string | null>(null);
+
+  /**
+   * Open the panel pre-filled with where the visit is NOW.
+   *
+   * Pre-filling matters: the front desk is almost always nudging a booking by
+   * half an hour, and an empty field makes them re-type a time they can already
+   * see on the row - which is how the wrong day gets entered.
+   */
+  openMove(row: ScheduleRow): void {
+    this.moving.set(row.id);
+    this.moveError.set(null);
+    this.moveTherapist.set('');
+    // datetime-local wants local time with no zone and no seconds. Slicing the
+    // ISO string would hand it UTC, which in Manila is eight hours wrong.
+    const d = new Date(row.start);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    this.moveWhen.set(
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+      + `T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+  }
+
+  closeMove(): void {
+    this.moving.set(null);
+    this.moveError.set(null);
+  }
+
+  /**
+   * Save the move.
+   *
+   * The server's refusal is shown verbatim rather than replaced with "could not
+   * move". It knows which of five rules said no - the therapist is busy, nobody
+   * at this branch performs it, the branch is shut then, the client is already
+   * booked - and only one of those means "try a different time".
+   */
+  async saveMove(row: ScheduleRow): Promise<void> {
+    if (this.saving()) { return; }
+    if (!this.moveWhen()) {
+      this.moveError.set('Choose a new date and time.');
+      return;
+    }
+    this.saving.set(row.id);
+    this.moveError.set(null);
+    try {
+      await this.bookings.rescheduleBooking(row.id, {
+        start: this.moveWhen(),
+        therapistId: this.moveTherapist() || null,
+        reason: 'Moved at the front desk',
+      });
+      this.closeMove();
+      await this.reread();
+    } catch (e: unknown) {
+      this.moveError.set(describeHttpError(e, 'That move was refused.'));
+    } finally {
+      this.saving.set(null);
+    }
+  }
 
   async ngOnInit(): Promise<void> {
     await this.load();

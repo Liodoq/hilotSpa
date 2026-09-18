@@ -65,6 +65,9 @@
                   <p class="sure-q">Cancel this visit?</p>
                   <p class="help">Your therapist and room are released straight away.
                     Nothing is charged either way — you have not paid.</p>
+                  @if (cancelOpenNote(v)) {
+                    <p class="help deadline">{{ cancelOpenNote(v) }}</p>
+                  }
                   <div class="sure-acts">
                     <button type="button" class="btn btn-danger btn-sm"
                             [disabled]="cancelling() === v.id" (click)="cancel(v)">
@@ -73,9 +76,14 @@
                             [disabled]="cancelling() === v.id" (click)="keepIt()">Keep it</button>
                   </div>
                 </div>
-              } @else {
+              } @else if (v.cancellable) {
                 <button type="button" class="btn btn-quiet btn-sm"
                         (click)="askCancel(v.id)">Cancel</button>
+              } @else {
+                <!-- Not a disabled button. A greyed-out Cancel reads as a fault
+                     in the site; a sentence reads as a rule, and tells them the
+                     one thing they can still do about it. -->
+                <p class="help closed">{{ cancelClosedNote(v) }}</p>
               }
             </div>
           </li>

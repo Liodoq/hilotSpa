@@ -11,6 +11,7 @@ import com.hilotspa.backend.model.BookingDtos.BookRequest;
 import com.hilotspa.backend.model.BookingDtos.Booking;
 import com.hilotspa.backend.model.BookingDtos.Openings;
 import com.hilotspa.backend.model.BookingDtos.OutcomeRequest;
+import com.hilotspa.backend.model.BookingDtos.RescheduleRequest;
 import com.hilotspa.backend.model.BookingDtos.DayLoad;
 import com.hilotspa.backend.model.BookingDtos.ScheduleRow;
 import com.hilotspa.backend.model.BookingDtos.WalkInRequest;
@@ -129,4 +130,18 @@ public interface BookingService {
      * counter and pretending otherwise just puts a wrong row on the day sheet.
      */
     Booking cancel(UUID appointmentId, String reason);
+
+    /**
+     * Move a visit to a new time (adviser's revision).
+     *
+     * SPA-SIDE ONLY. A client who wants a different hour cancels and books
+     * again, which frees their old slot for somebody else the moment they let
+     * go of it. Letting a client drag their own booking around would let one
+     * person hold a slot indefinitely while shopping for a better one.
+     *
+     * Every rule a new booking passes is re-checked here, inside the same
+     * transaction, with this appointment excluded from the clash tests - it is
+     * still sitting at its old time and would otherwise collide with itself.
+     */
+    Booking reschedule(UUID appointmentId, RescheduleRequest request);
 }

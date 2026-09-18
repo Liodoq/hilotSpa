@@ -23,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.hilotspa.backend.model.BookingDtos.Availability;
 import com.hilotspa.backend.model.BookingDtos.BookRequest;
 import com.hilotspa.backend.model.BookingDtos.Booking;
+import com.hilotspa.backend.model.BookingDtos.RescheduleRequest;
 import com.hilotspa.backend.model.BookingDtos.DayLoad;
 import com.hilotspa.backend.model.BookingDtos.Openings;
 import com.hilotspa.backend.model.BookingDtos.OutcomeRequest;
@@ -106,6 +107,22 @@ public class AppointmentController {
      * boolean, because "this happened" and "they never came" are different
      * facts and a URL that says which is harder to get wrong than a flag.
      */
+    /**
+     * Move a visit (adviser's revision: the spa can rebook).
+     *
+     * POST rather than PUT: this is not "replace the appointment with the one I
+     * am sending", it is "move this one", and the server decides the therapist
+     * and room unless the caller names them.
+     *
+     * STAFF and ADMIN only - enforced in the service, where the branch rule
+     * lives, not here.
+     */
+    @PostMapping("/{id}/reschedule")
+    public ResponseEntity<Booking> reschedule(@PathVariable UUID id,
+                                              @RequestBody RescheduleRequest body) {
+        return ResponseEntity.ok(bookingService.reschedule(id, body));
+    }
+
     @PostMapping("/{id}/complete")
     public ResponseEntity<Booking> complete(@PathVariable UUID id) {
         return ResponseEntity.ok(bookingService.complete(id, true));

@@ -52,10 +52,63 @@
                     @if (r.signed) {
                       <span style="font-size:17px">{{ r.authoredBy }}</span>
                     } @else {
+                      <!-- The placeholder was being printed in mono where a name
+                           goes, which reads as corrupted data rather than as a
+                           state the system is holding on purpose. It is
+                           PROVENANCE, so it is labelled as provenance. -->
                       <span class="pill bad" style="font-size:14px">UNSIGNED</span>
-                      <div class="help mono">{{ r.authoredBy }}</div>
+                      <div class="help prov">Drafted by the researchers, not yet
+                        confirmed by a practitioner.</div>
+                      <div class="help mono prov-src">{{ r.authoredBy }}</div>
                     }
-                    @if (r.rationale) { <div class="help">{{ r.rationale }}</div> }
+
+                    @if (editing() === r.id) {
+                      <!-- The sentence the assistant reads out word for word.
+                           It was write-once: the API took a new one and no
+                           screen could send it. -->
+                      <div class="ratedit">
+                        <textarea class="ctl ta" rows="3" [value]="draft()"
+                                  (input)="draft.set(val($event))"
+                                  placeholder="e.g. Availed in 26 of 28 archived records for this complaint."></textarea>
+                        <div class="rowacts">
+                          <button type="button" class="btn btn-primary btn-sm"
+                                  [disabled]="saving() === r.id"
+                                  (click)="saveRationale(r)">Save</button>
+                          <button type="button" class="btn btn-quiet btn-sm"
+                                  [disabled]="saving() === r.id"
+                                  (click)="closeEdit()">Cancel</button>
+                        </div>
+                      </div>
+                    } @else {
+                      @if (r.rationale) {
+                        <div class="help">{{ r.rationale }}</div>
+                      } @else {
+                        <div class="help"><i>No reason recorded — the assistant has nothing
+                          to say when a client asks why.</i></div>
+                      }
+                      <div class="rowacts">
+                        <button type="button" class="link-act" (click)="openEdit(r)">Edit reason</button>
+                        @if (removing() === r.id) {
+                          <!-- The consequence, in words. "Are you sure" is read
+                               by nobody; this sentence is the whole warning. -->
+                          <span class="rmwarn">
+                            @if (r.rule === 'CONTRAINDICATED') {
+                              Removing this lets the assistant offer {{ r.serviceName }} to
+                              clients with {{ r.conditionLabel }} again.
+                            } @else {
+                              {{ r.serviceName }} stops being matched to {{ r.conditionLabel }}.
+                            }
+                          </span>
+                          <button type="button" class="btn btn-danger btn-sm"
+                                  [disabled]="saving() === r.id"
+                                  (click)="remove(r)">Yes, remove</button>
+                          <button type="button" class="btn btn-quiet btn-sm"
+                                  (click)="removing.set(null)">Keep it</button>
+                        } @else {
+                          <button type="button" class="link-act" (click)="remove(r)">Remove</button>
+                        }
+                      </div>
+                    }
                   </td>
                 </tr>
               } @empty {
@@ -64,11 +117,134 @@
               }
             </table>
           </div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <!-- Add one rule. The service is typed rather than picked from a
+               select on purpose: the catalogue can be long, and the name is
+               what the spreadsheet will carry too. -->
+          <div class="card addrule">
+            <h2 class="t-s">Add a rule</h2>
+            <div class="fields">
+              <label class="f">
+                <span class="lbl">SERVICE</span>
+                <input class="ctl" list="svcnames" [value]="newService()"
+                       (input)="newService.set(val($event))" placeholder="Exactly as on the menu">
+                <datalist id="svcnames">
+                  @for (s of services(); track s.id) { <option [value]="s.name"></option> }
+                </datalist>
+              </label>
+              <label class="f">
+                <span class="lbl">CONDITION</span>
+                <select class="ctl" [value]="newCondition()"
+                        (change)="newCondition.set(val($event))">
+                  <option value="">Choose…</option>
+                  @for (c of complaints; track c.value) {
+                    <option [value]="c.value">{{ c.label }}</option>
+                  }
+                </select>
+              </label>
+              <label class="f">
+                <span class="lbl">RULE</span>
+                <select class="ctl" [value]="newRule()" (change)="newRule.set(val($event))">
+                  <option value="INDICATED">Indicated</option>
+                  <option value="CONTRAINDICATED">Contraindicated</option>
+                </select>
+              </label>
+              <label class="f grow">
+                <span class="lbl">RATIONALE</span>
+                <input class="ctl" [value]="newRationale()"
+                       (input)="newRationale.set(val($event))"
+                       placeholder="e.g. Availed in 26 of 28 archived records for this complaint.">
+              </label>
+              <button type="button" class="btn btn-primary" [disabled]="adding()"
+                      (click)="addRule()">{{ adding() ? 'Adding…' : 'Add rule' }}</button>
+            </div>
+            <p class="help">The rationale is not decoration — the assistant reads it out
+              when a client asks why a treatment was suggested, word for word.</p>
+          </div>
+
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+            <!-- The signable artefact. The CSV beside it is for re-import, not
+                 for signing — nobody signs a CSV, and that is part of why this
+                 table has been UNSIGNED since it was seeded. -->
+            <a class="btn btn-primary" routerLink="/admin/protocol-sheet">
+              Signature sheet</a>
+
+            <!-- The digital half of a signature on paper. Not an import: no rule
+                 changes, only who is answerable for it. -->
+            @if (unsigned().length) {
+              <button type="button" class="btn btn-ghost"
+                      (click)="signingOpen.set(!signingOpen())">
+                Record the signature ({{ unsigned().length }})</button>
+            }
             <button type="button" class="btn btn-ghost" (click)="exportForSignature()">
-              Export for signature</button>
+              Export as CSV</button>
+
+            <!-- The same columns the export writes, so the round trip is:
+                 export, fill it in, save as CSV, load it back. -->
+            <label class="btn btn-ghost filebtn">
+              {{ importing() ? 'Reading…' : 'Load Excel or CSV' }}
+              <input type="file" hidden (change)="importFile($event)"
+                     accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+            </label>
+
             <button type="button" class="btn btn-quiet" (click)="load()">Reload</button>
           </div>
+
+          @if (signingOpen()) {
+            <div class="card signbox">
+              <h2 class="t-s">Record the practitioner's signature</h2>
+              <p class="help">
+                This writes the name in <b>Authorising this change</b> onto the
+                {{ unsigned().length }} {{ unsigned().length === 1 ? 'rule that still carries'
+                  : 'rules that still carry' }} the seeded placeholder. <b>No rule changes</b> —
+                only who is answerable for it. Rules somebody has already signed are left alone.
+              </p>
+              <p class="help">
+                The signed paper sheet remains the artefact. This is so the system agrees with it.
+              </p>
+              <div class="fields">
+                <label class="f grow">
+                  <span class="lbl">NOTE FOR THE AUDIT LOG</span>
+                  <input class="ctl" [value]="signingNote()"
+                         (input)="signingNote.set(val($event))"
+                         placeholder="e.g. Signed sheet dated 20 September 2026, held at the branch">
+                </label>
+                <button type="button" class="btn btn-primary" [disabled]="signingBusy()"
+                        (click)="recordSignature()">
+                  {{ signingBusy() ? 'Recording…' : 'Record it' }}</button>
+                <button type="button" class="btn btn-quiet"
+                        (click)="signingOpen.set(false)">Cancel</button>
+              </div>
+              @if (!signature().trim()) {
+                <p class="help"><b>Put the practitioner's name in “Authorising this change”
+                  above first</b> — that name is what gets written.</p>
+              }
+            </div>
+          }
+
+          @if (importResult(); as r) {
+            <div class="card" [class.warnedge]="r.rejected > 0">
+              <h2 class="t-s">{{ r.created }} added · {{ r.updated }} updated ·
+                {{ r.unchanged }} unchanged · {{ r.rejected }} not loaded</h2>
+              <p class="help">{{ r.note }}</p>
+              @if (importProblems().length) {
+                <!-- Listed in full, never counted. "7 rows failed" sends somebody
+                     back to a spreadsheet with no idea which seven, and the
+                     commonest cause is a service name off by one character. -->
+                <table class="tbl">
+                  <tr><th style="width:70px">LINE</th><th>SERVICE</th>
+                      <th>CONDITION</th><th>WHY NOT</th></tr>
+                  @for (l of importProblems(); track l.line) {
+                    <tr>
+                      <td class="mono">{{ l.line }}</td>
+                      <td>{{ l.serviceName || '—' }}</td>
+                      <td>{{ l.condition || '—' }}</td>
+                      <td>{{ l.problem }}</td>
+                    </tr>
+                  }
+                </table>
+              }
+            </div>
+          }
         </div>
 
         <aside style="display:flex;flex-direction:column;gap:16px">
@@ -88,6 +264,34 @@
               establishment's own protocol, authored and signed by its practitioner. The signed sheet
               becomes Appendix C.</p>
           </div>
+
+          <!-- The cost of the permissive default, made visible. A service with
+               no rule at all is still offered to clients; nothing else on any
+               screen distinguishes that from one that was vetted. -->
+          @if (coverage(); as c) {
+            <div class="card" style="display:flex;flex-direction:column;gap:10px"
+                 [class.warnedge]="c.servicesWithNoRule > 0">
+              <h2 class="t-s" style="font-size:22px">Coverage</h2>
+              <div style="font-size:20px">
+                <b>{{ c.rules }}</b> rules over <b>{{ c.services }}</b> services.
+              </div>
+              @if (c.servicesWithNoRule) {
+                <div class="note warm" style="padding:12px 16px;font-size:17px"><span class="b"></span>
+                  <span><b>{{ c.servicesWithNoRule }}
+                    {{ c.servicesWithNoRule === 1 ? 'service has' : 'services have' }}
+                    no rule at all.</b> They can still be offered to any client — nothing
+                    rules them out, and nothing has vetted them either.</span></div>
+                <details>
+                  <summary class="help">Which ones</summary>
+                  <div class="help" style="margin-top:8px;line-height:1.6">
+                    @for (n of c.uncovered; track n) { <div>{{ n }}</div> }
+                  </div>
+                </details>
+              } @else {
+                <div><span class="pill ok"><i class="dotx"></i>Every service has a rule</span></div>
+              }
+            </div>
+          }
 
           <div class="card" style="display:flex;flex-direction:column;gap:10px">
             <h2 class="t-s" style="font-size:22px">Unsigned rules</h2>
@@ -265,6 +469,22 @@
         } @else {
           <p class="err">Left at zero, the assistant tells clients the price is not on file. That is
             deliberate — a guessed price is a false statement made to a client.</p>
+        }
+      </div>
+      <div>
+        <label class="lab2" for="ms">WHO CAN PERFORM THIS</label>
+        <select id="ms" class="input" (change)="patchMenu({ requiredSpecialty: val($event) })">
+          @for (x of specialtyOptions; track x.value) {
+            <option [value]="x.value" [selected]="d.requiredSpecialty === x.value">{{ x.label }}</option>
+          }
+        </select>
+        @if (d.requiredSpecialty) {
+          <p class="help" style="margin-top:8px">Only therapists recorded as performing this will be
+            offered for it — when times are shown, and again when one is assigned. A client is never
+            given a time only an untrained therapist could cover.</p>
+        } @else {
+          <p class="help" style="margin-top:8px">Any therapist may perform this. Leave it here unless
+            the treatment genuinely needs a particular skill.</p>
         }
       </div>
       <div>

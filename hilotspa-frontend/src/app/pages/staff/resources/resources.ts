@@ -94,6 +94,16 @@ export class StaffResources implements OnInit {
     { value: 'MALE',   label: 'Male' },
   ];
 
+  /** Bone setting is not massage. A client who books a bone setting and meets
+   *  someone who has never set a bone has been failed in a way no amount of
+   *  scheduling correctness makes up for — so the skill is recorded here and
+   *  enforced when times are offered AND again when the therapist is assigned. */
+  protected specialtyOptions: { value: string; label: string }[] = [
+    { value: 'MASSAGE',      label: 'Massage' },
+    { value: 'BONE_SETTING', label: 'Bone setting' },
+    { value: 'HEAD_SPA',     label: 'Head spa' },
+  ];
+
   staff = signal<TherapistDto[]>([]);
   rooms = signal<RoomDto[]>([]);
   today = signal<ScheduleRow[]>([]);
@@ -556,6 +566,34 @@ export class StaffResources implements OnInit {
       // Tapping the one already set clears it, which is how a therapist who
       // would rather not have it recorded gets left out of the matching.
       await this.api.saveTherapist(t.id, { sex: t.sex === sex ? '' : sex });
+      await this.load();
+      this.flash(t.id);
+    } catch (e: unknown) {
+      this.toast.show(describeHttpError(e, 'That did not save.'), 3200);
+    } finally {
+      this.saving.set(null);
+    }
+  }
+
+  /**
+   * Tap to add, tap again to remove. Optimistic, then reconciled with the server.
+   *
+   * Clearing every one is a legitimate answer, not a mistake: it records that
+   * nobody has restricted this person, and the booking rules read an empty set
+   * as "every treatment" rather than "none". The note under the chips says so,
+   * because an empty row of boxes reads as the opposite of what it means - and
+   * that misreading is how someone ticks all three "to be safe" and destroys the
+   * only information on the screen.
+   */
+  async toggleSpecialty(t: TherapistDto, value: string): Promise<void> {
+    if (this.saving()) return;
+    const have = t.specialties ?? [];
+    const next = have.includes(value)
+      ? have.filter(v => v !== value)
+      : [...have, value];
+    this.saving.set(t.id);
+    try {
+      await this.api.saveTherapist(t.id, { specialties: next });
       await this.load();
       this.flash(t.id);
     } catch (e: unknown) {

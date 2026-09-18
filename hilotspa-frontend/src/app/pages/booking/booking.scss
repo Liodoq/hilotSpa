@@ -59,6 +59,19 @@
 .sure { background: var(--color-cream); border: 1px solid var(--color-sage-200);
   border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
 .sure-q { margin: 0; font-size: 18px; font-weight: 600; color: var(--color-forest-900); }
+/* The rule, and the one thing still open to them. Deliberately not red:
+   nothing has gone wrong, the window simply closed. */
+.closed {
+  margin: 0;
+  max-width: 26ch;
+  line-height: 1.45;
+}
+
+.deadline {
+  margin: .35rem 0 0;
+  font-weight: 600;
+}
+
 .sure-acts { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* Advice, not data — closed by default because it is the same four lines every

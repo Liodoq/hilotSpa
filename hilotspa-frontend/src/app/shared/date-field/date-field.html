@@ -1,0 +1,58 @@
+<div class="df">
+  @if (label()) { <span class="lbl">{{ label() }}</span> }
+
+  <div class="dfbox" [class.on]="open()">
+    <!-- The typed value stays a plain text input. People who use this screen all
+         day type faster than they click, and the native control let them. -->
+    <input class="dfin" type="text" inputmode="numeric" autocomplete="off"
+           [value]="value()" [placeholder]="placeholder()"
+           (input)="typed($any($event.target).value)"
+           (focus)="open.set(true)">
+
+    <button type="button" class="dfbtn" (click)="toggle()"
+            [attr.aria-expanded]="open()" aria-label="Open calendar">
+      <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="16" rx="3" fill="none"
+              stroke="currentColor" stroke-width="1.8"/>
+        <path d="M3 10h18M8 3v4M16 3v4" fill="none"
+              stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  @if (shown() && !open()) {
+    <span class="dfread">{{ shown() }}</span>
+  }
+
+  @if (open()) {
+    <div class="cal">
+      <div class="calhead">
+        <button type="button" class="calnav" (click)="step(-1)" aria-label="Previous month">‹</button>
+        <span class="calm">{{ monthLabel() }}</span>
+        <button type="button" class="calnav" (click)="step(1)" aria-label="Next month">›</button>
+      </div>
+
+      <div class="caldow">
+        @for (d of dow; track d) { <span>{{ d }}</span> }
+      </div>
+
+      <!-- Six rows always. A grid that is five rows one month and six the next
+           changes the popup's height as you page, and the footer buttons move
+           out from under the cursor. -->
+      @for (w of weeks(); track $index) {
+        <div class="calrow">
+          @for (c of w; track c.key) {
+            <button type="button" class="calday"
+                    [class.out]="c.outside" [class.now]="c.today" [class.on]="c.chosen"
+                    (click)="pick(c.key)">{{ c.day }}</button>
+          }
+        </div>
+      }
+
+      <div class="calfoot">
+        <button type="button" class="link" (click)="clear()">Clear</button>
+        <button type="button" class="link" (click)="today()">Today</button>
+      </div>
+    </div>
+  }
+</div>

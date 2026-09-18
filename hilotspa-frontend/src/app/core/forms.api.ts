@@ -107,6 +107,24 @@ export class FormsApi {
       this.http.delete<BookingModel>(`${API_BASE}/appointments/${id}${q}`));
   }
 
+  /**
+   * Move a visit - the front desk rebooking on the client's behalf.
+   *
+   * There is no client-side version of this on purpose. A client who wants a
+   * different hour cancels and books again, which releases the old slot at
+   * once; one who could drag their booking around would hold a slot while
+   * shopping for a better one.
+   *
+   * therapistId null means "whoever is free". Naming one means THAT person or
+   * a refusal - the server never quietly substitutes somebody else.
+   */
+  rescheduleBooking(id: string, body: {
+    start: string; therapistId?: string | null; roomId?: string | null; reason?: string;
+  }): Promise<BookingModel> {
+    return firstValueFrom(this.http.post<BookingModel>(
+      `${API_BASE}/appointments/${id}/reschedule`, body));
+  }
+
   /** The caller's own appointments. The server scopes this; never filter client-side. */
   myBookings(): Promise<BookingModel[]> {
     return firstValueFrom(this.http.get<BookingModel[]>(`${API_BASE}/appointments/mine`));

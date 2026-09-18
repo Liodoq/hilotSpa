@@ -1,0 +1,101 @@
+<!-- Screen-only controls. The printed page carries none of this. -->
+<div class="bar noprint">
+  <button type="button" class="btn btn-quiet btn-sm" (click)="back()">← Back</button>
+  <button type="button" class="btn btn-primary btn-sm" (click)="print()">Print / Save as PDF</button>
+  <span class="help">Print this, have it signed, and scan it back in as Appendix C.
+    Then set each rule's author to the practitioner's name so the system agrees with the paper.</span>
+</div>
+
+<article class="sheet">
+  <header class="shead">
+    <h1>Service Protocol</h1>
+    <p class="org">Knead Wellness Spa · Bulan, Sorsogon</p>
+    <p class="meta">Generated {{ generatedAt | date:'d MMMM y, h:mm a' }}
+      · {{ rules().length }} rules · {{ contraindicated() }} contraindications</p>
+  </header>
+
+  <!-- What signing this actually commits the practitioner to. Written out
+       because a signature on a table of enum values is not informed consent to
+       anything, and this document has to be readable by somebody who has never
+       seen the software. -->
+  <section class="decl">
+    <h2>What this document is</h2>
+    <p>
+      This is the rule table used by the HilotSpa booking assistant at Knead Wellness Spa.
+      It is applied <b>before</b> the assistant is consulted, by the system itself:
+    </p>
+    <ul>
+      <li>A treatment marked <b>CONTRAINDICATED</b> for a condition is removed from the list
+        of treatments the assistant is permitted to see for a client who reported that
+        condition. The assistant cannot suggest it, because it is never shown it.</li>
+      <li>A treatment marked <b>INDICATED</b> is presented to the assistant as matched to that
+        condition, together with the reason written beside it. The assistant repeats that
+        reason to the client, word for word, when asked why a treatment was suggested.</li>
+      <li>A treatment with <b>no rule</b> for a condition may still be offered. Nothing rules
+        it out, and nothing has reviewed it.</li>
+    </ul>
+    <p>
+      The rules below were drafted by the researchers from the establishment's own archived
+      treatment records. They are <b>proposals</b>. Signing this sheet states that a
+      practitioner has read them and accepts them as the establishment's protocol.
+    </p>
+  </section>
+
+  @if (loading()) {
+    <p class="help">Loading the table…</p>
+  } @else {
+    @for (g of groups(); track g.service) {
+      <section class="svc">
+        <h2>{{ g.service }}</h2>
+        <table>
+          <tr><th class="c1">CONDITION</th><th class="c2">RULE</th><th>REASON RECORDED</th></tr>
+          @for (r of g.rows; track r.id) {
+            <tr>
+              <td>{{ r.conditionLabel }}</td>
+              <td [class.contra]="r.rule === 'CONTRAINDICATED'">{{ r.rule }}</td>
+              <td>{{ r.rationale || '—' }}</td>
+            </tr>
+          }
+        </table>
+      </section>
+    } @empty {
+      <p>The protocol table is empty.</p>
+    }
+
+    <!-- Room to write. A practitioner reading this will disagree with something,
+         and a sheet with nowhere to say so gets signed as-is or not at all. -->
+    <section class="amend">
+      <h2>Corrections</h2>
+      <p class="help">Anything to change before signing:</p>
+      <div class="lines"><span></span><span></span><span></span><span></span></div>
+    </section>
+
+    <section class="sign">
+      <h2>Practitioner's declaration</h2>
+      <p>
+        I have read the rules set out above. They represent the protocol of this
+        establishment, subject to any corrections noted.
+      </p>
+      <div class="sigrow">
+        <div class="sigbox">
+          <span class="rule"></span>
+          <span class="cap">Signature over printed name</span>
+        </div>
+        <div class="sigbox narrow">
+          <span class="rule"></span>
+          <span class="cap">Designation</span>
+        </div>
+        <div class="sigbox narrow">
+          <span class="rule"></span>
+          <span class="cap">Date</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <p>HilotSpa · Spa and Wellness Management System with 2D Visual Mapping Pre-Assessment
+        and a Data-Driven Virtual Assistant. Printed from the live rule table; this sheet and
+        the running system cannot disagree at the moment of printing.</p>
+    </footer>
+  }
+</article>

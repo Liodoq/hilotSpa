@@ -175,3 +175,39 @@
   .cal .slot.dayrow { flex-wrap: wrap; }
   .cal .slot.dayrow .acts { width: 100%; }
 }
+
+/* Move a visit (adviser's revision: the spa can rebook).
+
+   Inline under its own row rather than in a modal. The front desk is deciding
+   whether a new time is a good idea, and the only thing that answers that is
+   the rest of the day - which a modal covers up. */
+.movebox {
+  margin: -4px 0 12px 34px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--color-forest-700);
+  background: var(--color-ink-050, #f7f5f1);
+  border-radius: 0 8px 8px 0;
+}
+.movebox .mfields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+.movebox .mf { display: flex; flex-direction: column; gap: 5px; }
+/* The label and the controls are the .dash vocabulary (styles.scss, task 1.25). */
+.movebox .lbl {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: var(--color-ink-600);
+}
+.movebox .help { margin: 10px 0 0; max-width: 64ch; }
+/* The server's own sentence. It knows which of five rules refused, and only one
+   of them means "try another time". */
+.movebox .moveerr { color: var(--color-clay-700, #9a3b2f); }
+
+@media (max-width: 720px) {
+  .movebox { margin-left: 0; }
+  .movebox .mfields { flex-direction: column; align-items: stretch; }
+}

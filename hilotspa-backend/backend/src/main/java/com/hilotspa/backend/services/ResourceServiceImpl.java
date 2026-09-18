@@ -16,6 +16,7 @@ import com.hilotspa.backend.entities.AuditLog;
 import com.hilotspa.backend.entities.Branch;
 import com.hilotspa.backend.entities.Room;
 import com.hilotspa.backend.entities.Sex;
+import com.hilotspa.backend.entities.Specialty;
 import com.hilotspa.backend.entities.Therapist;
 import com.hilotspa.backend.entities.TherapistStatus;
 import com.hilotspa.backend.model.ResourceDtos.AuditRow;
@@ -157,6 +158,25 @@ public class ResourceServiceImpl implements ResourceService {
             t.setSex(raw.isEmpty() ? null : parseSex(raw));
         }
 
+        // Null means "not mentioned - leave them alone". A list REPLACES them, and an
+        // empty list is a real answer rather than a mistake: it records that nobody has
+        // restricted this therapist. The forgiving reading lives in canPerform(), so an
+        // empty set means every treatment, not none - see Therapist.specialties for why
+        // that direction is the safe one.
+        if (body.specialties() != null) {
+            java.util.Set<Specialty> chosen = new java.util.LinkedHashSet<>();
+            for (String raw : body.specialties()) {
+                if (raw != null && !raw.isBlank()) {
+                    chosen.add(parseSpecialty(raw));
+                }
+            }
+            if (t.getSpecialties() == null) {
+                t.setSpecialties(new java.util.LinkedHashSet<>());
+            }
+            t.getSpecialties().clear();
+            t.getSpecialties().addAll(chosen);
+        }
+
         boolean creating = id == null;
         Therapist saved = therapistRepository.save(t);
         audit(creating ? "THERAPIST_CREATED" : "THERAPIST_UPDATED", "Therapist", saved.getId(),
@@ -164,6 +184,18 @@ public class ResourceServiceImpl implements ResourceService {
                 saved.getFirstName() + " " + saved.getLastName() + " / " + saved.getStatus()
                         + (saved.isActive() ? "" : " / inactive"));
         return toDto(saved);
+    }
+
+    private Specialty parseSpecialty(String raw) {
+        try {
+            return Specialty.valueOf(raw.trim().toUpperCase().replace(' ', '_'));
+        } catch (IllegalArgumentException e) {
+            // Reject rather than drop. A typed specialty that silently vanished would
+            // leave an admin certain they had restricted someone who is still being
+            // offered every treatment.
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Unknown specialty '" + raw + "'. Use MASSAGE, BONE_SETTING or HEAD_SPA.");
+        }
     }
 
     private Sex parseSex(String raw) {
@@ -188,7 +220,9 @@ public class ResourceServiceImpl implements ResourceService {
         return new TherapistDto(t.getId(), t.getFirstName(), t.getLastName(),
                 t.getStatus() == null ? null : t.getStatus().name(),
                 t.getSex() == null ? null : t.getSex().name(),
-                t.isActive(), t.getBranch().getId(), t.getBranch().getName());
+                t.isActive(), t.getBranch().getId(), t.getBranch().getName(),
+                t.getSpecialties() == null ? java.util.List.of()
+                        : t.getSpecialties().stream().map(Enum::name).sorted().toList());
     }
 
     // ---------------------------------------------------------------- rooms

@@ -6,6 +6,7 @@ import { Toast } from '../../shared/toast/toast';
 import { ToastService } from '../../core/toast.service';
 import { FormsApi } from '../../core/forms.api';
 import { BookingModel } from '../../core/models';
+import { describeHttpError } from '../../core/http-error';
 
 /** Statuses that still hold a therapist and a room, i.e. a live booking. */
 const OPEN = new Set(['PENDING', 'CONFIRMED', 'IN_PROGRESS']);
@@ -116,6 +117,38 @@ export class Booking {
   keepIt(): void { this.confirming.set(null); }
 
   /**
+   * Why there is no Cancel button on this one.
+   *
+   * The server has already decided; this only puts the decision into words. A
+   * missing button with no sentence beside it is the version of this screen
+   * that sends somebody to the counter angry, having assumed the site was
+   * broken.
+   */
+  cancelClosedNote(v: BookingModel): string {
+    if (!v.cancellableUntil) {
+      return 'The front desk can cancel this for you.';
+    }
+    const at = new Date(v.cancellableUntil)
+      .toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return `Cancelling online closed at ${at}. Please call the branch `
+      + `and the front desk will cancel it for you.`;
+  }
+
+  /**
+   * How long the client still has, while they still have it.
+   *
+   * Shown on the confirm step rather than on the card: it is the answer to
+   * "can I still change my mind later", which is a question somebody only asks
+   * once they are already looking at Cancel.
+   */
+  cancelOpenNote(v: BookingModel): string {
+    if (!v.cancellableUntil) { return ''; }
+    const at = new Date(v.cancellableUntil)
+      .toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return `You can cancel online until ${at}. After that, please call the branch.`;
+  }
+
+  /**
    * Cancel — 2.32.
    *
    * The list is reloaded from the server rather than patched here. If the server
@@ -131,10 +164,12 @@ export class Booking {
       this.toast.show(`Cancelled — ${v.serviceName}, ${v.label}. Nothing to pay.`, 4200);
       await this.load();
     } catch (e: unknown) {
-      const status = (e as { status?: number })?.status;
-      this.toast.show(status === 409
-        ? 'That visit has already started. Please speak to the front desk.'
-        : 'We could not cancel that just now. Please try again, or call the branch.', 4200);
+      // The server's own sentence, not a guess from the status code. There are
+      // now two different 409s - "already started" and "inside the last hour" -
+      // and the client can only act on one of them.
+      this.toast.show(describeHttpError(
+        e, 'We could not cancel that just now. Please try again, or call the branch.'), 4600);
+      await this.load();
     } finally {
       this.cancelling.set(null);
     }

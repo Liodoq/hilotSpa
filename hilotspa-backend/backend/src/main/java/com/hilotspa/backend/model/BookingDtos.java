@@ -109,7 +109,25 @@ public final class BookingDtos {
             String paymentStatus,
             String source,
             /** When the booking was made - not when the visit is. */
-            java.time.LocalDateTime bookedAt) {
+            java.time.LocalDateTime bookedAt,
+            /**
+             * Whether the person who asked for this may still cancel it.
+             *
+             * Decided per VIEWER, not per booking: staff and admin have no
+             * cutoff, so the same appointment arrives cancellable at the counter
+             * and closed to the client. The UI must not re-derive this from
+             * `start` - the cutoff runs on the spa's clock in Asia/Manila, and
+             * the browser's clock is neither guaranteed correct nor guaranteed
+             * to be in that zone.
+             */
+            boolean cancellable,
+            /**
+             * The moment online cancelling closes for this viewer.
+             *
+             * Null when the viewer has no cutoff at all, which is how the screen
+             * tells "you have until 2:00 PM" apart from "this rule is not yours".
+             */
+            LocalDateTime cancellableUntil) {
     }
 
     /**
@@ -219,6 +237,22 @@ public final class BookingDtos {
     }
 
     /** 409 body: the slot went while the client was deciding. */
+    /**
+     * Move an existing visit (adviser's revision: the spa can rebook).
+     *
+     * therapistId and roomId are optional and behave like they do on a new
+     * booking: set means "this one or refuse", null means "whoever is free".
+     * A front desk moving a visit usually wants the same therapist at a new
+     * hour, and passing the current therapist's id is how they say so.
+     */
+    public record RescheduleRequest(
+            LocalDateTime start,
+            UUID therapistId,
+            UUID roomId,
+            /** Goes into the audit row. The client asked, the therapist called in sick. */
+            String reason) {
+    }
+
     public record SlotTaken(
             String message,
             List<Slot> alternatives) {

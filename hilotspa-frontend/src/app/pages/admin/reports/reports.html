@@ -1,0 +1,198 @@
+<app-dash-shell [role]="area" scopeNote="Read-only. Counted from the appointment table on load.">
+  <span bar style="font-size:18px">{{ heading() }}</span>
+
+  <div class="stack">
+
+    @if (error(); as e) {
+      <div class="note bad"><span class="b"></span>
+        <span>{{ e }} <button type="button" class="link" (click)="load()">Try again</button></span></div>
+    }
+
+    <!-- Controls first: a report whose range you cannot see is a report you
+         cannot quote. Dates are plain inputs rather than a picker component -
+         the value that matters is the one printed underneath, not the widget. -->
+    <div class="card controls">
+      <div class="fields">
+        <app-date-field label="FROM" placeholder="12 months back"
+                        [value]="from()" (valueChange)="from.set($event)" />
+        <app-date-field label="TO" placeholder="Today"
+                        [value]="to()" (valueChange)="to.set($event)" />
+        <!-- Administrators only. The server IGNORES a branchId from a staff
+             token rather than validating it, so a select that looked like it
+             worked and quietly did nothing would be worse than none. -->
+        @if (canPickBranch) {
+          <label class="f">
+            <span class="lbl">BRANCH</span>
+            <select class="ctl" [ngModel]="branchId()" (ngModelChange)="branchId.set($event)">
+              <option value="">All branches</option>
+              @for (b of branches(); track b.id) {
+                <option [value]="b.id">{{ b.name || b.branchName }}</option>
+              }
+            </select>
+          </label>
+        }
+        <button type="button" class="btn btn-primary" [disabled]="loading()"
+                (click)="load()">{{ loading() ? 'Counting…' : 'Generate' }}</button>
+      </div>
+      <div class="quick">
+        <button type="button" class="link" (click)="clearRange()">Last 12 months</button>
+        <span class="sep">·</span>
+        <button type="button" class="link" (click)="thisYear()">This year so far</button>
+      </div>
+    </div>
+
+    @if (loading() && !data()) {
+      <div class="skel-tiles"><div class="skel"></div><div class="skel"></div>
+        <div class="skel"></div><div class="skel"></div></div>
+      <div class="skel" style="height:220px"></div>
+    }
+
+    @if (data(); as d) {
+
+      <!-- The definition, printed before the numbers rather than under them.
+           A ranking of treatments is worthless if the reader cannot tell
+           whether cancelled bookings are in it, and this sentence is the
+           server's own - not a paraphrase this page invented. -->
+      <div class="note" [class.warm]="d.basis === 'BOOKED'" [class.ok]="d.basis === 'COMPLETED'">
+        <span class="b"></span>
+        <span><b>{{ d.basis === 'COMPLETED' ? 'Counted: completed visits.' : 'Counted: bookings.' }}</b>
+          {{ d.countedNote }}</span>
+      </div>
+
+      <!-- What was generated, said before the numbers. Read from the RESPONSE,
+           not from the picker: after a slow or failed request those differ, and
+           a figure labelled with a scope it does not have is the fault this
+           page keeps being corrected for. -->
+      <header class="rhead">
+        <h2 class="t-s">{{ allBranches() ? 'All branches' : scopeLabel() }}</h2>
+        <p class="help">
+          {{ d.from }} to {{ d.to }} inclusive
+          @if (allBranches()) { <span> · every branch counted together</span> }
+          @else { <span> · this branch only</span> }
+        </p>
+      </header>
+
+      <div class="tiles">
+        <div class="stat lead">
+          <div class="n">{{ top() ? top()!.name : '—' }}</div>
+          <div class="k">Most availed treatment
+            @if (top()) { <span class="sub">{{ top()!.visits }} visits · {{ top()!.pct }}%</span> }</div>
+        </div>
+        <div class="stat">
+          <div class="n">{{ d.peakMonth ? d.peakMonth.label : '—' }}</div>
+          <div class="k">Peak month
+            @if (d.peakMonth) { <span class="sub">{{ d.peakMonth.visits }} visits</span> }</div>
+        </div>
+        <div class="stat">
+          <div class="n">{{ d.visitsCounted | number }}</div>
+          <div class="k">Visits counted</div>
+        </div>
+        <div class="stat">
+          <div class="n">₱ {{ d.revenueCounted | number:'1.2-2' }}</div>
+          <div class="k">At the price charged on the day</div>
+        </div>
+      </div>
+
+      <!-- A tie is reported as a tie. A peak declared where two months are level
+           is a claim the reader has no way to check and no reason to doubt. -->
+      @if (d.peakNote) {
+        <p class="help note-line">{{ d.peakNote }}</p>
+      }
+
+      <div class="cols">
+        <div class="card">
+          <h2 class="t-s">Treatments, most availed first</h2>
+          @if (d.services.length) {
+            <table class="tbl">
+              <tr><th>TREATMENT</th><th class="c-n">VISITS</th>
+                  <th class="c-n">SHARE</th><th class="c-n">REVENUE</th></tr>
+              @for (s of d.services; track s.serviceId) {
+                <tr>
+                  <td>
+                    <b>{{ s.name }}</b>
+                    <!-- Two catalogue rows can carry the same name. They are
+                         different services and the count is right to keep them
+                         apart; printing two identical lines is what is not. -->
+                    @if (isDuplicateName(s.name)) {
+                      <span class="help mono dupe">#{{ s.serviceId.slice(0, 8).toUpperCase() }}</span>
+                    }
+                    <!-- The bar is the share, drawn behind the row. Reading a
+                         column of percentages and reading which one is biggest
+                         are two different jobs; this does the second. -->
+                    <span class="bar"><i [style.width.%]="s.pct"></i></span>
+                  </td>
+                  <td class="c-n">{{ s.visits }}</td>
+                  <td class="c-n">{{ s.pct }}%</td>
+                  <td class="c-n">₱ {{ s.revenue | number:'1.2-2' }}</td>
+                </tr>
+              }
+            </table>
+            <p class="help">Shares are rounded per row, so the column adds to about 100
+              and not exactly. Forcing it to 100 would mean moving a visit from one
+              treatment to another.</p>
+          } @else {
+            <p class="help">No visit in this range, so there is nothing to rank.</p>
+          }
+        </div>
+
+        <div class="card">
+          <h2 class="t-s">By month</h2>
+          <!-- Empty months are drawn, not dropped. A closed August that vanishes
+               looks like a busy one that fell off the chart, and "peak month" is
+               a claim about the months either side as much as about itself. -->
+          <ul class="months">
+            @for (m of d.months; track m.month) {
+              <!-- A control, not a picture. "Which month was busiest" is almost
+                   always followed by "what happened in it". -->
+              <li [class.peak]="m.peak">
+                <button type="button" class="mrow" [disabled]="!m.visits"
+                        (click)="openMonth(m.month)"
+                        [attr.title]="m.visits ? 'Show only ' + m.label : null">
+                  <span class="ml">{{ m.label }}</span>
+                  <span class="mb"><i [style.width]="barWidth(m)"></i></span>
+                  <span class="mv">{{ m.visits }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+
+      <!-- Branch against branch. Absent for a staff account and for a
+           single-branch spa: a comparison of one is not a comparison. -->
+      @if (showBranchTable()) {
+        <div class="card">
+          <h2 class="t-s">Branches, busiest first</h2>
+          <table class="tbl">
+            <tr><th class="c-rank">#</th><th>BRANCH</th><th>WROTE THESE</th>
+                <th class="c-n">VISITS</th><th class="c-n">SHARE</th><th class="c-n">REVENUE</th></tr>
+            @for (b of branchRows(); track b.branchId) {
+              <tr [class.lead]="b.rank === 1">
+                <td class="c-rank">{{ b.rank }}</td>
+                <td><b>{{ b.name }}</b>
+                  <span class="bar"><i [style.width.%]="b.pct"></i></span></td>
+                <!-- The node that WROTE the bookings, read from the rows - not
+                     whichever node happened to answer this request. -->
+                <td><span class="mono">{{ b.nodeId || '—' }}</span></td>
+                <td class="c-n">{{ b.visits }}</td>
+                <td class="c-n">{{ b.pct }}%</td>
+                <td class="c-n">₱ {{ b.revenue | number:'1.2-2' }}</td>
+              </tr>
+            }
+          </table>
+          <p class="help">Branches level on visits share a rank — calling one of them
+            second because it sorted later is a claim the data does not support.
+            <b>Wrote these</b> is the node the bookings were recorded on, taken from
+            the rows themselves.</p>
+        </div>
+      }
+
+      <div class="rowbar foot">
+        <button type="button" class="btn btn-quiet btn-sm" (click)="downloadCsv()">
+          Download CSV</button>
+        <span class="help mono">{{ d.from }} to {{ d.to }} inclusive ·
+          generated {{ d.generatedAt }}</span>
+      </div>
+    }
+  </div>
+</app-dash-shell>

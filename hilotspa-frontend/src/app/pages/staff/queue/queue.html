@@ -75,10 +75,40 @@
           <span class="pill bad">No assessment</span>
         }
         <button type="button" class="btn btn-ghost btn-sm" style="margin-left:8px"
+                [disabled]="closing()" (click)="openMove(s)">Move</button>
+        <button type="button" class="btn btn-ghost btn-sm"
                 [disabled]="closing()" (click)="cancelBooking(s)">
           {{ confirmCancel() === s.id ? 'Tap again to cancel' : 'Cancel' }}
         </button>
       </div>
+      @if (moving() === s.id) {
+        <div class="movebox">
+          <div class="mfields">
+            <label class="mf">
+              <span class="lbl">NEW DATE AND TIME</span>
+              <input class="ctl" type="datetime-local" [ngModel]="moveWhen()"
+                     (ngModelChange)="moveWhen.set($event)">
+            </label>
+            <label class="mf">
+              <span class="lbl">THERAPIST</span>
+              <select class="ctl" [ngModel]="moveTherapist()" (ngModelChange)="moveTherapist.set($event)">
+                <option value="">Whoever is free</option>
+                @for (t of staff(); track t.id) {
+                  <option [value]="t.id">{{ t.firstName }} {{ t.lastName }}</option>
+                }
+              </select>
+            </label>
+            <button type="button" class="btn btn-primary btn-sm"
+                    [disabled]="saving() === s.id" (click)="saveMove(s)">
+              {{ saving() === s.id ? 'Moving…' : 'Move it' }}</button>
+            <button type="button" class="btn btn-quiet btn-sm"
+                    [disabled]="saving() === s.id" (click)="closeMove()">Keep as is</button>
+          </div>
+          @if (moveError(); as me) {
+            <p class="help moveerr"><b>{{ me }}</b></p>
+          }
+        </div>
+      }
     } @empty {
       @if (!loading()) {
         <div class="note"><span class="b"></span>
@@ -199,6 +229,8 @@
                   } @else if (stillToCome(s)) {
                     <span class="pill mute">Booked</span>
                     <button type="button" class="btn btn-ghost btn-sm"
+                            [disabled]="closing()" (click)="openMove(s)">Move</button>
+                    <button type="button" class="btn btn-ghost btn-sm"
                             [disabled]="closing()" (click)="cancelBooking(s)">
                       {{ confirmCancel() === s.id ? 'Tap again to cancel' : 'Cancel' }}</button>
                   } @else if (s.status === 'COMPLETED') {
@@ -209,6 +241,42 @@
                     <span class="pill mute">{{ s.status }}</span>
                   }
                 </div>
+
+                @if (moving() === s.id) {
+                  <!-- Inline, under the row it belongs to. A modal here would
+                       hide the rest of the day, which is the only context that
+                       makes a new time a good or bad idea. -->
+                  <div class="movebox">
+                    <div class="mfields">
+                      <label class="mf">
+                        <span class="lbl">NEW DATE AND TIME</span>
+                        <input class="ctl" type="datetime-local" [ngModel]="moveWhen()"
+                               (ngModelChange)="moveWhen.set($event)">
+                      </label>
+                      <label class="mf">
+                        <span class="lbl">THERAPIST</span>
+                        <select class="ctl" [ngModel]="moveTherapist()"
+                                (ngModelChange)="moveTherapist.set($event)">
+                          <option value="">Whoever is free</option>
+                          @for (t of staff(); track t.id) {
+                            <option [value]="t.id">{{ t.firstName }} {{ t.lastName }}</option>
+                          }
+                        </select>
+                      </label>
+                      <button type="button" class="btn btn-primary btn-sm"
+                              [disabled]="saving() === s.id" (click)="saveMove(s)">
+                        {{ saving() === s.id ? 'Moving…' : 'Move it' }}</button>
+                      <button type="button" class="btn btn-quiet btn-sm"
+                              [disabled]="saving() === s.id" (click)="closeMove()">Keep as is</button>
+                    </div>
+                    <p class="help">Naming a therapist means that person or nothing —
+                      the system will not quietly hand the visit to someone else.
+                      The room is chosen for you.</p>
+                    @if (moveError(); as me) {
+                      <p class="help moveerr"><b>{{ me }}</b></p>
+                    }
+                  </div>
+                }
               </div>
             } @empty {
               <div class="empty" style="margin-top:10px">Nothing booked on this day.</div>

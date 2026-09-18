@@ -1,5 +1,7 @@
 package com.hilotspa.backend.entities;
 
+import com.hilotspa.backend.config.SyncAudited;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -7,6 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -21,6 +24,7 @@ import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 @Data
+@EntityListeners(SyncAudited.class)
 @Entity
 @Table(
     name = "service_protocol",

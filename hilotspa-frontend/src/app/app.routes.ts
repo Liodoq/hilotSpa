@@ -61,6 +61,13 @@ export const routes: Routes = [
       { path: 'resources', loadComponent: () => import('./pages/staff/resources/resources').then(m => m.StaffResources) },
       { path: 'report',    loadComponent: () => import('./pages/staff/report/report').then(m => m.StaffReport) },
       { path: 'walkin',    loadComponent: () => import('./pages/staff/walkin/walkin').then(m => m.StaffWalkin) },
+      // The SAME two components as the admin area. `area` tells them which
+      // sidebar to wear; the BRANCH RULE is the server's, not the route's - a
+      // staff token is forced to its own branch whichever path it arrives on.
+      { path: 'reports',   data: { area: 'STAFF' },
+        loadComponent: () => import('./pages/admin/reports/reports').then(m => m.AdminReports) },
+      { path: 'reminders', data: { area: 'STAFF' },
+        loadComponent: () => import('./pages/admin/notifications/notifications').then(m => m.AdminNotifications) },
     ],
   },
 
@@ -74,6 +81,12 @@ export const routes: Routes = [
       { path: 'branches', loadComponent: () => import('./pages/admin/branches/branches').then(m => m.AdminBranches) },
       { path: 'accounts', loadComponent: () => import('./pages/admin/accounts/accounts').then(m => m.AdminAccounts) },
       { path: 'config',   loadComponent: () => import('./pages/admin/config/config').then(m => m.AdminConfig) },
+      { path: 'reports',  data: { area: 'ADMIN' },
+        loadComponent: () => import('./pages/admin/reports/reports').then(m => m.AdminReports) },
+      { path: 'protocol-sheet',
+        loadComponent: () => import('./pages/admin/protocol-sheet/protocol-sheet').then(m => m.ProtocolSheet) },
+      { path: 'reminders', data: { area: 'ADMIN' },
+        loadComponent: () => import('./pages/admin/notifications/notifications').then(m => m.AdminNotifications) },
       { path: 'audit',    loadComponent: () => import('./pages/admin/audit/audit').then(m => m.AdminAudit) },
     ],
   },

@@ -1,0 +1,134 @@
+/* The console vocabulary lives in styles.scss under `.dash`. Only what is true
+   of THIS page is here.
+
+   A3 answers two questions - which treatment is availed most, and which month
+   is busiest - so the order is: what was counted, the two answers, then the
+   working. The definition comes first because the numbers are not interpretable
+   without it. */
+:host { display: block; }
+
+.stack { display: flex; flex-direction: column; gap: 20px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: 20px; align-items: start; }
+
+/* The fields row, the labels and the controls themselves are the .dash
+   vocabulary now (styles.scss, task 1.25). Only what is true of THIS page
+   stays here. */
+.controls .quick { margin-top: 12px; font-size: 17px; }
+.controls .quick .sep { margin: 0 8px; color: var(--color-ink-600); }
+
+.stat .k .sub {
+  display: block;
+  margin-top: 4px;
+  font-weight: 600;
+  color: var(--color-forest-900);
+}
+/* The most-availed tile carries a NAME, not a number, so it cannot use the
+   display size the other tiles do without wrapping to three lines. */
+.stat.lead .n { font-size: 28px; line-height: 1.2; }
+
+.note-line { margin: 0; }
+
+/* Share, drawn behind the treatment name. One series, one colour: a palette
+   here would imply the treatments are categories being compared on something
+   other than size, which they are not. */
+.bar {
+  display: block;
+  margin-top: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-ink-100, #eeebe5);
+  overflow: hidden;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  background: var(--color-forest-700);
+}
+
+.months { list-style: none; margin: 0; padding: 0; }
+.months li { margin: 1px 0; }
+/* The whole row is the target, not a link inside it. A 14px bar is not
+   something to ask anybody to hit. */
+.months .mrow {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.months .mrow:hover:not(:disabled) { background: var(--color-sage-100); }
+.months .mrow:focus-visible { outline: 3px solid var(--color-forest-500); outline-offset: -2px; }
+/* An empty month is still drawn — a gap has to read as a gap — but there is
+   nothing behind it to open. */
+.months .mrow:disabled { cursor: default; }
+.months .ml { font-size: 16px; color: var(--color-ink-600); }
+.months .mv { font-size: 16px; text-align: right; font-variant-numeric: tabular-nums; }
+.months .mb {
+  height: 14px;
+  border-radius: 3px;
+  background: var(--color-ink-100, #eeebe5);
+  overflow: hidden;
+}
+.months .mb i {
+  display: block;
+  height: 100%;
+  background: var(--color-forest-700);
+  /* A zero-visit month still shows a hairline, so the row reads as "counted and
+     empty" rather than as a row that failed to draw. */
+  min-width: 2px;
+}
+.months li.peak .ml, .months li.peak .mv { font-weight: 700; color: var(--color-forest-900); }
+.months li.peak .mb i { background: var(--color-forest-900); }
+
+.foot { margin-top: 4px; }
+.c-n { text-align: right; }
+
+@media (max-width: 1400px) {
+  .cols { grid-template-columns: 1fr; }
+  .tiles { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Branch comparison. Only an administrator ever sees more than one row. */
+.c-rank { width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+.tbl tr.lead td { background: var(--color-ink-050, #f7f5f1); }
+
+
+/* ---------- what was generated (the scope line) ---------- */
+.rhead { padding-bottom: 2px; }
+.rhead .t-s { margin: 0 0 4px; }
+.rhead .help { margin: 0; }
+
+/* A treatment name that appears twice is two catalogue rows, not one counted
+   wrong. The id says which is which without shouting. */
+.dupe { display: inline-block; margin-left: 8px; font-size: 13px; }
+
+/* ---------- responsive ----------
+   The console was built for a desk and this page is the widest thing in it:
+   two tables, a month column and a four-tile row. Each breakpoint below is a
+   thing that actually broke, not a round number. */
+
+/* The month column stops being a column before the tiles stop being a row. */
+@media (max-width: 1180px) {
+  .cols { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+  .tiles { grid-template-columns: repeat(2, 1fr); }
+  .stat.lead .n { font-size: 24px; }
+}
+
+@media (max-width: 680px) {
+  .tiles { grid-template-columns: 1fr; }
+  /* Six columns of numbers will not fit a phone and must not be squeezed into
+     an unreadable one. Scrolling the TABLE keeps the page itself still. */
+  .card > .tbl { display: block; overflow-x: auto; white-space: nowrap; }
+  .card > .tbl b { white-space: normal; }
+  .foot { flex-direction: column; align-items: flex-start; gap: 8px; }
+}

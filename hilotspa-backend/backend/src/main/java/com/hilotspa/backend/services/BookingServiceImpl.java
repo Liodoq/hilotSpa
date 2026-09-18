@@ -34,11 +34,15 @@ import com.hilotspa.backend.entities.Branch;
 import com.hilotspa.backend.entities.BookingSource;
 import com.hilotspa.backend.entities.Forms;
 import com.hilotspa.backend.entities.Massage;
+import com.hilotspa.backend.entities.NotificationKind;
+import com.hilotspa.backend.entities.NotificationLog;
+import com.hilotspa.backend.entities.NotificationStatus;
 import com.hilotspa.backend.entities.PaymentStatus;
 import com.hilotspa.backend.entities.PatientIntake;
 import com.hilotspa.backend.entities.Role;
 import com.hilotspa.backend.entities.Room;
 import com.hilotspa.backend.entities.Sex;
+import com.hilotspa.backend.entities.Specialty;
 import com.hilotspa.backend.entities.Therapist;
 import com.hilotspa.backend.entities.TherapistStatus;
 import com.hilotspa.backend.model.BookingDtos.Availability;
@@ -49,6 +53,7 @@ import com.hilotspa.backend.model.BookingDtos.Openings;
 import com.hilotspa.backend.model.BookingDtos.OpenTherapist;
 import com.hilotspa.backend.model.BookingDtos.OutcomeRequest;
 import com.hilotspa.backend.model.BookingDtos.OutcomeScore;
+import com.hilotspa.backend.model.BookingDtos.RescheduleRequest;
 import com.hilotspa.backend.model.BookingDtos.OpenRoom;
 import com.hilotspa.backend.model.BookingDtos.ScheduleRow;
 import com.hilotspa.backend.model.BookingDtos.Slot;
@@ -58,6 +63,7 @@ import com.hilotspa.backend.repository.AuditLogRepository;
 import com.hilotspa.backend.repository.BranchRepository;
 import com.hilotspa.backend.repository.FormsRepository;
 import com.hilotspa.backend.repository.MassageRepository;
+import com.hilotspa.backend.repository.NotificationLogRepository;
 import com.hilotspa.backend.repository.RoomRepository;
 import com.hilotspa.backend.repository.TherapistRepository;
 
@@ -95,12 +101,21 @@ public class BookingServiceImpl implements BookingService {
     @Autowired private TherapistRepository therapistRepository;
     @Autowired private RoomRepository roomRepository;
     @Autowired private AuditLogRepository auditLogRepository;
+    @Autowired private NotificationLogRepository notificationLogRepository;
 
     @Value("${hilotspa.booking.timezone:Asia/Manila}") private String timezone;
     @Value("${hilotspa.booking.open-hour:9}")          private int openHour;
     @Value("${hilotspa.booking.close-hour:18}")        private int closeHour;
     @Value("${hilotspa.booking.slot-minutes:30}")      private int slotMinutes;
     @Value("${hilotspa.booking.max-days:7}")           private int maxDays;
+    /**
+     * How long before a visit the client's own Cancel button stops working.
+     *
+     * Configurable rather than a literal 60 because it is a business rule, not
+     * a fact: the adviser asked for an hour, and the spa may want two once the
+     * therapists have to travel between the two branches.
+     */
+    @Value("${hilotspa.booking.cancel-cutoff-minutes:60}") private int cancelCutoffMinutes;
     @Value("${hilotspa.node.id:local-dev}")            private String nodeId;
 
     // ---------------------------------------------------------- availability
@@ -126,7 +141,8 @@ public class BookingServiceImpl implements BookingService {
         // filter the client is overriding here - it is the reason this shorter
         // list is the right one to show them.
         List<OpenTherapist> therapists = freeTherapists(
-                branchId, start, end, form.getTherapistPreference()).stream()
+                branchId, start, end, form.getTherapistPreference(),
+                service.getRequiredSpecialty(), null).stream()
                 .map(t -> new OpenTherapist(
                         t.getId(),
                         t.getFirstName(),
@@ -137,7 +153,7 @@ public class BookingServiceImpl implements BookingService {
                         t.getSex() == null ? null : t.getSex().getDisplayName()))
                 .toList();
 
-        List<OpenRoom> rooms = freeRooms(branchId, start, end).stream()
+        List<OpenRoom> rooms = freeRooms(branchId, start, end, null).stream()
                 .map(r -> new OpenRoom(r.getId(), r.getName(), r.getImageName()))
                 .toList();
 
@@ -195,12 +211,13 @@ public class BookingServiceImpl implements BookingService {
 
         // No sex preference: nobody has answered that question at the counter.
         // Every free therapist is shown and staff ask the client out loud.
-        List<OpenTherapist> therapists = freeTherapists(branchId, start, end, null).stream()
+        List<OpenTherapist> therapists = freeTherapists(branchId, start, end, null,
+                service.getRequiredSpecialty(), null).stream()
                 .map(t -> new OpenTherapist(t.getId(), t.getFirstName(),
                         t.getSex() == null ? null : t.getSex().getDisplayName()))
                 .toList();
 
-        List<OpenRoom> rooms = freeRooms(branchId, start, end).stream()
+        List<OpenRoom> rooms = freeRooms(branchId, start, end, null).stream()
                 .map(r -> new OpenRoom(r.getId(), r.getName(), r.getImageName()))
                 .toList();
 
@@ -233,6 +250,18 @@ public class BookingServiceImpl implements BookingService {
         Sex want = form.getTherapistPreference();
         if (want != null) {
             therapists = therapists.stream().filter(t -> want == t.getSex()).toList();
+        }
+
+        // And trained for THIS treatment, for exactly the reason above: a time
+        // offered that only an untrained therapist could cover is a promise the
+        // write path then breaks - and breaks at the counter, in front of a
+        // client who came for a bone setting.
+        //
+        // An empty specialty set is "nobody has said", never "no". The forgiving
+        // reading is what stops this column emptying a calendar the day it ships.
+        Specialty need = service.getRequiredSpecialty();
+        if (need != null) {
+            therapists = therapists.stream().filter(t -> t.canPerform(need)).toList();
         }
 
         // Task 2.38 - TherapistStatus is honoured, and only for TODAY.
@@ -394,7 +423,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         Assignment assignment = assign(branchId, start, end, form.getTherapistPreference(),
-                req.therapistId(), req.roomId());
+                req.therapistId(), req.roomId(), service.getRequiredSpecialty(), null);
         Therapist therapist = assignment.therapist();
         Room room = assignment.room();
 
@@ -605,13 +634,178 @@ public class BookingServiceImpl implements BookingService {
     }
 
     /**
+     * Move a visit (adviser's revision: the spa can rebook).
+     *
+     * SPA-SIDE ONLY, and that is a decision rather than an omission. A client
+     * who wants a different hour cancels and books again, which releases their
+     * old slot the moment they let go of it. A client who could drag their own
+     * booking around would hold a slot indefinitely while shopping for a better
+     * one, and the spa would never see it come free.
+     *
+     * Everything a new booking is checked against is re-checked here, in this
+     * transaction, with THIS appointment excluded from the clash tests - it is
+     * still sitting at its old time and would otherwise be found colliding with
+     * itself.
+     */
+    @Override
+    @Transactional
+    public Booking reschedule(UUID appointmentId, RescheduleRequest req) {
+        if (req == null || req.start() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A new start time is required.");
+        }
+
+        Appointment a = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Booking not found"));
+
+        assertMayRebook(a);
+
+        if (a.getStatus() != AppointmentStatus.PENDING
+                && a.getStatus() != AppointmentStatus.CONFIRMED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Only a visit that is still ahead can be moved. This one is "
+                    + a.getStatus().name().toLowerCase().replace('_', ' ')
+                    + " - record a new booking instead.");
+        }
+
+        LocalDateTime was = a.getStartTime();
+        LocalDateTime start = req.start();
+        LocalDateTime end = start.plusMinutes(a.getService().getDurationMinute());
+        LocalDateTime now = LocalDateTime.now(ZoneId.of(timezone));
+
+        if (start.equals(was) && req.therapistId() == null && req.roomId() == null) {
+            // Nothing asked for. Returning the booking unchanged is kinder than
+            // a 400 for pressing Save twice.
+            return toDto(a);
+        }
+        if (start.isBefore(now)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "That time has already passed.");
+        }
+        // The whole visit has to fit inside the opening hours, not just its
+        // start. A 90-minute treatment beginning at 5 PM in a branch that shuts
+        // at 6 is a therapist working an hour past closing.
+        LocalDateTime opens = start.toLocalDate().atTime(openHour, 0);
+        LocalDateTime closes = start.toLocalDate().atTime(closeHour, 0);
+        if (start.isBefore(opens) || end.isAfter(closes)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "The branch is open " + openHour + ":00 to " + closeHour + ":00, and a "
+                    + a.getService().getDurationMinute()
+                    + "-minute visit has to finish inside that.");
+        }
+
+        UUID branchId = a.getBranch().getId();
+
+        // Rule 4 again: one person, one room, one time. The client's OTHER
+        // bookings still count, so moving a visit on top of their own second
+        // booking is refused exactly as making it there would have been.
+        if (a.getCustomer() != null) {
+            for (Appointment other : appointmentRepository
+                    .findByCustomerIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+                            a.getCustomer().getId(), BLOCKING, end, start)) {
+                if (!other.getId().equals(a.getId())) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "That client already has " + other.getService().getName()
+                            + " booked at " + other.getStartTime().format(LABEL) + ".");
+                }
+            }
+        }
+
+        Assignment assignment = assign(branchId, start, end,
+                null, req.therapistId(), req.roomId(),
+                a.getService().getRequiredSpecialty(), a.getId());
+
+        Therapist wasWith = a.getTherapist();
+        a.setTherapist(assignment.therapist());
+        a.setRoom(assignment.room());
+        a.setStartTime(start);
+        a.setEndTime(end);
+
+        // The EXCLUDE constraints from V2 are still the backstop, and they do
+        // not object to a row overlapping itself - so an UPDATE that only moves
+        // this visit passes, while one that lands on somebody else's does not.
+        Appointment saved = writeOrConflict(a);
+
+        releaseReminderClaim(saved, was);
+
+        auditAction(saved, "APPOINTMENT_RESCHEDULED",
+                "movedBy=" + CurrentUser.email().orElse("unknown")
+                + " from=" + was
+                + " therapistWas=" + (wasWith == null ? "none" : wasWith.getId())
+                + " therapistNow=" + saved.getTherapist().getId()
+                + " reason=\"" + (req.reason() == null ? "" : req.reason().replace('"', '\'')) + "\"");
+
+        return toDto(saved);
+    }
+
+    /**
+     * Who may move a visit.
+     *
+     * Staff within their own branch, and administrators anywhere. No customer
+     * path at all - see reschedule().
+     */
+    private void assertMayRebook(Appointment a) {
+        if (CurrentUser.isAdmin()) {
+            return;
+        }
+        if (!CurrentUser.hasRole(Role.STAFF)) {
+            // 404 rather than 403: telling a stranger the id exists is a leak,
+            // and it is the same rule cancel() follows.
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
+        }
+        boolean sameBranch = a.getBranch() != null
+                && CurrentUser.branchId().map(b -> b.equals(a.getBranch().getId())).orElse(false);
+        if (!sameBranch) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
+        }
+    }
+
+    /**
+     * A moved visit has to be reminded about again.
+     *
+     * The day-before reminder claims an appointment by writing a notification
+     * row, and that claim is what stops a second email. Once the visit moves,
+     * any reminder already sent described a time that is no longer true, so the
+     * claim is released and tomorrow's run will write to the client again.
+     *
+     * The row is deleted rather than kept, and the trade is deliberate: the
+     * notification log is operational state for the job, while the permanent
+     * record of what happened is the audit row written beside this call. Keeping
+     * a stale claim would be tidier in the log and would leave a client turning
+     * up at the wrong hour, which is the wrong thing to optimise for.
+     */
+    private void releaseReminderClaim(Appointment a, LocalDateTime oldStart) {
+        try {
+            List<NotificationLog> held = notificationLogRepository
+                    .findByKindAndAppointmentIdIn(NotificationKind.REMINDER_DAY_BEFORE,
+                            List.of(a.getId()));
+            if (held.isEmpty()) {
+                return;
+            }
+            NotificationLog row = held.get(0);
+            boolean hadBeenSent = row.getStatus() == NotificationStatus.SENT;
+            notificationLogRepository.deleteAll(held);
+            auditAction(a, "REMINDER_CLAIM_RELEASED",
+                    "oldStart=" + oldStart + " alreadyEmailed=" + hadBeenSent);
+        } catch (Exception e) {
+            // A visit that moved must not fail to move because a log row would
+            // not delete. The worst case is one client not re-reminded.
+            LOG.warn("Could not release the reminder claim for {}", a.getId(), e);
+        }
+    }
+
+    /**
      * Who may cancel what.
      *
-     * A customer gets their own, and only before it starts - once the hour has
-     * arrived the therapist is standing there and it is the counter's call, not
-     * an app's. Staff get their whole branch with no time limit, because a
-     * client walking out mid-session is a real event and the day sheet has to be
-     * able to say so.
+     * A customer gets their own, and only up to cancelCutoffMinutes before it
+     * starts. The cutoff exists because of what happens inside that last hour:
+     * the therapist has been told, the room is being turned over, and the slot
+     * is too late to sell to anybody else. Past it the loss is real and the
+     * decision belongs to a person at the counter, not to a button.
+     *
+     * Staff get their whole branch with no time limit, because a client walking
+     * out mid-session is a real event and the day sheet has to be able to say
+     * so.
      */
     private void assertCanCancel(Appointment a) {
         if (CurrentUser.isAdmin()) {
@@ -635,9 +829,20 @@ public class BookingServiceImpl implements BookingService {
         if (!owns) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
         }
-        if (!a.getStartTime().isAfter(LocalDateTime.now(ZoneId.of(timezone)))) {
+        LocalDateTime now = LocalDateTime.now(ZoneId.of(timezone));
+        if (!a.getStartTime().isAfter(now)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "That visit has already started. Please speak to the front desk.");
+        }
+        // Two refusals, not one. "It already started" and "you are inside the
+        // last hour" are different situations and the client can act on only
+        // one of them - being told the wrong one sends them to the counter
+        // expecting an argument.
+        if (!now.isBefore(cancelDeadline(a))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Online cancelling closes " + cancelCutoffMinutes
+                    + " minutes before a visit, and that moment has passed. "
+                    + "Please call the branch - the front desk can still cancel it for you.");
         }
     }
 
@@ -888,7 +1093,8 @@ public class BookingServiceImpl implements BookingService {
      * than not offering the choice at all.
      */
     private List<Therapist> freeTherapists(UUID branchId, LocalDateTime start,
-                                           LocalDateTime end, Sex want) {
+                                           LocalDateTime end, Sex want, Specialty need,
+                                           UUID ignore) {
         // Status is only consulted for a visit starting TODAY. Without this a
         // walk-in could be handed to somebody the front desk had just marked
         // off duty, thirty seconds after the screen stopped offering them.
@@ -896,19 +1102,69 @@ public class BookingServiceImpl implements BookingService {
 
         return therapistRepository.findByBranchIdAndActiveTrue(branchId).stream()
                 .filter(t -> want == null || want == t.getSex())
+                // Trained for THIS treatment. canPerform() treats an empty set
+                // as "nobody has said", never as "no" - see Therapist.
+                .filter(t -> t.canPerform(need))
                 .filter(t -> !today || onDuty(t))
-                .filter(t -> !appointmentRepository
-                        .existsByTherapistIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
-                                t.getId(), BLOCKING, end, start))
+                // `ignore` is the visit being MOVED, and it is still sitting in
+                // the table at its old time. Without excluding it, rescheduling
+                // a 2 PM visit to 3 PM reports the therapist busy - busy with
+                // the very appointment the front desk is moving.
+                .filter(t -> ignore == null
+                        ? !appointmentRepository
+                            .existsByTherapistIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+                                    t.getId(), BLOCKING, end, start)
+                        : !appointmentRepository
+                            .existsByTherapistIdAndIdNotAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+                                    t.getId(), ignore, BLOCKING, end, start))
                 .toList();
     }
 
+    /**
+     * Which constraint refused, in words the client can act on.
+     *
+     * Four different sentences because they send the client to do four
+     * different things, and only one of them is "try another time". The
+     * specialty case splits in two, and the split is the whole point of the
+     * feature: "the bone setter is busy" means come back Thursday, while
+     * "nobody here sets bones" means this branch cannot ever do it and the
+     * front desk should be the next stop. Telling someone to try another time
+     * for a treatment nobody at that branch can perform is a small cruelty.
+     */
+    private String whyNoTherapist(UUID branchId, UUID wantTherapist, Sex want, Specialty need) {
+        if (wantTherapist != null) {
+            return "The therapist you chose has just been booked for that time. "
+                 + "Please choose someone else, or another time.";
+        }
+        if (need != null) {
+            boolean anyoneAtAll = therapistRepository.findByBranchIdAndActiveTrue(branchId)
+                    .stream().anyMatch(t -> t.canPerform(need));
+            return anyoneAtAll
+                    ? "No one who performs " + need.getDisplayName().toLowerCase()
+                      + " is free at that time. Please choose another time."
+                    : "No one at this branch is recorded as performing "
+                      + need.getDisplayName().toLowerCase()
+                      + ". Please ask the front desk.";
+        }
+        if (want != null) {
+            return "No " + want.getDisplayName().toLowerCase()
+                 + " therapist is free at that time. Please choose another time, or change "
+                 + "your preference on your assessment.";
+        }
+        return "That time was just taken";
+    }
+
     /** Every room free for the whole visit. Same contract as freeTherapists. */
-    private List<Room> freeRooms(UUID branchId, LocalDateTime start, LocalDateTime end) {
+    private List<Room> freeRooms(UUID branchId, LocalDateTime start, LocalDateTime end,
+                                 UUID ignore) {
         return roomRepository.findByBranchIdAndActiveTrue(branchId).stream()
-                .filter(r -> !appointmentRepository
-                        .existsByRoomIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
-                                r.getId(), BLOCKING, end, start))
+                .filter(r -> ignore == null
+                        ? !appointmentRepository
+                            .existsByRoomIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+                                    r.getId(), BLOCKING, end, start)
+                        : !appointmentRepository
+                            .existsByRoomIdAndIdNotAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+                                    r.getId(), ignore, BLOCKING, end, start))
                 .toList();
     }
 
@@ -927,10 +1183,11 @@ public class BookingServiceImpl implements BookingService {
      * later and better-informed statement of the same wish.
      */
     private Assignment assign(UUID branchId, LocalDateTime start, LocalDateTime end,
-                              Sex want, UUID wantTherapist, UUID wantRoom) {
+                              Sex want, UUID wantTherapist, UUID wantRoom,
+                              Specialty need, UUID ignore) {
         Sex effective = wantTherapist == null ? want : null;
 
-        Therapist therapist = freeTherapists(branchId, start, end, effective).stream()
+        Therapist therapist = freeTherapists(branchId, start, end, effective, need, ignore).stream()
                 .filter(t -> wantTherapist == null || wantTherapist.equals(t.getId()))
                 .findFirst()
                 // Say WHICH constraint bit. "That time was just taken", "no
@@ -938,17 +1195,9 @@ public class BookingServiceImpl implements BookingService {
                 // has just been booked" send the client to do three different
                 // things, and only one of them is trying another time.
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
-                        wantTherapist != null
-                                ? "The therapist you chose has just been booked for that time. "
-                                  + "Please choose someone else, or another time."
-                                : want == null
-                                        ? "That time was just taken"
-                                        : "No " + want.getDisplayName().toLowerCase()
-                                          + " therapist is free at that time. Please choose "
-                                          + "another time, or change your preference on your "
-                                          + "assessment."));
+                        whyNoTherapist(branchId, wantTherapist, want, need)));
 
-        Room room = freeRooms(branchId, start, end).stream()
+        Room room = freeRooms(branchId, start, end, ignore).stream()
                 .filter(r -> wantRoom == null || wantRoom.equals(r.getId()))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
@@ -1039,7 +1288,7 @@ public class BookingServiceImpl implements BookingService {
         // is refused inside the same transaction rather than swapped silently.
         Assignment assignment = assign(branchId, start, end,
                 walkInForm == null ? null : walkInForm.getTherapistPreference(),
-                req.therapistId(), req.roomId());
+                req.therapistId(), req.roomId(), service.getRequiredSpecialty(), null);
 
         Appointment a = new Appointment();
         a.setBranch(branch);
@@ -1102,7 +1351,42 @@ public class BookingServiceImpl implements BookingService {
                 a.getStatus().name(),
                 a.getPaymentStatus().name(),
                 a.getSource().name(),
-                a.getCreatedAt());
+                a.getCreatedAt(),
+                stillCancellable(a),
+                cancelClosesAt(a));
+    }
+
+    /** True when the caller is looking at this as the spa rather than as a client. */
+    private static boolean staffEye() {
+        return CurrentUser.isAdmin() || CurrentUser.hasRole(Role.STAFF);
+    }
+
+    /**
+     * The client's deadline for one appointment.
+     *
+     * One method computes it and both the refusal in assertCanCancel and the
+     * flag in toDto read it, so the button the client sees and the answer the
+     * server gives can never disagree. That disagreement is the whole bug class
+     * this codebase keeps running into.
+     */
+    private LocalDateTime cancelDeadline(Appointment a) {
+        return a.getStartTime().minusMinutes(cancelCutoffMinutes);
+    }
+
+    /** Null for staff and admin: they have no deadline, not a deadline of null. */
+    private LocalDateTime cancelClosesAt(Appointment a) {
+        return staffEye() ? null : cancelDeadline(a);
+    }
+
+    private boolean stillCancellable(Appointment a) {
+        if (a.getStatus() != AppointmentStatus.PENDING
+                && a.getStatus() != AppointmentStatus.CONFIRMED) {
+            return false;
+        }
+        if (staffEye()) {
+            return true;
+        }
+        return LocalDateTime.now(ZoneId.of(timezone)).isBefore(cancelDeadline(a));
     }
 
     /** The account holder's name, or the walk-in's. One of the two always exists. */

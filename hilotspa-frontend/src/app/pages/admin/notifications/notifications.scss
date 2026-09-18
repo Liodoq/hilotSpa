@@ -1,0 +1,57 @@
+/* The console vocabulary lives in styles.scss under `.dash` — including the
+   date field and the labels, since task 1.25. Only what is true of THIS page
+   is here.
+
+   The page is built so a row that was NOT sent reads as loudly as one that was.
+   That is the whole point of it: the spa has to be able to say why somebody was
+   not written to, and a log showing only successes is one nobody can answer
+   with. */
+:host { display: block; }
+
+.stack { display: flex; flex-direction: column; gap: 20px; }
+
+/* Deliberately NOT `.head` — that class exists globally as a COLUMN flex, and
+   combined with .rowbar's align-items:center it stacked this row and centred it
+   in the middle of the card. Two unrelated rules, one word. */
+.duebar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.duebar .t-s { margin: 0; }
+
+.scopeline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+}
+.rowbar.bulk { margin-top: 16px; align-items: flex-start; }
+.rowbar.bulk .help { max-width: 62ch; }
+
+.untold { margin: 0 0 10px; }
+.note-line { margin: 12px 0 0; }
+
+/* Secondary facts sit under their primary one rather than in columns of their
+   own — the log table is already five columns wide and a phone has to survive
+   it. */
+.tbl .help { display: block; margin-top: 3px; }
+.tbl .why { max-width: 46ch; line-height: 1.4; }
+.tbl .tries { display: inline-block; margin-left: 8px; }
+.tbl .block { max-width: 30ch; line-height: 1.4; }
+
+.c-stat { width: 150px; }
+.c-when { width: 150px; }
+.c-act  { width: 140px; }
+
+/* The last column is right-aligned by the .dash table rules, which is where the
+   Send button wants to be anyway. */
+.c-act .btn { white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .c-stat, .c-when, .c-act { width: auto; }
+}

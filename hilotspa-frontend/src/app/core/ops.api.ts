@@ -19,6 +19,15 @@ export interface TherapistDto {
    *  is offered only to clients who expressed no preference — never guessed at. */
   sex: string | null;
   active: boolean; branchId: string; branchName: string;
+  /** Enum names of what this therapist performs. EMPTY MEANS NO RESTRICTION HAS
+   *  BEEN RECORDED — never "can do nothing". Read the other way, every therapist
+   *  entered before the column existed would match no treatment and the calendar
+   *  would empty in silence. */
+  /** Optional on purpose, and the `?? []` guards in the template stay. The
+   *  browser is deployed separately from the backend, so for the minutes between
+   *  the two deploys this field genuinely is absent - and `.includes` on
+   *  undefined is a blank page, not a missing chip. */
+  specialties?: string[];
 }
 
 export interface RoomDto {
@@ -63,6 +72,10 @@ export interface MassageDto {
   /** Photo filename in public/services/ — "hilot.jpg". A filename, never the
    *  id: ids are regenerated on every reseed and photos would break. */
   imageName?: string | null;
+  /** Enum name of the skill this treatment needs, or null for "anyone may
+   *  perform it". Null is the permissive reading: the other way round, adding
+   *  this field would have emptied the calendar for every existing treatment. */
+  requiredSpecialty?: string | null;
 }
 
 export interface WalkInRequest {

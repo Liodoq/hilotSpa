@@ -13,13 +13,17 @@ const STAFF_NAV: NavItem[] = [
   { path: '/staff/queue',     label: 'Queue' },
   { path: '/staff/resources', label: 'Therapists & rooms' },
   { path: '/staff/report',    label: 'Visit log' },
+  { path: '/staff/reports',   label: 'Reports' },
+  { path: '/staff/reminders', label: 'Reminders' },
   { path: '/staff/walkin',    label: 'Record walk-in' },
 ];
 const ADMIN_NAV: NavItem[] = [
   { path: '/admin/overview', label: 'Overview' },
+  { path: '/admin/reports',  label: 'Reports' },
   { path: '/admin/branches', label: 'Branches' },
   { path: '/admin/accounts', label: 'Accounts' },
   { path: '/admin/config',   label: 'Configuration' },
+  { path: '/admin/reminders', label: 'Reminders' },
   { path: '/admin/audit',    label: 'Audit logs' },
 ];
 

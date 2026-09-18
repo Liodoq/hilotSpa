@@ -202,6 +202,24 @@
                 blank.</p>
             }
           </div>
+          <div class="rcontrols">
+            <div class="help rlabel">TRAINED TO PERFORM</div>
+            <div class="chips" role="group" [attr.aria-label]="'Specialties for ' + name(s)">
+              @for (x of specialtyOptions; track x.value) {
+                <button type="button" class="chip"
+                        [class.on]="(s.specialties ?? []).includes(x.value)"
+                        [disabled]="saving() === s.id"
+                        [attr.aria-pressed]="(s.specialties ?? []).includes(x.value)"
+                        (click)="toggleSpecialty(s, x.value)">
+                  {{ x.label }}</button>
+              }
+            </div>
+            @if (!(s.specialties ?? []).length) {
+              <p class="help" style="margin-top:6px">Nothing recorded, so {{ name(s) }} can be booked
+                for <b>any</b> treatment. That is the safe default for someone hired before this was
+                asked — tap the ones they actually perform to narrow it.</p>
+            }
+          </div>
 
           <!-- Correcting a name, and recording that somebody has left. There is no
                delete: every past appointment names a therapist, and removing the

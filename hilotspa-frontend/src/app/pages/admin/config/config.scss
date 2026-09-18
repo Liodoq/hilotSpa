@@ -2,3 +2,53 @@
 .stack { display: flex; flex-direction: column; gap: 18px; }
 .cols { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 20px; align-items: start; }
 @media (max-width: 1400px) { .cols { grid-template-columns: 1fr; } }
+
+/* Add a rule, and the import beside it. The controls are the .dash vocabulary
+   (styles.scss); only the layout is here. */
+.addrule { display: flex; flex-direction: column; gap: 12px; }
+.addrule .t-s { margin: 0; font-size: 22px; }
+.addrule .help { margin: 0; max-width: 72ch; }
+.addrule .f.grow { flex: 1; min-width: 260px; }
+
+/* A file input is unstyleable, so the LABEL is the button and the input is
+   hidden inside it. Clicking the label opens the picker, which is the one piece
+   of native behaviour worth keeping. */
+.filebtn { cursor: pointer; display: inline-flex; align-items: center; }
+
+/* Something in this card needs reading, not glancing at. */
+.warnedge { border-color: var(--color-gold-700, #8a6d18); border-width: 2.5px; }
+
+/* Editing the rationale in place, and removing a rule. */
+.ratedit { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.ratedit .ta {
+  height: auto;
+  padding: 10px 12px;
+  line-height: 1.45;
+  resize: vertical;
+  width: 100%;
+  min-width: 260px;
+}
+.rowacts {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+/* The consequence of removing a rule, said in the row rather than in a dialog
+   nobody reads. */
+.rmwarn {
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--color-danger-600);
+  max-width: 44ch;
+}
+
+/* An unsigned rule is a deliberate state, not missing data. The placeholder was
+   rendering in mono where a person's name belongs, which read as corruption. */
+.prov { max-width: 40ch; line-height: 1.4; margin-top: 4px; }
+.prov-src { font-size: 14px; opacity: .7; margin-top: 2px; }
+
+.signbox { display: flex; flex-direction: column; gap: 12px; }
+.signbox .t-s { margin: 0; font-size: 22px; }
+.signbox .help { margin: 0; max-width: 78ch; }

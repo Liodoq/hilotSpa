@@ -889,6 +889,68 @@ select.input { appearance: none;
 .dash .tbl .link-act + .link-act { margin-left: 6px; }
 .dash .tablecard { padding: 8px 22px; }
 
+/* ---------- console form controls (task 1.25) ----------
+
+   The client-facing `.input` is 68px tall at 21px, sized for a phone held by
+   somebody in their sixties, and that is right for the assessment. A console
+   filter bar built out of three of those plus a button is a column, not a row.
+
+   So the console gets its own size and nothing else of its own: same border
+   width, same radius token, same focus ring, same arrow treatment. The point
+   of 1.25 is that A7 and A8 stopped looking like a different application, not
+   that they gained a second design. */
+.dash .ctl {
+  height: 44px;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  padding: 0 14px;
+  font: 400 17px/1.4 var(--font-sans);
+  color: var(--color-ink-900);
+  box-shadow: none;
+  max-width: 100%;
+}
+.dash .ctl:hover { border-color: var(--color-sage-300); }
+.dash .ctl:focus {
+  outline: 3px solid var(--color-forest-500);
+  outline-offset: 1px;
+  border-color: var(--color-forest-700);
+}
+.dash select.ctl {
+  appearance: none;
+  padding-right: 38px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--color-ink-600) 50%),
+                    linear-gradient(135deg, var(--color-ink-600) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 19px, calc(100% - 14px) 19px;
+  background-size: 7px 7px, 7px 7px;
+  background-repeat: no-repeat;
+}
+/* Chrome will not let the date field's own icon be replaced, only tinted. Left
+   at full strength it is the one piece of chrome on these pages that belongs to
+   the browser rather than to the spa. */
+.dash .ctl::-webkit-calendar-picker-indicator {
+  opacity: .5;
+  cursor: pointer;
+}
+.dash .ctl:hover::-webkit-calendar-picker-indicator,
+.dash .ctl:focus::-webkit-calendar-picker-indicator { opacity: 1; }
+
+.dash .f { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dash .f.inline { flex-direction: row; align-items: center; gap: 10px; }
+.dash .lbl {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: var(--color-ink-600);
+}
+/* A filter bar. Wraps to a column on a narrow screen rather than scrolling. */
+.dash .fields { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+
+@media (max-width: 720px) {
+  .dash .fields { flex-direction: column; align-items: stretch; }
+  .dash .fields .btn { width: 100%; }
+}
+
 /* --------------------------------------------------------- health states
    The readiness card's border colour was computed in the template as a string
    of three nested ternaries. It is a state, so it is a class. */

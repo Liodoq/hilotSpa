@@ -298,6 +298,17 @@ export interface BookingModel {
   source: string;
   /** when the booking was made, not when the visit is */
   bookedAt: string;
+  /**
+   * Whether YOU may still cancel this. The server decides, not this screen.
+   *
+   * Do not re-derive it from `start`: the cutoff runs on the spa's clock in
+   * Asia/Manila, and a browser's clock is neither guaranteed correct nor
+   * guaranteed to be in that zone. Staff and admin have no cutoff, so the same
+   * booking arrives cancellable at the counter and closed for the client.
+   */
+  cancellable: boolean;
+  /** When online cancelling closes. Null when this viewer has no cutoff. */
+  cancellableUntil: string | null;
 }
 
 export interface AssistantChatResponse {
