@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { Connectivity } from '../../core/connectivity';
+import { NodeStore } from '../../core/node.store';
 import { Logo } from '../logo/logo';
 import { homeFor, isConsoleRole } from '../../core/role-home';
 
@@ -17,8 +18,14 @@ export class AppNav {
   /** 3.7 - the client's own connection, stated plainly rather than left to be
    *  inferred from a screen that has quietly stopped updating. */
   protected net = inject(Connectivity);
+  /** 3.5 - the bar names the branch this NODE serves. It used to be a literal
+   *  string in the template, which was true while one node existed and became
+   *  a lie the moment a second one did. */
+  protected site = inject(NodeStore);
   private router = inject(Router);
   open = signal(false);
+
+  constructor() { this.site.ensure(); }
 
   go(path: string): void { this.open.set(false); this.router.navigateByUrl(path); }
   signOut(): void { this.open.set(false); this.auth.logout(); }

@@ -95,6 +95,7 @@ public class ReminderServiceImpl implements ReminderService {
 
     @Value("${hilotspa.booking.timezone:Asia/Manila}") private String timezone;
     @Value("${hilotspa.node.id:local-dev}")           private String nodeId;
+    @Value("${hilotspa.node.branch-id:}")              private String nodeBranchId;
     @Value("${hilotspa.reminders.max-attempts:3}")    private int maxAttempts;
     @Value("${spring.mail.host:}")                    private String mailHost;
     @Value("${hilotspa.reminders.from:}")             private String mailFrom;
@@ -113,15 +114,48 @@ public class ReminderServiceImpl implements ReminderService {
     public void nightlyRun() {
         LocalDate tomorrow = LocalDate.now(ZoneId.of(timezone)).plusDays(1);
         try {
-            // Null = every branch this node holds. The nightly run is the spa,
-            // not a person, and it is not scoped to anybody's desk.
-            int sent = remindFor(tomorrow, null);
-            LOG.info("Day-before reminders for {}: {} sent", tomorrow, sent);
+            // Scoped to the branch this NODE owns, not to every branch it holds
+            // - and those are different things the moment a second node exists.
+            //
+            // A replica holds a full copy of the business, so an unscoped run on
+            // node 2 would mail every Bulan client a reminder node 1 had already
+            // sent. The ledger that prevents a double send is notification_log,
+            // which is deliberately NOT replicated: what this node has emailed
+            // is a local fact, so node 2 cannot learn that node 1 already went.
+            //
+            // Null when the node declares no branch - a single-node deployment,
+            // where "every branch it holds" is the right answer and always was.
+            Collection<UUID> scope = ownBranch();
+            int sent = remindFor(tomorrow, scope);
+            LOG.info("Day-before reminders for {} ({}): {} sent", tomorrow,
+                     scope == null ? "every branch" : "own branch only", sent);
         } catch (Exception e) {
             // A scheduled method that throws is silently not rescheduled in some
             // configurations, and a reminder job that stops running is worse
             // than one that fails loudly once.
             LOG.error("Day-before reminder run for {} failed outright", tomorrow, e);
+        }
+    }
+
+    /**
+     * This node's own branch, or null when it has not been told.
+     *
+     * Null is not a silent failure here: NodeController states the same fact at
+     * startup, once, where somebody reads it. A reminder run that quietly
+     * covered branches it does not own would be the failure, and that is the
+     * case this removes.
+     */
+    private Collection<UUID> ownBranch() {
+        if (nodeBranchId == null || nodeBranchId.isBlank()) {
+            return null;
+        }
+        try {
+            return List.of(UUID.fromString(nodeBranchId.trim()));
+        } catch (IllegalArgumentException e) {
+            LOG.error("NODE_BRANCH_ID is not a UUID: '{}'. Reminding for every branch "
+                    + "this node holds, which on a multi-node deployment will double-send.",
+                    nodeBranchId);
+            return null;
         }
     }
 

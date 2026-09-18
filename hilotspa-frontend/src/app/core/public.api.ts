@@ -40,6 +40,21 @@ export interface PublicSpa {
   therapists: PublicTherapist[];
 }
 
+/**
+ * Which node served this page, and which branch it writes for.
+ *
+ * branchId is null when the node has not been told which branch it owns. That
+ * is a legitimate single-node configuration, so the caller falls back to the
+ * old behaviour rather than refusing - but on a two-node deployment it means
+ * the node is misconfigured, and the server says so in its startup log.
+ */
+export interface NodeIdentity {
+  nodeId: string;
+  nodeName: string;
+  branchId: string | null;
+  branchName: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PublicApi {
   private http = inject(HttpClient);
@@ -51,5 +66,11 @@ export class PublicApi {
 
   services(): Promise<PublicService[]> {
     return firstValueFrom(this.http.get<PublicService[]>(`${API_BASE}/public/services`));
+  }
+
+  /** This node's own identity. Unauthenticated: the page has to name the
+   *  branch before anybody signs in. */
+  node(): Promise<NodeIdentity> {
+    return firstValueFrom(this.http.get<NodeIdentity>(`${API_BASE}/public/node`));
   }
 }

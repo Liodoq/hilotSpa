@@ -11,7 +11,7 @@
 <header class="appbar">
   <a class="brand" [routerLink]="home()" aria-label="Knead Wellness Spa, home">
     <app-logo [size]="58" />
-    <span><b>Knead Wellness Spa</b><small>Bulan, Sorsogon</small></span>
+    <span><b>Knead Wellness Spa</b>@if (site.label(); as where) {<small>{{ where }}</small>}</span>
   </a>
 
   <!-- The same bar serves signed-in clients and visitors. A visitor browsing

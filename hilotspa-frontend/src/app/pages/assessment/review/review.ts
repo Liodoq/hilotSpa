@@ -6,6 +6,7 @@ import { AssessmentStore } from '../../../core/assessment.store';
 import { ProfileStore } from '../../../core/profile.store';
 import { AuthService } from '../../../core/auth.service';
 import { FormsApi } from '../../../core/forms.api';
+import { NodeStore } from '../../../core/node.store';
 import { AnatomicalRegion, COMPLAINTS, PRESSURES, REGIONS, THERAPIST_PREFERENCES, safetyFlagLabel } from '../../../core/models';
 import { describeHttpError } from '../../../core/http-error';
 
@@ -24,6 +25,7 @@ export class Review {
   private router = inject(Router);
   private auth = inject(AuthService);
   private api = inject(FormsApi);
+  private site = inject(NodeStore);
   protected store = inject(AssessmentStore);
 
   /** The safety checklist in the client's own words, for the review screen. */
@@ -85,10 +87,25 @@ export class Review {
     this.error.set('');
     let usedBranch: string | null = null;
     try {
-      // branchId comes from the token for staff; a customer has none, so we
-      // fall back to the first branch. When multi-branch selection ships this
-      // becomes a picker on C2 — see the note in paper-deltas §B1.
+      // branchId comes from the token for staff. A customer has none, so it
+      // comes from the NODE that served this page - the branch this deployment
+      // writes for.
+      //
+      // This used to be branches[0], the first branch the API returned, which
+      // is Bulan alphabetically. On a single node that was merely arbitrary;
+      // the moment a second node existed it was wrong, because a client
+      // standing in Daraga, booking on the Daraga node, filed against Bulan.
+      // Single-writer-per-partition is the property everything else rests on,
+      // and a default was breaking it at the point of entry.
+      //
+      // The old fallback is KEPT, and only for a node that declares no branch
+      // of its own - a single-node deployment, where the first branch is the
+      // only branch and always was the right answer. It is not a silent
+      // degrade: the server states the same fact in its startup log.
       let branchId = this.auth.branchId();
+      if (!branchId) {
+        branchId = (await this.site.ensure())?.branchId ?? null;
+      }
       if (!branchId) {
         const branches = await this.api.branches();
         branchId = branches[0]?.id ?? null;
