@@ -72,7 +72,11 @@ export interface ProtocolRow {
 export type ReportBasis = 'COMPLETED' | 'BOOKED';
 
 export interface ServiceRow {
-  serviceId: string; name: string; visits: number; pct: number; revenue: number;
+  serviceId: string; name: string;
+  /** Not optional: the spa sells the same treatment at 60 and at 90, and a
+   *  table of names alone shows it twice and reads as a duplicated row. */
+  durationMinutes: number;
+  visits: number; pct: number; revenue: number;
 }
 
 /**

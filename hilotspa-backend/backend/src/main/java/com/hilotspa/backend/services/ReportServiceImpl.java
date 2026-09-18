@@ -187,20 +187,21 @@ public class ReportServiceImpl implements ReportService {
     private List<ServiceRow> services(Set<AppointmentStatus> statuses, List<UUID> branchIds,
                                       LocalDateTime from, LocalDateTime to) {
         List<Object[]> rows = appointmentRepository.countByService(statuses, branchIds, from, to);
-        long total = rows.stream().mapToLong(r -> ((Number) r[2]).longValue()).sum();
+        long total = rows.stream().mapToLong(r -> ((Number) r[3]).longValue()).sum();
 
         List<ServiceRow> out = new ArrayList<>(rows.size());
         for (Object[] r : rows) {
-            long visits = ((Number) r[2]).longValue();
+            long visits = ((Number) r[3]).longValue();
             out.add(new ServiceRow(
                     (UUID) r[0],
                     (String) r[1],
+                    r[2] == null ? 0 : ((Number) r[2]).intValue(),
                     visits,
                     // Rounded per row, so the column sums to about 100 and not
                     // exactly. Forcing it to 100 means moving a visit from one
                     // treatment to another, which is a worse lie than 99.
                     total == 0 ? 0 : (int) Math.round(visits * 100.0 / total),
-                    toMoney(r[3])));
+                    toMoney(r[4])));
         }
         return out;
     }

@@ -40,6 +40,17 @@ public final class ReportDtos {
     public record ServiceRow(
             UUID serviceId,
             String name,
+            /**
+             * Minutes, and not optional.
+             *
+             * The spa sells the same treatment at two lengths - Hilotin
+             * Signature at 60 and at 90 - so a table listing names alone shows
+             * "Signature Massage" twice and reads as a duplicated row rather
+             * than as two services. The assistant's prompt already carries this
+             * rule ("always say the minutes with the name"); the report did
+             * not, and a reader cannot tell a catalogue error from a catalogue.
+             */
+            int durationMinutes,
             long visits,
             /** Share of the visits counted, rounded. Sums to ~100, not exactly. */
             int pct,

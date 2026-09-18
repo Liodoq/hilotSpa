@@ -424,6 +424,9 @@ export class AdminConfig implements OnInit {
   exportForSignature(): void {
     const head = ['service', 'condition', 'rule', 'rationale', 'authoredBy', 'signed'];
     const body = this.rules().map(r => [
+      // The length goes into the name. Without it a round trip through Excel
+      // cannot say WHICH length a rule was for, and the import would widen it
+      // back to every length silently.
       r.serviceName, r.conditionLabel, r.rule, r.rationale ?? '', r.authoredBy,
       r.signed ? 'yes' : 'NO — awaiting practitioner',
     ].map(csv).join(','));

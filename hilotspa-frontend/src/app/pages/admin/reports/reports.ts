@@ -122,24 +122,6 @@ export class AdminReports implements OnInit {
   allBranches = computed(() => this.data()?.branchId == null && !this.locked);
 
   /**
-   * Treatment names that appear more than once.
-   *
-   * Two catalogue rows can carry the same name - they are different services
-   * with different ids, and the report is right to count them apart. Printing
-   * them as two identical lines is what is wrong, so those rows get their id
-   * shown. Only those: an id on every row is noise.
-   */
-  private duplicated = computed(() => {
-    const seen = new Map<string, number>();
-    for (const s of this.data()?.services ?? []) {
-      seen.set(s.name, (seen.get(s.name) ?? 0) + 1);
-    }
-    return new Set([...seen].filter(([, n]) => n > 1).map(([n]) => n));
-  });
-
-  isDuplicateName(name: string): boolean { return this.duplicated().has(name); }
-
-  /**
    * Set the range to one month and regenerate.
    *
    * The month list was a picture; this makes it a control. "Which month was
@@ -224,7 +206,7 @@ export class AdminReports implements OnInit {
       '',
       [q('Treatment'), q('Visits'), q('Share %'), q('Revenue PHP')].join(','),
       ...d.services.map(s =>
-        [q(s.name), s.visits, s.pct, s.revenue].join(',')),
+        [q(`${s.name} (${s.durationMinutes} min)`), s.visits, s.pct, s.revenue].join(',')),
       '',
       [q('Month'), q('Visits'), q('Revenue PHP'), q('Peak')].join(','),
       ...d.months.map(m =>

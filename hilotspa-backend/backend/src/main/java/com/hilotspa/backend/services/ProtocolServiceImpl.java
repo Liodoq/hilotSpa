@@ -113,8 +113,8 @@ public class ProtocolServiceImpl implements ProtocolService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Body is required");
         }
         String by = signature(body.authoredBy());
-        Massage service = matchService(body.serviceName());
-        if (service == null) {
+        List<Massage> services = matchServices(body.serviceName());
+        if (services.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "No service is called \"" + body.serviceName() + "\". "
                     + "Add it to the service menu first, or correct the spelling.");
@@ -130,17 +130,29 @@ public class ProtocolServiceImpl implements ProtocolService {
                     "Rule must be INDICATED or CONTRAINDICATED.");
         }
 
-        ServiceProtocol existing = find(service.getId(), condition);
-        if (existing != null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "There is already a rule for " + service.getName() + " and "
-                    + label(condition.name()) + ". Edit that one instead.");
+        // The same treatment at two lengths gets the rule on both: it is one
+        // clinical judgement, and a contraindication does not stop applying at
+        // 90 minutes. Name a length to single one out.
+        ServiceProtocol first = null;
+        for (Massage service : services) {
+            if (find(service.getId(), condition) != null) {
+                if (services.size() == 1) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "There is already a rule for " + service.getName() + " and "
+                            + label(condition.name()) + ". Edit that one instead.");
+                }
+                continue;   // one length already ruled; do the others
+            }
+            ServiceProtocol saved = write(service, condition, rule, body.rationale(), by);
+            audit(saved, null);
+            if (first == null) { first = saved; }
         }
-
-        ServiceProtocol saved = write(service, condition, rule,
-                body.rationale(), by);
-        audit(saved, null);
-        return toRow(saved);
+        if (first == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Every length of " + services.get(0).getName() + " already has a rule for "
+                    + label(condition.name()) + ". Edit those instead.");
+        }
+        return toRow(first);
     }
 
     @Override
@@ -276,13 +288,15 @@ public class ProtocolServiceImpl implements ProtocolService {
             String rowAuthor = cells.size() > 4 && !cell(cells, 4).isBlank()
                     ? cell(cells, 4) : fileAuthor;
 
-            Massage service = matchService(serviceName);
-            if (service == null) {
+            List<Massage> services = matchServices(serviceName);
+            if (services.isEmpty()) {
                 // The commonest failure by a distance, and the one worth naming
                 // precisely: a spreadsheet says "Hilot (60 min)" and the menu
-                // says "Hilot 60".
+                // says "Hilot 60". A named length that matches nothing lands
+                // here too, which is right - it is a typo, not a wider match.
                 lines.add(new ImportLine(lineNo, serviceName, conditionRaw, "REJECTED",
-                        "No service is called this. Check it against the service menu."));
+                        "No service is called this, at that length. Check it against "
+                        + "the service menu."));
                 rejected++;
                 continue;
             }
@@ -319,34 +333,46 @@ public class ProtocolServiceImpl implements ProtocolService {
                 continue;
             }
 
-            ServiceProtocol existing = find(service.getId(), condition);
-            if (existing == null) {
-                write(service, condition, rule, rationale, rowAuthor);
-                lines.add(new ImportLine(lineNo, service.getName(),
-                        label(condition.name()), "CREATED", null));
+            // One line can touch several rows: the same treatment at two
+            // lengths is one clinical judgement. The outcome reported is the
+            // strongest thing that happened, so a line that created one rule
+            // and left another alone reads as CREATED rather than as nothing.
+            String shown = describe(services);
+            boolean anyCreated = false;
+            boolean anyUpdated = false;
+
+            for (Massage service : services) {
+                ServiceProtocol existing = find(service.getId(), condition);
+                if (existing == null) {
+                    write(service, condition, rule, rationale, rowAuthor);
+                    anyCreated = true;
+                    continue;
+                }
+                boolean same = existing.getRule() == rule
+                        && java.util.Objects.equals(
+                                existing.getRationale(), blankToNull(rationale))
+                        && rowAuthor.equals(existing.getAuthoredBy());
+                if (same) {
+                    continue;
+                }
+                ProtocolRule was = existing.getRule();
+                existing.setRule(rule);
+                existing.setRationale(blankToNull(rationale));
+                existing.setAuthoredBy(rowAuthor);
+                audit(protocolRepository.save(existing), was);
+                anyUpdated = true;
+            }
+
+            if (anyCreated) {
+                lines.add(new ImportLine(lineNo, shown, label(condition.name()), "CREATED", null));
                 created++;
-                continue;
-            }
-
-            boolean same = existing.getRule() == rule
-                    && java.util.Objects.equals(
-                            existing.getRationale(), blankToNull(rationale))
-                    && rowAuthor.equals(existing.getAuthoredBy());
-            if (same) {
-                lines.add(new ImportLine(lineNo, service.getName(),
-                        label(condition.name()), "UNCHANGED", null));
+            } else if (anyUpdated) {
+                lines.add(new ImportLine(lineNo, shown, label(condition.name()), "UPDATED", null));
+                updated++;
+            } else {
+                lines.add(new ImportLine(lineNo, shown, label(condition.name()), "UNCHANGED", null));
                 unchanged++;
-                continue;
             }
-
-            ProtocolRule was = existing.getRule();
-            existing.setRule(rule);
-            existing.setRationale(blankToNull(rationale));
-            existing.setAuthoredBy(rowAuthor);
-            audit(protocolRepository.save(existing), was);
-            lines.add(new ImportLine(lineNo, service.getName(),
-                    label(condition.name()), "UPDATED", null));
-            updated++;
         }
 
         String note = rejected == 0
@@ -387,37 +413,80 @@ public class ProtocolServiceImpl implements ProtocolService {
     /**
      * A service name as a person typed it, matched to the catalogue.
      *
-     * Exact first, then case-insensitive, then ignoring punctuation and spacing
-     * - "Hilot (60 min)" and "Hilot 60 min" are the same service to everybody
-     * except a string comparison. It stops there: no fuzzy distance, because a
-     * near-miss silently attached to the wrong service is worse than a rejected
-     * row somebody has to look at.
+     * Returns EVERY match, and the caller applies the rule to all of them.
+     *
+     * This used to return one service and REFUSE when two shared a name, on the
+     * reasoning that guessing would attach a clinical rule to the wrong
+     * service. That reasoning was right and the conclusion was wrong for this
+     * catalogue: the spa sells the same treatment at two lengths - Hilotin
+     * Signature at 60 and at 90 - and they are the same treatment clinically.
+     * A contraindication for bone setting does not stop applying at 90 minutes.
+     * Refusing meant no rule could be written for most of the menu; forcing one
+     * row per length would double the table for no clinical reason.
+     *
+     * A length CAN still be named to single one out - "Hilotin Signature
+     * Massage (90 min)" or "... 90" - and then only that row is matched.
+     *
+     * Matching is exact, then case-insensitive, then ignoring punctuation and
+     * spacing. It stops there. No fuzzy distance: a near-miss silently attached
+     * to the wrong treatment is worse than a rejected row somebody has to look
+     * at.
      */
-    private Massage matchService(String name) {
+    private List<Massage> matchServices(String name) {
         if (name == null || name.isBlank()) {
-            return null;
+            return List.of();
         }
         String want = name.trim();
         List<Massage> all = massageRepository.findAll();
 
-        for (Massage m : all) {
-            if (want.equals(m.getName())) { return m; }
+        // An explicit length, written any of the ways a person writes one.
+        Integer wantMinutes = null;
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(?i)[\\s(\\-,]+(\\d{2,3})\\s*(min|mins|minutes)?\\s*\\)?\\s*$")
+                .matcher(want);
+        if (m.find()) {
+            wantMinutes = Integer.valueOf(m.group(1));
+            want = want.substring(0, m.start()).trim();
         }
-        for (Massage m : all) {
-            if (want.equalsIgnoreCase(m.getName())) { return m; }
+
+        List<Massage> hits = pick(all, want);
+        if (hits.isEmpty()) {
+            return hits;
         }
+        if (wantMinutes != null) {
+            final int mins = wantMinutes;
+            List<Massage> exact = hits.stream()
+                    .filter(x -> x.getDurationMinute() != null && x.getDurationMinute() == mins)
+                    .toList();
+            // A length that matches nothing is a typo worth reporting, not a
+            // reason to silently widen back to every length.
+            return exact;
+        }
+        return hits;
+    }
+
+    /** Exact, then case-insensitive, then punctuation-and-spacing-insensitive. */
+    private static List<Massage> pick(List<Massage> all, String want) {
+        List<Massage> out = all.stream().filter(x -> want.equals(x.getName())).toList();
+        if (!out.isEmpty()) { return out; }
+        out = all.stream().filter(x -> want.equalsIgnoreCase(x.getName())).toList();
+        if (!out.isEmpty()) { return out; }
         String loose = squash(want);
-        Massage hit = null;
-        for (Massage m : all) {
-            if (squash(m.getName()).equals(loose)) {
-                // Two catalogue rows can share a name. Refusing is right: the
-                // import cannot know which one was meant, and guessing would
-                // attach a clinical rule to the wrong service.
-                if (hit != null) { return null; }
-                hit = m;
-            }
+        return all.stream().filter(x -> squash(x.getName()).equals(loose)).toList();
+    }
+
+    /** "Hilotin Signature Massage (60, 90 min)" - what the import reports back. */
+    private static String describe(List<Massage> hits) {
+        if (hits.size() == 1) {
+            Massage only = hits.get(0);
+            return only.getName()
+                 + (only.getDurationMinute() == null ? "" : " (" + only.getDurationMinute() + " min)");
         }
-        return hit;
+        String mins = hits.stream()
+                .map(x -> x.getDurationMinute() == null ? "?" : String.valueOf(x.getDurationMinute()))
+                .sorted()
+                .collect(java.util.stream.Collectors.joining(", "));
+        return hits.get(0).getName() + " (" + mins + " min)";
     }
 
     private static String squash(String s) {

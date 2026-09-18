@@ -109,13 +109,12 @@
               @for (s of d.services; track s.serviceId) {
                 <tr>
                   <td>
+                    <!-- The minutes are part of the name here. The same
+                         treatment at 60 and at 90 is two services, and without
+                         the length this table showed one name twice and read as
+                         a catalogue error. -->
                     <b>{{ s.name }}</b>
-                    <!-- Two catalogue rows can carry the same name. They are
-                         different services and the count is right to keep them
-                         apart; printing two identical lines is what is not. -->
-                    @if (isDuplicateName(s.name)) {
-                      <span class="help mono dupe">#{{ s.serviceId.slice(0, 8).toUpperCase() }}</span>
-                    }
+                    <span class="help dur">{{ s.durationMinutes }} min</span>
                     <!-- The bar is the share, drawn behind the row. Reading a
                          column of percentages and reading which one is biggest
                          are two different jobs; this does the second. -->

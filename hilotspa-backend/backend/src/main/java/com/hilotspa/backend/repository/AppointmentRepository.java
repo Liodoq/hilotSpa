@@ -111,13 +111,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
      * worked out, so there is exactly one place that knows the shape.
      */
     @Query("""
-            select a.service.id, a.service.name, count(a), coalesce(sum(a.priceAtBooking), 0)
+            select a.service.id, a.service.name, a.service.durationMinute,
+                   count(a), coalesce(sum(a.priceAtBooking), 0)
             from Appointment a
             where a.status in :statuses
               and a.branch.id in :branchIds
               and a.startTime >= :from and a.startTime < :to
-            group by a.service.id, a.service.name
-            order by count(a) desc, a.service.name asc
+            group by a.service.id, a.service.name, a.service.durationMinute
+            order by count(a) desc, a.service.name asc, a.service.durationMinute asc
             """)
     List<Object[]> countByService(@Param("statuses") Collection<AppointmentStatus> statuses,
                                   @Param("branchIds") Collection<UUID> branchIds,

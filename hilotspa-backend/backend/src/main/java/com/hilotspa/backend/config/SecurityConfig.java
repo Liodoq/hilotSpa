@@ -25,6 +25,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity          // turns on @PreAuthorize, used in 0.6c
 public class SecurityConfig {
 
+    /**
+     * The origin(s) the browser may call this API from. Comma-separated.
+     *
+     * A LIST, not one value, for two reasons that both turned up in practice:
+     * a node is renamed and has to answer on the old and the new hostname while
+     * the change settles, and a second node has an origin of its own. Held as
+     * one value it silently allowed whichever was configured and 403'd the
+     * other on every POST - which is B131, and it is invisible under
+     * `ng serve` because a same-origin POST still sends an Origin header.
+     */
     @Value("${hilotspa.cors.allowed-origin}")
     private String allowedOrigin;
 
@@ -122,7 +132,19 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration c = new CorsConfiguration();
-        c.setAllowedOrigins(List.of(allowedOrigin));
+        List<String> origins = java.util.Arrays.stream(allowedOrigin.split(","))
+                .map(String::trim)
+                .filter(o -> !o.isEmpty())
+                .toList();
+        if (origins.isEmpty()) {
+            // Refuse to start rather than run with CORS wide open or wholly
+            // shut. Both failure modes are silent from the server's side and
+            // land on whoever is using the site.
+            throw new IllegalStateException(
+                    "FRONTEND_ORIGIN is empty. Set it to the site's address, "
+                    + "or to a comma-separated list while a hostname is changing.");
+        }
+        c.setAllowedOrigins(origins);
         c.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         c.setAllowedHeaders(List.of("*"));
         c.setAllowCredentials(true);

@@ -107,7 +107,7 @@
 
 /* A treatment name that appears twice is two catalogue rows, not one counted
    wrong. The id says which is which without shouting. */
-.dupe { display: inline-block; margin-left: 8px; font-size: 13px; }
+/* (the duplicate-id plaster is gone - the duration says it now) */
 
 /* ---------- responsive ----------
    The console was built for a desk and this page is the widest thing in it:
@@ -132,3 +132,7 @@
   .card > .tbl b { white-space: normal; }
   .foot { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
+
+/* The length, beside the name. Two rows called "Hilotin Signature Massage" are
+   60 and 90 minutes, not a catalogue error. */
+.dur { display: inline-block; margin-left: 8px; }
