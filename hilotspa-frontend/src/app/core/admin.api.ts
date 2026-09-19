@@ -39,6 +39,29 @@ export interface Overview {
   readiness: Readiness;
 }
 
+/**
+ * One node in the cluster, as THIS node sees it (task 3.2).
+ *
+ * "As this node sees it" is the honest framing, and the reason the registry is
+ * not replicated: whether a peer is reachable is only answerable from where you
+ * are standing, and two nodes are entitled to different answers at the same
+ * moment.
+ */
+export interface NodeView {
+  nodeId: string;
+  name: string | null;
+  baseUrl: string | null;
+  branchId: string | null;
+  self: boolean;
+  /** UNKNOWN until first asked, then ONLINE or UNREACHABLE. */
+  state: 'UNKNOWN' | 'ONLINE' | 'UNREACHABLE';
+  /** When it last ANSWERED. Not when it was last tried. */
+  lastSeenAt: string | null;
+  theirWatermark: number | null;
+  ourWatermark: number;
+  lastError: string | null;
+}
+
 /** Operational readiness. OK = working · DEGRADED = running but broken somewhere · DOWN = unusable. */
 export type HealthState = 'OK' | 'DEGRADED' | 'DOWN';
 
@@ -213,6 +236,11 @@ export class AdminApi {
   /** Answers 503 when the system is unusable, so a monitor need not read the body. */
   health(): Promise<Health> {
     return firstValueFrom(this.http.get<Health>(`${API_BASE}/admin/health`));
+  }
+
+  /** The node registry. Never allowed to break A1 - see the caller. */
+  nodes(): Promise<NodeView[]> {
+    return firstValueFrom(this.http.get<NodeView[]>(`${API_BASE}/admin/nodes`));
   }
 
   /** Omitted params mean "the last twelve months" and "every branch". */

@@ -1,5 +1,6 @@
 package com.hilotspa.backend.controller;
 
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,7 +10,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.hilotspa.backend.entities.PeerNode;
 import com.hilotspa.backend.entities.SyncLog;
+import com.hilotspa.backend.model.SyncDtos.NodeView;
+import com.hilotspa.backend.repository.PeerNodeRepository;
 import com.hilotspa.backend.repository.SyncLogRepository;
 
 /**
@@ -26,6 +30,7 @@ import com.hilotspa.backend.repository.SyncLogRepository;
 public class SyncController {
 
     @Autowired private SyncLogRepository syncLogRepository;
+    @Autowired private PeerNodeRepository peerNodeRepository;
 
     @Value("${hilotspa.node.id:local-dev}") private String nodeId;
 
@@ -50,5 +55,30 @@ public class SyncController {
                 .toList();
         return ResponseEntity.ok(new SyncStatus(
                 nodeId, latest == null ? 0L : latest.getId(), rows.size(), rows));
+    }
+
+    /**
+     * The cluster as this node sees it (task 3.2).
+     *
+     * "As this node sees it" is the honest framing and the reason the registry
+     * is not replicated: whether a peer is reachable is a question only
+     * answerable from where you are standing, and two nodes are entitled to
+     * different answers at the same moment.
+     */
+    @GetMapping("/nodes")
+    public ResponseEntity<List<NodeView>> nodes() {
+        return ResponseEntity.ok(peerNodeRepository.findAll().stream()
+                // Explicit parameter type, and !isSelf() rather than
+                // .reversed(): chaining thenComparing after reversed() on an
+                // inferred comparator is a well-known javac inference trap, and
+                // the error it produces names neither the field nor the method.
+                .sorted(Comparator.comparing((PeerNode n) -> !n.isSelf())
+                        .thenComparing(n -> n.getName() == null ? "" : n.getName(),
+                                String.CASE_INSENSITIVE_ORDER))
+                .map(n -> new NodeView(
+                        n.getNodeId(), n.getName(), n.getBaseUrl(), n.getBranchId(),
+                        n.isSelf(), n.getState(), n.getLastSeenAt(),
+                        n.getTheirWatermark(), n.getOurWatermark(), n.getLastError()))
+                .toList());
     }
 }

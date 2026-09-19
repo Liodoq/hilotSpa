@@ -27,7 +27,9 @@ import com.hilotspa.backend.entities.Therapist;
 import com.hilotspa.backend.entities.TherapistStatus;
 import com.hilotspa.backend.model.OverviewDtos.AssistantStats;
 import com.hilotspa.backend.model.OverviewDtos.ComplaintCount;
+import com.hilotspa.backend.entities.PeerNode;
 import com.hilotspa.backend.model.OverviewDtos.NodeCard;
+import com.hilotspa.backend.repository.PeerNodeRepository;
 import com.hilotspa.backend.model.OverviewDtos.Overview;
 import com.hilotspa.backend.model.OverviewDtos.Readiness;
 import com.hilotspa.backend.repository.AppointmentRepository;
@@ -55,6 +57,8 @@ import com.hilotspa.backend.repository.TherapistRepository;
  */
 @Service
 public class OverviewServiceImpl implements OverviewService {
+
+    @Autowired private PeerNodeRepository peerNodeRepository;
 
     @Autowired private AppointmentRepository appointmentRepository;
     @Autowired private FormsRepository formsRepository;
@@ -104,11 +108,17 @@ public class OverviewServiceImpl implements OverviewService {
                     .filter(java.util.Objects::nonNull)
                     .max(Comparator.naturalOrder())
                     .orElse(null);
+            // Which node OWNS this branch, read from the registry rather than
+            // stamped with whoever answered the request. Stamping was correct
+            // while one node existed and became a lie the moment there were
+            // two - an administrator on Daraga would have seen Bulan's card
+            // labelled daraga-01.
+            PeerNode owner = peerNodeRepository.findByBranchId(b.getId()).orElse(null);
             nodes.add(new NodeCard(
                     b.getId(),
                     b.getName(),
-                    nodeId,
-                    true,   // one node exists; see the class comment
+                    owner == null ? nodeId : owner.getNodeId(),
+                    owner == null || owner.isSelf(),
                     (int) appointments.stream()
                             .filter(a -> a.getBranch().getId().equals(b.getId()))
                             .filter(a -> a.getStartTime().toLocalDate().equals(today))
@@ -125,9 +135,17 @@ public class OverviewServiceImpl implements OverviewService {
                     lastWrite));
         }
 
+        // Counted from the registry. UNKNOWN counts as not-online: a peer that
+        // has never answered has not been seen, and reporting it as up is the
+        // one thing this screen must never do.
+        List<PeerNode> registry = peerNodeRepository.findAll();
+        int nodesTotal = Math.max(registry.size(), 1);
+        int nodesOnline = registry.isEmpty() ? 1
+                : (int) registry.stream().filter(n -> "ONLINE".equals(n.getState())).count();
+
         return new Overview(
                 now, bookingsToday, bookingsWeek, assessmentsWeek, forms.size(),
-                1, 1,
+                nodesOnline, nodesTotal,
                 nodes,
                 topComplaints(forms, monthAgo),
                 assistantStats(),

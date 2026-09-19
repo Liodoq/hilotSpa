@@ -123,6 +123,14 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/branches/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/v1/massages/**").authenticated()
 
+
+                // Peer-to-peer (task 3.2). NOT part of the JWT chain:
+                // SyncTokenFilter guards this prefix with the shared node
+                // secret and denies everything when that secret is unset.
+                // permitAll here means "Spring Security steps aside", not
+                // "open" - the filter runs either way.
+                .requestMatchers("/api/v1/sync/**").permitAll()
+
                 .anyRequest().authenticated())
             .oauth2ResourceServer(o -> o.jwt(
                 jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));

@@ -80,13 +80,44 @@
         }
       }
 
+      <div class="sec-rule"><h2 class="t-s">Cluster</h2></div>
+      <div class="grid2">
+        @for (nd of cluster(); track nd.nodeId) {
+          <div class="card colstack nodecard">
+            <div class="rowbar split">
+              <div class="nodename">{{ nd.name || nd.nodeId }}@if (nd.self) { <span class="help">· this node</span>}</div>
+              <span class="pill"
+                    [class.ok]="nd.state === 'ONLINE'"
+                    [class.bad]="nd.state === 'UNREACHABLE'"><i class="dotx"></i>{{ nd.state }}</span>
+            </div>
+            <div class="help mono">{{ nd.nodeId }}@if (nd.baseUrl) { · {{ nd.baseUrl }}}</div>
+            <div class="figrow">
+              <div class="fig"><div class="figN">{{ seen(nd.lastSeenAt) }}</div><div class="help">last seen</div></div>
+              <div class="fig"><div class="figN">{{ nd.theirWatermark ?? '—' }}</div><div class="help">their log</div></div>
+              <div class="fig"><div class="figN">{{ nd.ourWatermark }}</div><div class="help">we have read</div></div>
+            </div>
+            @if (nd.lastError) {
+              <!-- A failure state with no reason is the thing nobody can act on. -->
+              <div class="help mono err">{{ nd.lastError }}</div>
+            }
+          </div>
+        }
+        @if (!cluster().length) {
+          <div class="note"><span class="b"></span>
+            <span>No registry rows yet. This node writes its own row on startup, so an empty
+              list means the backend has not restarted since the registry was added.</span></div>
+        }
+      </div>
+
       <div class="sec-rule"><h2 class="t-s">Branch nodes</h2></div>
       <div class="grid2">
         @for (n of nodes(); track n.branchId) {
           <div class="card colstack nodecard">
             <div class="rowbar split">
               <div class="nodename">{{ n.branchName }}</div>
-              <span class="pill ok"><i class="dotx"></i>ONLINE</span>
+              <span class="pill"
+                    [class.ok]="stateOf(n.nodeId) === 'ONLINE'"
+                    [class.bad]="stateOf(n.nodeId) === 'UNREACHABLE'"><i class="dotx"></i>{{ stateOf(n.nodeId) }}</span>
             </div>
             <div class="help mono">node {{ n.nodeId }} · last write {{ when(n.lastWrite) }}</div>
             <div class="figrow">
@@ -103,9 +134,10 @@
       </div>
 
       <div class="note warm"><span class="b"></span>
-        <span><b>One node is running.</b> The sync log, node registry and gossip protocol are Sprint 3
-          and are not built yet, so this screen reports the node answering the request and nothing
-          else. A second branch drawn here as "offline" would be a mock-up, not evidence.</span></div>
+        <span><b>Each node is asked, not assumed.</b> Every thirty seconds this node calls each peer
+          and records whether it answered; "last seen" is the time of a real answer, never of an
+          attempt. Replication itself is the next stage — a booking made on one node does not yet
+          appear on the other, and the two logs above will drift apart until it does.</span></div>
 
       <div class="cols">
         <div class="card colstack">

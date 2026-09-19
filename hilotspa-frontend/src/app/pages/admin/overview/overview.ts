@@ -1,18 +1,22 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { DashShell } from '../../../shared/dash-shell/dash-shell';
-import { AdminApi, Health, Overview } from '../../../core/admin.api';
+import { AdminApi, Health, NodeView, Overview } from '../../../core/admin.api';
 import { BranchContext } from '../../../core/branch-context';
 
 /**
  * A1 — node aggregation. Figure 3.3.
  *
  * Every figure is counted from the database when the page loads, so the same
- * number can be reproduced in psql (backend/verify.sql). Two things are
- * deliberately absent: takings, because every service still seeds at ₱0.00
- * until the spa hands over its rate card; and a second node drawn as "offline",
- * because the node registry is Sprint 3 and does not exist yet. Showing a
- * picture of a feature is not the feature.
+ * number can be reproduced in psql (backend/verify.sql). Takings are
+ * deliberately absent: every service still seeds at ₱0.00 until the spa hands
+ * over its rate card.
+ *
+ * The cluster section is REAL as of task 3.2. Each row is a node this one has
+ * actually asked, and "last seen" is when it answered rather than when it was
+ * tried. Until 19 September this screen carried a note explaining that a second
+ * node drawn as offline would be a mock-up rather than evidence. It is now
+ * evidence.
  */
 @Component({
   selector: 'app-admin-overview',
@@ -32,6 +36,10 @@ export class AdminOverview implements OnInit {
    * page: a health check that takes the screen down with it is worse than none.
    */
   health = signal<Health | null>(null);
+
+  /** The node registry (3.2). Loaded separately and never allowed to break the
+   *  page, for the same reason as health. */
+  cluster = signal<NodeView[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
 
@@ -59,12 +67,14 @@ export class AdminOverview implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const [overview, health] = await Promise.all([
+      const [overview, health, cluster] = await Promise.all([
         this.api.overview(),
         this.api.health().catch(() => null),
+        this.api.nodes().catch(() => []),
       ]);
       this.data.set(overview);
       this.health.set(health);
+      this.cluster.set(cluster);
     } catch {
       this.error.set('We could not build the aggregate.');
     } finally {
@@ -76,6 +86,30 @@ export class AdminOverview implements OnInit {
   faults = computed(() =>
     (this.health()?.checks ?? []).filter(c => c.state !== 'OK')
       .sort((a, b) => (a.state === 'DOWN' ? -1 : 1) - (b.state === 'DOWN' ? -1 : 1)));
+
+  /**
+   * The state of whichever node OWNS this branch.
+   *
+   * The branch card used to print ONLINE unconditionally. That was true while
+   * one node existed and became a claim nobody had checked the moment there
+   * were two - the screen would have drawn a dead branch as healthy, which is
+   * the single thing an operations screen must never do.
+   */
+  stateOf(nodeId: string): 'UNKNOWN' | 'ONLINE' | 'UNREACHABLE' {
+    return this.cluster().find(n => n.nodeId === nodeId)?.state ?? 'UNKNOWN';
+  }
+
+  /** How long ago, in words. "Last seen" only ever means "it really answered". */
+  seen(iso: string | null): string {
+    if (!iso) return 'never answered';
+    const then = new Date(iso).getTime();
+    if (Number.isNaN(then)) return '—';
+    const secs = Math.max(0, Math.round((Date.now() - then) / 1000));
+    if (secs < 90) return secs + 's ago';
+    const mins = Math.round(secs / 60);
+    if (mins < 90) return mins + ' min ago';
+    return this.when(iso);
+  }
 
   when(iso: string | null): string {
     if (!iso) return 'no writes yet';
