@@ -39,4 +39,31 @@ public final class ResourceDtos {
             String actor, String branch, String details,
             String originNodeId, LocalDateTime occurredAt) {
     }
+
+    /** One planned day off, as a screen shows it (task 3.33). */
+    public record LeaveDto(
+            java.util.UUID id,
+            java.util.UUID therapistId,
+            String therapistName,
+            java.time.LocalDate startsOn,
+            java.time.LocalDate endsOn,
+            String reason,
+            /** Bookings this leave now clashes with. Empty is the good case. */
+            java.util.List<ClashRow> clashes) {
+    }
+
+    /** What the front desk has to move before that day arrives. */
+    public record ClashRow(
+            java.util.UUID appointmentId,
+            java.time.LocalDateTime startTime,
+            String client,
+            String serviceName,
+            String status) {
+    }
+
+    public record LeaveWrite(
+            java.time.LocalDate startsOn,
+            java.time.LocalDate endsOn,
+            String reason) {
+    }
 }

@@ -221,6 +221,75 @@
             }
           </div>
 
+          <!-- 3.33 - planned time off. Distinct from STATUS above, which is a
+               right-now flag for today only, and from "no longer works here",
+               which is for ever. This is the middle: a dated range, in advance,
+               that ends by itself. -->
+          <div class="rcontrols">
+            <div class="help rlabel">DAYS OFF</div>
+            <button type="button" class="btn btn-ghost btn-sm"
+                    [attr.aria-expanded]="leaveOpen() === s.id"
+                    (click)="toggleLeave(s.id)">
+              {{ leaveOpen() === s.id ? 'Close' : 'Days off for ' + name(s) }}</button>
+
+            @if (leaveOpen() === s.id) {
+              <div style="margin-top:10px">
+                <div class="daypick">
+                  <app-date-picker [value]="leaveFrom()" [minYear]="2024"
+                                   placeholder="First day"
+                                   (changed)="setLeaveFrom($event ?? '')" />
+                  <app-date-picker [value]="leaveTo()" [minYear]="2024"
+                                   placeholder="Last day"
+                                   (changed)="leaveTo.set($event ?? '')" />
+                </div>
+                <input class="input" style="margin-top:8px"
+                       placeholder="Reason (optional)"
+                       [value]="leaveWhy()"
+                       (input)="leaveWhy.set($any($event.target).value)" />
+                <button type="button" class="btn btn-primary btn-sm" style="margin-top:8px"
+                        [disabled]="leaveBusy() || !leaveFrom()"
+                        (click)="addLeave(s.id)">
+                  {{ leaveBusy() ? 'Saving…' : 'Record this day off' }}</button>
+
+                <p class="help" style="margin-top:8px">One day is the common case — leave the
+                  last day as it is. New bookings stop being offered straight away. Visits
+                  <b>already</b> booked do not move themselves; they are listed below so you can
+                  move them from the queue.</p>
+
+                @if (!leaves().length && !leaveBusy()) {
+                  <p class="help">Nothing recorded. {{ name(s) }} is available on every working
+                    day.</p>
+                }
+
+                @for (l of leaves(); track l.id) {
+                  <div class="card colstack" style="margin-top:10px">
+                    <div class="rowbar split">
+                      <div><b>{{ leaveLabel(l) }}</b>
+                        @if (l.reason) { <span class="help"> · {{ l.reason }}</span> }
+                      </div>
+                      <button type="button" class="btn btn-ghost btn-sm"
+                              [disabled]="leaveBusy()"
+                              (click)="removeLeave(s.id, l.id)">Remove</button>
+                    </div>
+
+                    @if (l.clashes.length) {
+                      <!-- The half that matters. Blocking new bookings is easy;
+                           these are the clients somebody has to ring. -->
+                      <div class="help err">{{ l.clashes.length }} booking{{ l.clashes.length === 1
+                        ? '' : 's' }} still expecting {{ name(s) }}:</div>
+                      @for (c of l.clashes; track c.appointmentId) {
+                        <div class="help mono">{{ whenClash(c.startTime) }} · {{ c.client }}
+                          · {{ c.serviceName }} · {{ c.status }}</div>
+                      }
+                    } @else {
+                      <div class="help">Nothing booked on those days.</div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
           <!-- Correcting a name, and recording that somebody has left. There is no
                delete: every past appointment names a therapist, and removing the
                row would take those visits with it. -->

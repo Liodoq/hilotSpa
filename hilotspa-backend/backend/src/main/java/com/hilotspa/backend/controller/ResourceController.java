@@ -17,11 +17,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hilotspa.backend.model.ResourceDtos.AuditRow;
+import com.hilotspa.backend.model.ResourceDtos.LeaveDto;
+import com.hilotspa.backend.model.ResourceDtos.LeaveWrite;
 import com.hilotspa.backend.model.ResourceDtos.RoomDto;
 import com.hilotspa.backend.model.ResourceDtos.RoomWrite;
 import com.hilotspa.backend.model.ResourceDtos.TherapistDto;
 import com.hilotspa.backend.model.ResourceDtos.TherapistWrite;
 import com.hilotspa.backend.services.ResourceService;
+import com.hilotspa.backend.services.TherapistLeaveService;
 
 /**
  * Staff and admin operational data.
@@ -35,6 +38,9 @@ public class ResourceController {
 
     @Autowired
     private ResourceService resourceService;
+
+    @Autowired
+    private TherapistLeaveService leaveService;
 
     // ------------------------------------------------------------ therapists
 
@@ -54,6 +60,39 @@ public class ResourceController {
     public ResponseEntity<TherapistDto> updateTherapist(
             @PathVariable UUID id, @RequestBody TherapistWrite body) {
         return ResponseEntity.ok(resourceService.saveTherapist(id, body));
+    }
+
+    // ------------------------------------------------------- planned time off
+
+    /**
+     * A therapist's days off, each with the visits it clashes with (3.33).
+     *
+     * Under /therapists/**, so STAFF and ADMIN, which is right: rostering is a
+     * front-desk job and the person who takes the phone call asking for the day
+     * off is the person who should be able to write it down.
+     */
+    @GetMapping("/therapists/{id}/leave")
+    public ResponseEntity<List<LeaveDto>> leave(@PathVariable UUID id) {
+        return ResponseEntity.ok(leaveService.forTherapist(id));
+    }
+
+    /**
+     * Record a day off. Never refused because of existing bookings.
+     *
+     * The person IS off; the visits are what have to change. Refusing would
+     * leave the desk unable to write down a fact that is already true. The
+     * response names the clashes instead, so they can be moved deliberately.
+     */
+    @PostMapping("/therapists/{id}/leave")
+    public ResponseEntity<LeaveDto> addLeave(@PathVariable UUID id,
+                                             @RequestBody LeaveWrite body) {
+        return new ResponseEntity<>(leaveService.create(id, body), HttpStatus.CREATED);
+    }
+
+    @DeleteMapping("/therapists/leave/{leaveId}")
+    public ResponseEntity<Void> removeLeave(@PathVariable UUID leaveId) {
+        leaveService.delete(leaveId);
+        return ResponseEntity.noContent().build();
     }
 
     // ----------------------------------------------------------------- rooms

@@ -12,6 +12,37 @@ import { Branch, Openings } from './models';
  * client that can name someone else's. Filtering here would be decoration.
  */
 
+/** One visit a day off now clashes with (task 3.33). */
+export interface ClashRow {
+  appointmentId: string;
+  startTime: string;
+  client: string;
+  serviceName: string;
+  status: string;
+}
+
+/**
+ * A therapist's planned day off.
+ *
+ * `clashes` is the half that matters: blocking new bookings is easy, and the
+ * visits already in the book are the ones somebody has to ring about.
+ */
+export interface LeaveDto {
+  id: string;
+  therapistId: string;
+  therapistName: string;
+  startsOn: string;
+  endsOn: string;
+  reason: string | null;
+  clashes: ClashRow[];
+}
+
+export interface LeaveWrite {
+  startsOn: string;
+  endsOn: string;
+  reason?: string | null;
+}
+
 export interface TherapistDto {
   id: string; firstName: string; lastName: string;
   status: 'AVAILABLE' | 'BUSY' | 'ON_BREAK' | 'OFF_DUTY';
@@ -144,6 +175,22 @@ export class OpsApi {
    * The server refuses with 409 the moment one appointment names them. This is
    * for correcting a mistake - a name typed twice - not for retiring anybody.
    */
+  /** A therapist's days off, each with what it clashes with (3.33). */
+  leave(therapistId: string): Promise<LeaveDto[]> {
+    return firstValueFrom(this.http.get<LeaveDto[]>(
+      `${API_BASE}/therapists/${therapistId}/leave`));
+  }
+
+  /** Never refused because of existing bookings - the answer names them. */
+  addLeave(therapistId: string, body: LeaveWrite): Promise<LeaveDto> {
+    return firstValueFrom(this.http.post<LeaveDto>(
+      `${API_BASE}/therapists/${therapistId}/leave`, body));
+  }
+
+  removeLeave(leaveId: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${API_BASE}/therapists/leave/${leaveId}`));
+  }
+
   deleteTherapist(id: string): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`${API_BASE}/therapists/${id}`));
   }

@@ -4,7 +4,7 @@ import { DatePicker } from '../../../shared/date-picker/date-picker';
 import { BranchContext } from '../../../core/branch-context';
 import { ToastService } from '../../../core/toast.service';
 import { describeHttpError } from '../../../core/http-error';
-import { OpsApi, RoomDto, ScheduleRow, TherapistDto } from '../../../core/ops.api';
+import { OpsApi, RoomDto, ScheduleRow, TherapistDto, LeaveDto, LeaveWrite } from '../../../core/ops.api';
 
 type Status = TherapistDto['status'];
 
@@ -68,6 +68,100 @@ export class StaffResources implements OnInit {
    *  when an ADMINISTRATOR has switched into a branch (Figure 3.3). */
   protected ctx = inject(BranchContext);
   protected toast = inject(ToastService);
+
+  // ---------------------------------------------------------- days off (3.33)
+
+  /**
+   * Loaded per therapist, on demand.
+   *
+   * Not with the roster: most of the time nobody is looking at leave, and
+   * fetching every therapist's days off plus the visits each one clashes with,
+   * on every page load, would make the common case pay for the rare one.
+   */
+  protected leaveOpen = signal<string | null>(null);
+  protected leaves = signal<LeaveDto[]>([]);
+  protected leaveBusy = signal(false);
+  protected leaveFrom = signal('');
+  protected leaveTo = signal('');
+  protected leaveWhy = signal('');
+
+  protected async toggleLeave(therapistId: string): Promise<void> {
+    if (this.leaveOpen() === therapistId) { this.leaveOpen.set(null); return; }
+    this.leaveOpen.set(therapistId);
+    this.leaves.set([]);
+    this.leaveFrom.set(''); this.leaveTo.set(''); this.leaveWhy.set('');
+    await this.reloadLeave(therapistId);
+  }
+
+  private async reloadLeave(therapistId: string): Promise<void> {
+    this.leaveBusy.set(true);
+    try {
+      this.leaves.set(await this.api.leave(therapistId));
+    } catch {
+      this.toast.show('Could not read the days off.');
+    } finally {
+      this.leaveBusy.set(false);
+    }
+  }
+
+  /**
+   * One day off is the common case, so the last day defaults to the first.
+   * Typing the same date twice to say "Tuesday" is the sort of small friction
+   * that stops a control being used at all.
+   */
+  protected setLeaveFrom(v: string): void {
+    this.leaveFrom.set(v);
+    if (!this.leaveTo()) { this.leaveTo.set(v); }
+  }
+
+  protected async addLeave(therapistId: string): Promise<void> {
+    const from = this.leaveFrom();
+    const to = this.leaveTo() || from;
+    if (!from) { this.toast.show('Choose the first day.'); return; }
+    this.leaveBusy.set(true);
+    try {
+      const made = await this.api.addLeave(therapistId,
+        { startsOn: from, endsOn: to, reason: this.leaveWhy().trim() || null } as LeaveWrite);
+      this.leaveFrom.set(''); this.leaveTo.set(''); this.leaveWhy.set('');
+      await this.reloadLeave(therapistId);
+      // Say it plainly and immediately. A day off that silently breaks three
+      // visits is worse than the paper diary this replaced.
+      this.toast.show(made.clashes.length
+        ? `Recorded. ${made.clashes.length} booking${made.clashes.length === 1 ? '' : 's'} `
+          + 'still need moving - listed below.'
+        : 'Recorded. Nothing was booked on those days.');
+    } catch (e) {
+      this.toast.show(describeHttpError(e));
+    } finally {
+      this.leaveBusy.set(false);
+    }
+  }
+
+  protected async removeLeave(therapistId: string, leaveId: string): Promise<void> {
+    this.leaveBusy.set(true);
+    try {
+      await this.api.removeLeave(leaveId);
+      await this.reloadLeave(therapistId);
+      // Deliberately not "the bookings are back" - nothing was moved by the
+      // system, so nothing is restored by removing this.
+      this.toast.show('Day off removed. Any visits already moved stay where they are.');
+    } catch (e) {
+      this.toast.show(describeHttpError(e));
+    } finally {
+      this.leaveBusy.set(false);
+    }
+  }
+
+  protected leaveLabel(l: LeaveDto): string {
+    return l.startsOn === l.endsOn ? l.startsOn : `${l.startsOn} to ${l.endsOn}`;
+  }
+
+  protected whenClash(iso: string): string {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? iso
+      : d.toLocaleString('en-GB',
+          { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
 
   /**
    * Two statuses, not four.

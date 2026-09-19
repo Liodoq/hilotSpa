@@ -44,6 +44,7 @@ import com.hilotspa.backend.entities.Room;
 import com.hilotspa.backend.entities.Sex;
 import com.hilotspa.backend.entities.Specialty;
 import com.hilotspa.backend.entities.Therapist;
+import com.hilotspa.backend.entities.TherapistLeave;
 import com.hilotspa.backend.entities.TherapistStatus;
 import com.hilotspa.backend.model.BookingDtos.Availability;
 import com.hilotspa.backend.model.BookingDtos.BookRequest;
@@ -65,6 +66,7 @@ import com.hilotspa.backend.repository.FormsRepository;
 import com.hilotspa.backend.repository.MassageRepository;
 import com.hilotspa.backend.repository.NotificationLogRepository;
 import com.hilotspa.backend.repository.RoomRepository;
+import com.hilotspa.backend.repository.TherapistLeaveRepository;
 import com.hilotspa.backend.repository.TherapistRepository;
 
 /**
@@ -99,6 +101,7 @@ public class BookingServiceImpl implements BookingService {
     @Autowired private MassageRepository massageRepository;
     @Autowired private AppointmentRepository appointmentRepository;
     @Autowired private TherapistRepository therapistRepository;
+    @Autowired private TherapistLeaveRepository therapistLeaveRepository;
     @Autowired private RoomRepository roomRepository;
     @Autowired private AuditLogRepository auditLogRepository;
     @Autowired private NotificationLogRepository notificationLogRepository;
@@ -318,6 +321,20 @@ public class BookingServiceImpl implements BookingService {
 
         int duration = service.getDurationMinute();
 
+        // Planned leave, for the whole window, in one query (3.33). Loaded like
+        // the booked list above and for the same reason: asking per day per
+        // therapist would be dozens of round trips to draw one week.
+        //
+        // Leave is per DAY, so unlike sex and specialty it cannot be applied
+        // once to the whole list - it has to be applied inside the day loop.
+        // That distinction is the entire reason this is not two lines.
+        List<TherapistLeave> leave = therapists.isEmpty()
+                ? List.of()
+                : therapistLeaveRepository
+                    .findByTherapistIdInAndEndsOnGreaterThanEqualAndStartsOnLessThanEqual(
+                        therapists.stream().map(Therapist::getId).toList(),
+                        start, start.plusDays(window - 1L));
+
         for (int day = 0; day < window; day++) {
             LocalDate d = start.plusDays(day);
             LocalDateTime cursor = d.atTime(openHour, 0);
@@ -326,6 +343,18 @@ public class BookingServiceImpl implements BookingService {
             // Today is judged against who is actually on the floor; later days
             // against everyone who works here.
             List<Therapist> pool = d.equals(todayHere) ? onDutyNow : therapists;
+
+            // ...minus anybody whose day off covers this date.
+            if (!leave.isEmpty()) {
+                final LocalDate here = d;
+                Set<UUID> off = leave.stream()
+                        .filter(l -> l.covers(here))
+                        .map(l -> l.getTherapist().getId())
+                        .collect(java.util.stream.Collectors.toSet());
+                if (!off.isEmpty()) {
+                    pool = pool.stream().filter(t -> !off.contains(t.getId())).toList();
+                }
+            }
 
             while (!cursor.isAfter(lastStart)) {
                 LocalDateTime slotEnd = cursor.plusMinutes(duration);
@@ -1152,8 +1181,18 @@ public class BookingServiceImpl implements BookingService {
         // off duty, thirty seconds after the screen stopped offering them.
         boolean today = start.toLocalDate().equals(LocalDate.now(ZoneId.of(timezone)));
 
+        LocalDate onDate = start.toLocalDate();
+
         return therapistRepository.findByBranchIdAndActiveTrue(branchId).stream()
                 .filter(t -> want == null || want == t.getSex())
+                // Planned leave (3.33). Checked HERE as well as in availability
+                // because this is the gate the WRITE goes through: the calendar
+                // stopping offering a day is a courtesy, this is the thing that
+                // makes it true. A client holding a stale page, a walk-in typed
+                // at the counter, and anyone with curl all arrive here.
+                .filter(t -> !therapistLeaveRepository
+                        .existsByTherapistIdAndStartsOnLessThanEqualAndEndsOnGreaterThanEqual(
+                                t.getId(), onDate, onDate))
                 // Trained for THIS treatment. canPerform() treats an empty set
                 // as "nobody has said", never as "no" - see Therapist.
                 .filter(t -> t.canPerform(need))

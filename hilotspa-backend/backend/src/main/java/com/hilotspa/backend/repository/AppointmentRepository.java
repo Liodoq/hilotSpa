@@ -41,6 +41,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
      */
     boolean existsByTherapistId(UUID therapistId);
 
+    /**
+     * Everything booked for one therapist inside a window (task 3.33).
+     *
+     * Used to answer "what does this day off break", which is the half of the
+     * feature that matters: blocking new bookings is easy, and the visits
+     * already in the book are the ones somebody has to ring about.
+     */
+    List<Appointment> findByTherapistIdAndStartTimeBetween(
+            UUID therapistId, LocalDateTime from, LocalDateTime to);
+
     boolean existsByRoomId(UUID roomId);
 
     /**
