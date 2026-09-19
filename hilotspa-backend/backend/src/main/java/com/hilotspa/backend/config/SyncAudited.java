@@ -44,6 +44,12 @@ public class SyncAudited {
     }
 
     private void emit(Object entity, String action) {
+        if (ReplicationContext.isApplying()) {
+            // A change we are copying FROM a peer. Recording it would make this
+            // node advertise the peer's write as its own, the peer would fetch
+            // it back, and the row would circulate between them indefinitely.
+            return;
+        }
         UUID id = idOf(entity);
         if (id == null) {
             return;

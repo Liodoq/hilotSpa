@@ -6,9 +6,11 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.hilotspa.backend.entities.Appointment;
 import com.hilotspa.backend.entities.AppointmentStatus;
@@ -194,4 +196,76 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
                       @Param("branchIds") Collection<UUID> branchIds,
                       @Param("from") LocalDateTime from,
                       @Param("to") LocalDateTime to);
+
+    /**
+     * Write a replicated appointment in, keeping the peer's id (task 3.3).
+     *
+     * Native, and not JpaRepository.save(), for one specific reason: the id is
+     * @GeneratedValue(GenerationType.UUID). Saving a detached row whose id is
+     * not yet in this database goes through merge, and merge on a row that does
+     * not exist persists a copy - at which point the generator runs and assigns
+     * a NEW id. The replica would land under an id the peer has never heard of,
+     * the next pull would not find it, and every pull would insert another one.
+     * Silent, unbounded duplication, invisible until somebody counts.
+     *
+     * ON CONFLICT (id) DO UPDATE is exactly the "upsert keyed by the origin's
+     * id" this needs, and it is one statement, so a pull cannot half-apply.
+     *
+     * It also bypasses the JPA listener, which means no sync_log row and no
+     * echo back to the peer - the same thing ReplicationContext does for the
+     * delete path, achieved here by construction rather than by a flag.
+     *
+     * customer_id and form_id are always NULL: the account and the assessment
+     * stay on the node that recorded them. walk_in_name carries the client's
+     * name, which is what satisfies appointment_has_a_client.
+     */
+    @Modifying
+    // On the repository method, not on the caller. Spring Data's proxy IS the
+    // caller here, so the annotation is honoured - whereas a @Transactional
+    // private method invoked from inside its own class is silently ignored
+    // (B134). A @Modifying query with no transaction fails outright.
+    @Transactional
+    @Query(value = """
+            INSERT INTO appointment (
+                id, branch_id, service_id, therapist_id, room_id,
+                customer_id, form_id, walk_in_name, walk_in_contact,
+                start_time, end_time, status, payment_status, source,
+                price_at_booking, notes, origin_node_id, created_at, updated_at)
+            VALUES (
+                :id, :branchId, :serviceId, :therapistId, :roomId,
+                NULL, NULL, :clientName, NULL,
+                :startTime, :endTime, :status, :paymentStatus, :source,
+                :price, :notes, :originNodeId, :createdAt, :updatedAt)
+            ON CONFLICT (id) DO UPDATE SET
+                branch_id      = EXCLUDED.branch_id,
+                service_id     = EXCLUDED.service_id,
+                therapist_id   = EXCLUDED.therapist_id,
+                room_id        = EXCLUDED.room_id,
+                walk_in_name   = EXCLUDED.walk_in_name,
+                start_time     = EXCLUDED.start_time,
+                end_time       = EXCLUDED.end_time,
+                status         = EXCLUDED.status,
+                payment_status = EXCLUDED.payment_status,
+                source         = EXCLUDED.source,
+                price_at_booking = EXCLUDED.price_at_booking,
+                notes          = EXCLUDED.notes,
+                origin_node_id = EXCLUDED.origin_node_id,
+                updated_at     = EXCLUDED.updated_at
+            """, nativeQuery = true)
+    int upsertReplicated(@Param("id") java.util.UUID id,
+                         @Param("branchId") java.util.UUID branchId,
+                         @Param("serviceId") java.util.UUID serviceId,
+                         @Param("therapistId") java.util.UUID therapistId,
+                         @Param("roomId") java.util.UUID roomId,
+                         @Param("clientName") String clientName,
+                         @Param("startTime") java.time.LocalDateTime startTime,
+                         @Param("endTime") java.time.LocalDateTime endTime,
+                         @Param("status") String status,
+                         @Param("paymentStatus") String paymentStatus,
+                         @Param("source") String source,
+                         @Param("price") java.math.BigDecimal price,
+                         @Param("notes") String notes,
+                         @Param("originNodeId") String originNodeId,
+                         @Param("createdAt") java.time.LocalDateTime createdAt,
+                         @Param("updatedAt") java.time.LocalDateTime updatedAt);
 }
