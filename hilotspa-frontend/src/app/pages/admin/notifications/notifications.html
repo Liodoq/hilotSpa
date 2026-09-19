@@ -33,6 +33,13 @@
               </select>
             </label>
           }
+          <!-- 3.32. A <p> cannot live inside a <label>, which accepts phrasing
+               content only - so this sits beside the field, not in it. -->
+          @if (site.label(); as where) {
+            <p class="help">Reminders are sent from the node that serves <b>{{ where }}</b>.
+              Another branch's reminders go out from its own node, which keeps its own record of
+              what it has already sent.</p>
+          }
         </div>
       </div>
 

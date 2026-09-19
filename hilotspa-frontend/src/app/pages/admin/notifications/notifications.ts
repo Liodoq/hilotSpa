@@ -9,6 +9,7 @@ import { Branch } from '../../../core/models';
 import { DateField } from '../../../shared/date-field/date-field';
 import { AuthService } from '../../../core/auth.service';
 import { BranchContext } from '../../../core/branch-context';
+import { NodeStore } from '../../../core/node.store';
 import { describeHttpError } from '../../../core/http-error';
 
 /**
@@ -33,6 +34,13 @@ import { describeHttpError } from '../../../core/http-error';
   styleUrl: './notifications.scss',
 })
 export class AdminNotifications implements OnInit {
+  /**
+   * 3.32 - this node sends for the branch it serves and no other, so the page
+   * says which before anybody presses anything. The server enforces it either
+   * way; being told afterwards is a worse way to find out.
+   */
+  protected site = inject(NodeStore);
+
   private api = inject(AdminApi);
   private formsApi = inject(FormsApi);
   private auth = inject(AuthService);
@@ -111,6 +119,7 @@ export class AdminNotifications implements OnInit {
   untold = computed(() => this.due().filter(d => !d.status).length);
 
   ngOnInit(): void {
+    this.site.ensure();
     void this.loadBranches();
     void this.load();
     void this.loadDue();

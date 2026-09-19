@@ -52,6 +52,8 @@ public class NotificationController {
     @Autowired private BranchRepository branchRepository;
 
     @Value("${hilotspa.booking.timezone:Asia/Manila}") private String timezone;
+    @Value("${hilotspa.node.name:Local}")              private String nodeName;
+    @Value("${hilotspa.node.branch-id:}")              private String nodeBranchIdRaw;
 
     /**
      * @param branchId honoured for an ADMINISTRATOR only, and only because an
@@ -131,7 +133,12 @@ public class NotificationController {
 
         // 404 rather than 403 - telling a stranger the id exists is itself a
         // leak, and it is the rule cancel() and reschedule() already follow.
-        List<UUID> scope = scopeOf(branchId);
+        //
+        // sendScope, not scopeOf: this is a SEND. Reading another branch's log
+        // on this node is fine, because the row is already in this database.
+        // Mailing its client is not, because the node that owns that branch has
+        // its own ledger and may have sent it already.
+        List<UUID> scope = sendScope(branchId);
         if (scope != null && !scope.contains(a.getBranch().getId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
         }
@@ -143,6 +150,60 @@ public class NotificationController {
                 sent
                     ? "Sent."
                     : "Nothing was sent - the row beside this visit says why."));
+    }
+
+    /**
+     * The branches this node may SEND for (task 3.32).
+     *
+     * Reading and sending are different questions, and this is the one that
+     * leaves the building.
+     *
+     * A replica holds the whole business, so an administrator on the Daraga
+     * node pressing "Run reminders" with no branch selected would have mailed
+     * every Bulan client a reminder the Bulan node had already sent. The guard
+     * against a double send is notification_log, and it is deliberately NOT
+     * replicated - what this node has emailed is a local fact, so node 2 cannot
+     * learn that node 1 already went. There is nothing to consult; the only
+     * safe answer is not to send.
+     *
+     * So: this node sends for the branch it OWNS, and for no other. Same
+     * single-writer-per-partition rule the booking path follows, applied to the
+     * one other action that reaches a real person.
+     *
+     * A node that declares no branch is unchanged - that is a single-node
+     * deployment, where "every branch it holds" was always the right answer.
+     */
+    private List<UUID> sendScope(UUID requested) {
+        List<UUID> asked = scopeOf(requested);        // null = every branch
+        UUID mine = nodeBranchId();
+        if (mine == null) {
+            return asked;
+        }
+        if (asked == null) {
+            return List.of(mine);
+        }
+        List<UUID> both = asked.stream().filter(mine::equals).toList();
+        if (both.isEmpty()) {
+            // 409 rather than 403: nothing is wrong with the caller or their
+            // permissions. They asked the wrong machine.
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This node (" + nodeName + ") sends reminders only for the branch it "
+                  + "serves. Another node is responsible for the branch you asked for - "
+                  + "send it from there, or it may go out twice.");
+        }
+        return both;
+    }
+
+    /** The branch this node owns, or null when it has not been told. */
+    private UUID nodeBranchId() {
+        if (nodeBranchIdRaw == null || nodeBranchIdRaw.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(nodeBranchIdRaw.trim());
+        } catch (IllegalArgumentException e) {
+            return null;   // NodeController already says so, loudly, at startup
+        }
     }
 
     /**
@@ -214,10 +275,11 @@ public class NotificationController {
         LocalDate target = day == null
                 ? LocalDate.now(ZoneId.of(timezone)).plusDays(1)
                 : day;
-        // An administrator runs the whole node. A front desk runs its own
-        // branch and cannot reach across to the other one, even by pressing the
-        // same button - the scope comes from the token, not the request.
-        int sent = reminderService.remindFor(target, scopeOf(branchId));
+        // A front desk runs its own branch and cannot reach across to the other
+        // one, even by pressing the same button - the scope comes from the
+        // token, not the request. An administrator is additionally clamped to
+        // the branch this NODE owns; see sendScope.
+        int sent = reminderService.remindFor(target, sendScope(branchId));
         return ResponseEntity.ok(new RunResult(target, sent,
                 sent == 0
                     ? "Nothing was sent. Either every visit that day has already been "
