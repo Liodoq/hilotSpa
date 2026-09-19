@@ -33,6 +33,17 @@ services:
       # usually n8n, which reaches the client as "I am having trouble
       # answering right now".
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=30 -XX:+UseSerialGC"
+      # See application.properties. The poller made this matter.
+      SHOW_SQL: "false"
+    # Docker's default json-file driver NEVER rotates. A service that logs on a
+    # timer will fill the disk given enough weeks, and a full disk on this box
+    # means PostgreSQL cannot write - which is a far worse Monday than a
+    # truncated log.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   n8n:
     environment:
