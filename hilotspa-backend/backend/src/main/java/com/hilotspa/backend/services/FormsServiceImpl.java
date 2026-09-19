@@ -78,6 +78,21 @@ public class FormsServiceImpl implements FormsService {
     @Value("${hilotspa.node.id:local-dev}")
     private String nodeId;
 
+    @Value("${hilotspa.node.branch-id:}")
+    private String nodeBranchIdRaw;
+
+    /** The branch this node writes for, or null when it has not been told. */
+    private UUID thisNodeBranch() {
+        if (nodeBranchIdRaw == null || nodeBranchIdRaw.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(nodeBranchIdRaw.trim());
+        } catch (IllegalArgumentException e) {
+            return null;   // NodeController already says so, loudly, at startup
+        }
+    }
+
     @Override
     public FormsModel createForm(FormsModel model) {
         UUID actorId = CurrentUser.id()
@@ -104,7 +119,27 @@ public class FormsServiceImpl implements FormsService {
             // Customer: the form is theirs, whatever the body said. A client can
             // never record an assessment in someone else's name.
             ownerId = actorId;
-            branchId = model.getBranchId();
+            // ...and it belongs to the branch THIS NODE serves, whatever the
+            // body said about that either (B139).
+            //
+            // Until now the branch came from the request. A customer has no
+            // branch of their own, so the client picked one - and a client that
+            // picks is a client that can pick wrong. It did: a booking made on
+            // the Bulan site was filed against Daraga, because a frontend that
+            // predates task 3.31 falls back to the first branch the API returns
+            // and that list is unordered.
+            //
+            // The frontend fix was necessary and insufficient. Single-writer-
+            // per-partition is the property the whole architecture rests on, and
+            // it cannot depend on every client being current - a cached bundle,
+            // a stale tab or anyone with curl would break it. It is enforced
+            // here, at the writer, where it cannot be worked around.
+            //
+            // A node that declares no branch keeps the old behaviour: that is a
+            // single-node deployment, where the client's choice is the only
+            // one available and always was.
+            UUID here = thisNodeBranch();
+            branchId = here != null ? here : model.getBranchId();
             model.setWalkInName(null);
         }
 
