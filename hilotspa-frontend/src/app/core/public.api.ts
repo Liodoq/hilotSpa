@@ -20,6 +20,10 @@ export interface PublicService {
   durationMinutes: number;
   price: number;
   imageName: string | null;
+  /** The spa's own words, or null. The detail page has its own fallback -
+   *  nothing here is ever generated, because a description the system wrote
+   *  itself would be a clinical claim nobody authored. */
+  description: string | null;
 }
 
 /** A therapist as a stranger sees them: first name and sex, nothing else. */

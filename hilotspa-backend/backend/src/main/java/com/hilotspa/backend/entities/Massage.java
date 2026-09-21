@@ -67,6 +67,17 @@ public class Massage {
     private String imageName;
 
     /**
+     * What this treatment is, in the spa's own words (task 3.35).
+     *
+     * Null until somebody at the spa writes it. The detail page falls back to a
+     * generic sentence rather than showing an empty panel - and nothing here is
+     * ever generated, because a description the system wrote itself would be a
+     * clinical claim nobody authored.
+     */
+    @Column(length = 600)
+    private String description;
+
+    /**
      * The skill this treatment requires, or null if it needs no particular one.
      *
      * NULL MEANS ANYONE MAY PERFORM IT. Read the other way round - null meaning

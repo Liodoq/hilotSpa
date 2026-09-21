@@ -18,6 +18,9 @@ public class MassageModel {
      *  spa has not supplied one. Set from the A6 service menu screen. */
     private String imageName;
 
+    /** What the treatment is, in the spa's own words. Null until they write it. */
+    private String description;
+
     /**
      * Enum name of the skill this treatment requires, or null for "anyone".
      *

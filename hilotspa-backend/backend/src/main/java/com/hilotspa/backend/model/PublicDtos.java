@@ -26,7 +26,9 @@ public final class PublicDtos {
             /** Zero means the spa has not given us a price. The client is told
              *  that plainly rather than being quoted nothing. */
             BigDecimal price,
-            String imageName) {
+            String imageName,
+            /** The spa's own words, or null - the page has its own fallback. */
+            String description) {
     }
 
     /**

@@ -98,7 +98,7 @@ public class PublicController {
             }
             out.add(new PublicService(
                     m.getId(), m.getName(), m.getDurationMinute(),
-                    m.getPrice(), m.getImageName()));
+                    m.getPrice(), m.getImageName(), m.getDescription()));
         }
         out.sort((a, b) -> {
             int byName = a.name().compareToIgnoreCase(b.name());

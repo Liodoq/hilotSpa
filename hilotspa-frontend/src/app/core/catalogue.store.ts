@@ -160,6 +160,7 @@ function toEntry(s: PublicService): CatalogueEntry {
     rule: null,
     reason: null,
     imageName: s.imageName,
+    description: s.description,
   };
 }
 

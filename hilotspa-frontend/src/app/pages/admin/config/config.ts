@@ -114,13 +114,14 @@ export class AdminConfig implements OnInit {
 
   addService(): void {
     this.menuDrawer.set({ id: null, name: '', minutes: '60', price: '0', imageName: '',
-      requiredSpecialty: '' });
+      requiredSpecialty: '', description: '' });
   }
 
   editService(m: MassageDto): void {
     this.menuDrawer.set({ id: m.id, name: m.name,
       minutes: String(m.durationMinute), price: String(m.price ?? 0),
-      imageName: m.imageName ?? '', requiredSpecialty: m.requiredSpecialty ?? '' });
+      imageName: m.imageName ?? '', requiredSpecialty: m.requiredSpecialty ?? '',
+      description: m.description ?? '' });
   }
 
   patchMenu(part: Partial<MenuForm>): void {
@@ -142,6 +143,9 @@ export class AdminConfig implements OnInit {
         // Blank is meaningful here too: it clears the restriction, and the
         // server reads blank as "any therapist may perform this".
         requiredSpecialty: d.requiredSpecialty,
+        // Blank clears it, like the photo. Somebody has to be able to take back
+        // a sentence they regret without an administrator opening psql.
+        description: d.description.trim(),
       });
       this.menuDrawer.set(null);
       await this.load();
@@ -461,4 +465,7 @@ interface MenuForm {
    *  break. Blank means the spa has not supplied one, and the screens show a
    *  tinted block rather than a broken image. */
   imageName: string;
+  /** What the treatment IS, in the spa's own words. Blank clears it and the
+   *  detail page falls back to a generic sentence - never to an invented one. */
+  description: string;
 }

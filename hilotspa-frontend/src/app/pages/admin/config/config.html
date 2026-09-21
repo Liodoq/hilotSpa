@@ -488,6 +488,21 @@
         }
       </div>
       <div>
+        <label class="lab2" for="mdesc">ABOUT THIS TREATMENT</label>
+        <textarea id="mdesc" class="input" rows="4" maxlength="600"
+                  style="resize:vertical;line-height:1.5"
+                  placeholder="What it is, and who it suits. In the spa's own words."
+                  [value]="d.description"
+                  (input)="patchMenu({ description: val($event) })"></textarea>
+        <p class="help" style="margin-top:8px">
+          {{ 600 - d.description.length }} characters left. Shown on the treatment's own page.
+          <b>Leave it blank</b> and the page falls back to a general sentence — which is what
+          every treatment says today. Nothing here is ever written by the system: a sentence
+          about what a treatment DOES is a clinical claim, and it has to come from the spa.
+        </p>
+      </div>
+
+      <div>
         <label class="lab2" for="mi">PHOTO FILE</label>
         <input id="mi" class="input" [value]="d.imageName" placeholder="hilot.jpg"
                (input)="patchMenu({ imageName: val($event) })">

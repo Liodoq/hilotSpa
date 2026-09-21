@@ -18,10 +18,18 @@
         <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
           <div class="card">
             <h2 class="t-s" style="font-size:24px;margin-bottom:10px">About this treatment</h2>
-            <p style="font-size:20px;line-height:1.6;color:var(--color-ink-600)">
-              {{ s.name }} runs {{ s.durationMinutes }} minutes. Ask the booking assistant what it
-              would do for the areas you marked on your body map — it answers from this spa's own
-              treatment records, not from the internet.</p>
+            <!-- 3.35. The spa's own words when they have written them. The
+                 fallback is deliberately generic: a sentence invented here about
+                 what a treatment DOES would be a clinical claim nobody authored,
+                 which is the one thing this application must not produce. -->
+            @if (s.description) {
+              <p style="font-size:20px;line-height:1.6;color:var(--color-ink-600);white-space:pre-line">{{ s.description }}</p>
+            } @else {
+              <p style="font-size:20px;line-height:1.6;color:var(--color-ink-600)">
+                {{ s.name }} runs {{ s.durationMinutes }} minutes. Ask the booking assistant what it
+                would do for the areas you marked on your body map — it answers from this spa's own
+                treatment records, not from the internet.</p>
+            }
           </div>
 
           <div class="card">

@@ -103,6 +103,8 @@ export interface MassageDto {
   /** Photo filename in public/services/ — "hilot.jpg". A filename, never the
    *  id: ids are regenerated on every reseed and photos would break. */
   imageName?: string | null;
+  /** What the treatment is, in the spa's own words. Empty clears it. */
+  description?: string | null;
   /** Enum name of the skill this treatment needs, or null for "anyone may
    *  perform it". Null is the permissive reading: the other way round, adding
    *  this field would have emptied the calendar for every existing treatment. */
@@ -133,6 +135,7 @@ export interface CatalogueEntry {
   /** Photo filename in public/services/, or null when the spa has not supplied
    *  one. Never the service id — see Massage.imageName. */
   imageName?: string | null;
+  description?: string | null;
 }
 
 export interface AccountRow {

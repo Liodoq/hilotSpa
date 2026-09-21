@@ -324,7 +324,8 @@ public class AssistantServiceImpl implements AssistantService {
                     banned ? "CONTRAINDICATED" : (v.indicated().containsKey(m.getId())
                             ? "INDICATED" : "NEUTRAL"),
                     note == null ? "" : note,
-                    m.getImageName()));
+                    m.getImageName(),
+                    m.getDescription()));
         }
         return out;
     }

@@ -51,7 +51,9 @@ public final class AssistantDtos {
             String reason,
             /** Photo filename in public/services/, or null. Never the id - see
              *  Massage.imageName for why. */
-            String imageName) {
+            String imageName,
+            /** The spa's own words, or null - the page has its own fallback. */
+            String description) {
     }
 
     public record PainPointView(
