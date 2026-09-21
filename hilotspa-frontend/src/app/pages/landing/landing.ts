@@ -76,7 +76,8 @@ export class Landing implements OnInit {
     if (!h) { return ''; }
     const region = REGIONS.find(r => r.value === h.region)?.label ?? h.region;
     const side = sideLabel(h.side);
-    return side ? `${region} · ${side}` : region;
+    const base = side ? `${region} · ${side}` : region;
+    return h.where ? `${base} · ${h.where}` : base;
   });
 
   place(h: Hotspot): void { this.picked.set(h); }

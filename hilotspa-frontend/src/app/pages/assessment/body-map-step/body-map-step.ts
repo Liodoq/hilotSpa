@@ -6,7 +6,7 @@ import { AssessmentStore, PainPoint } from '../../../core/assessment.store';
 import { ToastService } from '../../../core/toast.service';
 import { AnatomicalRegion, REGIONS } from '../../../core/models';
 import { severityClass } from '../../../core/region.util';
-import { Hotspot, sideLabel } from '../../../core/body-hotspots';
+import { Hotspot, sideLabel, whereOf } from '../../../core/body-hotspots';
 
 /**
  * C4 — the headline feature.
@@ -76,7 +76,12 @@ export class BodyMapStep {
 
   fullLabel(p: PainPoint): string {
     const side = sideLabel(p.side);
-    return side ? `${this.label(p.region)} · ${side}` : this.label(p.region);
+    const base = side ? `${this.label(p.region)} · ${side}` : this.label(p.region);
+    // Looked up from the hotspot id rather than stored on the point: the
+    // wording is presentation, and a phrase copied into every saved record
+    // could never be corrected without rewriting history.
+    const where = whereOf(p.hotspotId);
+    return where ? `${base} · ${where}` : base;
   }
 
   back(): void { this.router.navigateByUrl('/assessment/intent'); }

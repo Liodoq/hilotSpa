@@ -39,10 +39,19 @@ export class BodyMap {
 
   isTaken(id: string): boolean { return this.points().some(p => p.hotspotId === id); }
 
+  /**
+   * "Knee · left · behind the knee".
+   *
+   * The third part is what makes the two figures usable. Region and side alone
+   * read identically for the kneecap and the hollow behind the knee, so a
+   * client looking at two dots in the same place on FRONT and BACK had nothing
+   * to choose on - and the practitioner reading it back had the same problem.
+   */
   labelFor(h: Hotspot): string {
     const region = REGIONS.find(r => r.value === h.region)?.label ?? h.region;
     const side = sideLabel(h.side);
-    return side ? `${region} · ${side}` : region;
+    const base = side ? `${region} · ${side}` : region;
+    return h.where ? `${base} · ${h.where}` : base;
   }
 
   /** Numbered across BOTH views so the list and the figures agree. */
