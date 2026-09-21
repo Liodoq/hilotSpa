@@ -410,10 +410,40 @@ public class ReminderServiceImpl implements ReminderService {
      * useful; the same words the other way round do not.
      */
     private String subject(Appointment a, NotificationKind kind) {
-        String when = kind == NotificationKind.REMINDER_HOUR_BEFORE
-                ? "Your visit in about an hour"
-                : "Your visit tomorrow";
-        return when + " - " + a.getService().getName();
+        return whenPhrase(a, kind, true) + " - " + a.getService().getName();
+    }
+
+    /**
+     * How to refer to WHEN the visit is, in words.
+     *
+     * The first reminder fires as soon as the visit is inside 24 hours, which is
+     * NOT the same as "tomorrow". A visit at 9 PM booked at 7 PM the same
+     * evening is two hours away and would have been told it was tomorrow - the
+     * exact inversion of the old bug, where a visit really was tomorrow and the
+     * email arrived thirty-seven hours early. Measuring from the appointment
+     * fixed the timing; the sentence has to follow the timing or the email is
+     * still lying, just in a new direction.
+     *
+     * Compared as calendar DATES in the spa's zone, not as a difference in
+     * hours: "tomorrow" is a day on a calendar, and 23 hours can land either
+     * side of midnight.
+     */
+    private String whenPhrase(Appointment a, NotificationKind kind, boolean forSubject) {
+        if (kind == NotificationKind.REMINDER_HOUR_BEFORE) {
+            return forSubject ? "Your visit in about an hour" : "in about an hour";
+        }
+        LocalDate today = LocalDate.now(ZoneId.of(timezone));
+        LocalDate visit = a.getStartTime().toLocalDate();
+        if (visit.equals(today)) {
+            return forSubject ? "Your visit later today" : "later today";
+        }
+        if (visit.equals(today.plusDays(1))) {
+            return forSubject ? "Your visit tomorrow" : "tomorrow";
+        }
+        // Belt and braces: the window is 24 hours, so this is only reachable if
+        // somebody widens lead-hours. Naming the day is right at any distance.
+        String day = a.getStartTime().format(DateTimeFormatter.ofPattern("EEEE", Locale.ENGLISH));
+        return forSubject ? "Your visit on " + day : "on " + day;
     }
 
     /**
@@ -437,9 +467,8 @@ public class ReminderServiceImpl implements ReminderService {
         String name = a.getCustomer() == null ? "there" : a.getCustomer().getFirstName();
         Branch branch = a.getBranch();
 
-        String opening = kind == NotificationKind.REMINDER_HOUR_BEFORE
-                ? "This is a reminder that your visit is in about an hour."
-                : "This is a reminder of your visit tomorrow.";
+        String opening = "This is a reminder of your visit "
+                + whenPhrase(a, kind, false) + ".";
 
         String arrive = kind == NotificationKind.REMINDER_HOUR_BEFORE
                 ? "Please make your way over now if you have not already - we hold the room "
