@@ -13,3 +13,24 @@
 
 @media (max-width: 1300px) { .cols { grid-template-columns: 1fr; } }
 @media (max-width: 700px)  { .search { max-width: none; width: 100%; } }
+
+/* 3.36 — the password block in the edit drawer. Set apart from the profile
+   fields above it on purpose: this is the one control here that changes what
+   somebody can do rather than what the record says about them. */
+.reset { border-top: 1.5px solid var(--color-line); padding-top: 18px; margin-top: 4px; }
+.reset .rt { margin: 0 0 6px; font-size: 13px; letter-spacing: .08em; color: var(--color-ink-600); }
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 12px; }
+.mode { display: flex; flex-direction: column; gap: 4px; text-align: left; cursor: pointer;
+        padding: 12px 14px; border-radius: 12px; background: #fff;
+        border: 1.5px solid var(--color-line); }
+.mode.on { border-color: var(--color-forest-700, #466231); background: var(--color-cream); }
+.mode .mh { font-weight: 600; font-size: 15px; }
+.mode .ms { font-size: 13px; color: var(--color-ink-600); line-height: 1.4; }
+.shown { margin-top: 14px; padding: 14px 16px; border-radius: 12px;
+         background: var(--color-cream); border: 1.5px solid var(--color-forest-700, #466231); }
+.shown .sl { margin: 0 0 6px; font-size: 12px; letter-spacing: .1em; color: var(--color-ink-600); }
+.shown .pw { margin: 0 0 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+             font-size: 26px; font-weight: 600; letter-spacing: .04em; word-break: break-all; }
+.help.ok { color: var(--color-forest-700, #466231); font-weight: 600; }
+
+@media (max-width: 560px) { .modes { grid-template-columns: 1fr; } }

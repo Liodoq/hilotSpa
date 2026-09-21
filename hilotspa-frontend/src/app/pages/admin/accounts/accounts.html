@@ -134,9 +134,60 @@
         </div>
       }
 
+      @if (d.id) {
+        <div class="reset">
+          <h3 class="rt">PASSWORD</h3>
+          <p class="help">They cannot tell you their password and neither can we — only a BCrypt
+            hash is stored. Give them a new way in instead.</p>
+
+          <div class="modes">
+            <button type="button" class="mode" [class.on]="resetMode() === 'TEMPORARY'"
+                    (click)="resetMode.set('TEMPORARY')">
+              <span class="mh">Set one now</span>
+              <span class="ms">For someone at the counter. Shown once, on this screen.</span>
+            </button>
+            <button type="button" class="mode" [class.on]="resetMode() === 'EMAIL'"
+                    (click)="resetMode.set('EMAIL')">
+              <span class="mh">Email them a link</span>
+              <span class="ms">For someone on the phone. You never see a password.</span>
+            </button>
+          </div>
+
+          @if (resetMode() === 'TEMPORARY') {
+            <label class="lab2" for="tp">TEMPORARY PASSWORD</label>
+            <input id="tp" class="input" type="text" autocomplete="off"
+                   placeholder="Leave blank and we will generate one"
+                   [value]="resetCustom()" (input)="resetCustom.set(val($event))">
+            <p class="help" style="margin-top:8px">At least 8 characters. A generated one avoids
+              the characters that sound alike when you read it out.</p>
+          } @else if (!d.email) {
+            <p class="err">This account has no email address, so there is nowhere to send a link.
+              Set a temporary password instead.</p>
+          }
+
+          <button type="button" class="btn btn-ghost" style="margin-top:14px"
+                  [disabled]="resetting() || (resetMode() === 'EMAIL' && !d.email)"
+                  (click)="resetPassword()">
+            {{ resetting() ? 'Working…'
+               : resetMode() === 'TEMPORARY' ? 'Set temporary password' : 'Send reset link' }}
+          </button>
+
+          @if (tempPassword(); as pw) {
+            <div class="shown">
+              <p class="sl">READ THIS TO THEM NOW</p>
+              <p class="pw">{{ pw }}</p>
+              <button type="button" class="link" (click)="copyTempPassword()">Copy</button>
+              <p class="help">{{ resetNote() }}</p>
+            </div>
+          } @else if (resetNote()) {
+            <p class="help ok" style="margin-top:12px">{{ resetNote() }}</p>
+          }
+        </div>
+      }
+
       <div class="note"><span class="b"></span>
-        <span>Creating an account or changing a role is written to the audit log with your name
-          against it.</span></div>
+        <span>Creating an account, changing a role or resetting a password is written to the audit
+          log with your name against it.</span></div>
     </div>
 
     <footer>

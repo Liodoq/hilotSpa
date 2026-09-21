@@ -45,6 +45,25 @@ export class AdminAccounts implements OnInit {
    */
   drawer = signal<AccountForm | null>(null);
 
+  /**
+   * 3.36 - the front desk helping somebody who is locked out.
+   *
+   * Two shapes of the same person walk in. One is standing at the counter with
+   * their phone at home, and needs a password read out to them now. The other
+   * is on the telephone, and should get the same link the public flow sends so
+   * that nobody at the spa ever handles their password.
+   *
+   * `tempPassword` holds a temporary password for exactly as long as the drawer is
+   * open. It is never written to a signal that outlives the drawer, never put
+   * in the row list, and never re-fetchable - the server keeps only a BCrypt
+   * hash. Closing the drawer is the same as losing it.
+   */
+  resetting = signal(false);
+  resetMode = signal<'TEMPORARY' | 'EMAIL'>('TEMPORARY');
+  resetCustom = signal('');
+  tempPassword = signal<string | null>(null);
+  resetNote = signal('');
+
   /** The server enforces all of this too; the form only saves a round trip. */
   canSave = computed(() => {
     const d = this.drawer();
@@ -97,11 +116,13 @@ export class AdminAccounts implements OnInit {
   // --------------------------------------------------------------- drawer
 
   add(): void {
+    this.clearReset();
     this.drawer.set({ id: null, firstName: '', lastName: '', email: '',
       role: 'STAFF', branchId: null, password: '' });
   }
 
   edit(a: AccountRow): void {
+    this.clearReset();
     this.drawer.set({ id: a.id, firstName: a.firstName ?? '', lastName: a.lastName ?? '',
       email: a.email ?? '', role: a.role, branchId: a.branchId, password: '' });
   }
@@ -117,7 +138,64 @@ export class AdminAccounts implements OnInit {
     });
   }
 
-  close(): void { this.drawer.set(null); }
+  close(): void { this.clearReset(); this.drawer.set(null); }
+
+  /** Nothing about a reset survives the drawer. */
+  private clearReset(): void {
+    this.resetting.set(false);
+    this.resetMode.set('TEMPORARY');
+    this.resetCustom.set('');
+    this.tempPassword.set(null);
+    this.resetNote.set('');
+  }
+
+  /**
+   * Do the reset.
+   *
+   * Note what is NOT here: a confirmation dialog. The action is recoverable -
+   * doing it twice just makes a second temporary password - and a dialog in
+   * front of the front desk while a client waits is friction spent on nothing.
+   * What IS here is the audit line the server writes, which is the thing that
+   * actually answers "who changed this account".
+   */
+  async resetPassword(): Promise<void> {
+    const d = this.drawer();
+    if (!d?.id || this.resetting()) return;
+    const mode = this.resetMode();
+    const custom = this.resetCustom().trim();
+    if (mode === 'TEMPORARY' && custom.length > 0 && custom.length < 8) {
+      this.toast.show('A temporary password must be at least 8 characters.', 3200);
+      return;
+    }
+    this.resetting.set(true);
+    this.tempPassword.set(null);
+    this.resetNote.set('');
+    try {
+      const res = await this.api.resetAccountPassword(d.id, {
+        mode,
+        temporaryPassword: mode === 'TEMPORARY' && custom ? custom : undefined,
+      });
+      this.tempPassword.set(res.temporaryPassword);
+      this.resetNote.set(res.message);
+      this.resetCustom.set('');
+      if (mode === 'EMAIL') this.toast.show(res.message, 4200);
+    } catch (e: unknown) {
+      this.toast.show(describeHttpError(e, 'That reset did not go through. Nothing was changed.'), 4200);
+    } finally {
+      this.resetting.set(false);
+    }
+  }
+
+  async copyTempPassword(): Promise<void> {
+    const pw = this.tempPassword();
+    if (!pw) return;
+    try {
+      await navigator.clipboard.writeText(pw);
+      this.toast.show('Copied. It is still only in this window — it is not stored anywhere.');
+    } catch {
+      this.toast.show('Your browser would not let us copy. Read it from the screen.', 3200);
+    }
+  }
 
   async save(): Promise<void> {
     const d = this.drawer();

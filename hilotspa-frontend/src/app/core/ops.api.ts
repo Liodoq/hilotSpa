@@ -138,6 +138,13 @@ export interface CatalogueEntry {
   description?: string | null;
 }
 
+export interface AdminResetResult {
+  mode: 'TEMPORARY' | 'EMAIL';
+  /** Present only for TEMPORARY, and only in this one response. */
+  temporaryPassword: string | null;
+  message: string;
+}
+
 export interface AccountRow {
   id: string; firstName: string; lastName: string; middleName: string | null;
   email: string; contact: string | null; address: string | null;
@@ -274,6 +281,20 @@ export class OpsApi {
 
   saveAccount(id: string, body: Partial<AccountRow>): Promise<AccountRow> {
     return firstValueFrom(this.http.put<AccountRow>(`${API_BASE}/users/${id}`, body));
+  }
+
+  /**
+   * Reset somebody else's password (3.36, ADMIN only).
+   *
+   * TEMPORARY comes back carrying the password ONCE, in the response and
+   * nowhere else - the server stores only a BCrypt hash, so there is no second
+   * chance to read it and no endpoint that could show it again. EMAIL returns
+   * no password at all; the link goes to the account holder.
+   */
+  resetAccountPassword(id: string, body: { mode: 'TEMPORARY' | 'EMAIL'; temporaryPassword?: string })
+      : Promise<AdminResetResult> {
+    return firstValueFrom(
+      this.http.post<AdminResetResult>(`${API_BASE}/users/${id}/password-reset`, body));
   }
 
   createAccount(body: Partial<AccountRow> & { password: string }): Promise<AccountRow> {

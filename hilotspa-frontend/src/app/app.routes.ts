@@ -21,6 +21,12 @@ export const routes: Routes = [
   /* ---- public ---- */
   { path: 'login',    loadComponent: () => import('./pages/login/login').then(m => m.Login) },
   { path: 'register', loadComponent: () => import('./pages/register/register').then(m => m.Register) },
+  // Forgotten passwords (3.36). Public by necessity - the person cannot sign in,
+  // that is the whole problem. Neither page reveals whether an account exists.
+  { path: 'forgot-password',
+    loadComponent: () => import('./pages/forgot-password/forgot-password').then(m => m.ForgotPassword) },
+  { path: 'reset-password',
+    loadComponent: () => import('./pages/reset-password/reset-password').then(m => m.ResetPassword) },
 
   /* ---- customer ---- */
   { path: 'home',     canActivate: [authGuard], loadComponent: () => import('./pages/home/home').then(m => m.Home) },

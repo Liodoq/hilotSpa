@@ -42,6 +42,33 @@ export class AuthService {
     this.accept(res);
   }
 
+  /**
+   * "I forgot my password." Never touches the session - the caller is by
+   * definition not signed in, and a reply that changed anything locally would
+   * be a reply that told them whether the address exists.
+   *
+   * The server returns one fixed sentence whatever it finds, so this returns
+   * that sentence rather than a boolean. There is nothing here to branch on.
+   */
+  async forgotPassword(email: string): Promise<string> {
+    const res = await firstValueFrom(
+      this.http.post<{ message: string }>(`${API_BASE}/auth/forgot-password`, { email }));
+    return res.message;
+  }
+
+  /**
+   * Spend the token from the email.
+   *
+   * Deliberately does NOT sign them in afterwards. Somebody who has just been
+   * handed a link out of an inbox should prove the new password works by using
+   * it - and if the link was opened by the wrong person on a shared phone, an
+   * automatic session would hand them the account.
+   */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    await firstValueFrom(
+      this.http.post<void>(`${API_BASE}/auth/reset-password`, { token, newPassword }));
+  }
+
   logout(): void {
     localStorage.removeItem(STORAGE_KEY);
     this.session.set(null);
