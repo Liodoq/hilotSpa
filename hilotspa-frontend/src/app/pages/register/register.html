@@ -96,7 +96,7 @@
   <aside class="photo">
     <app-logo [size]="150" class="badge" />
     <div class="bottom">
-      <p class="kicker">KNEAD WELLNESS SPA &middot; BULAN, SORSOGON</p>
+      <p class="kicker">KNEAD WELLNESS SPA@if (site.label(); as where) { &middot; {{ where }}}</p>
       <p class="quote">Traditional hilot,<br>guided by your own body map.</p>
     </div>
   </aside>

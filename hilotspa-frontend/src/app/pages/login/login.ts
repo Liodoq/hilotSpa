@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { Logo } from '../../shared/logo/logo';
 import { describeHttpError } from '../../core/http-error';
+import { NodeStore } from '../../core/node.store';
 import { homeFor, isClientPath, isConsoleRole } from '../../core/role-home';
 
 @Component({
@@ -12,6 +13,18 @@ import { homeFor, isClientPath, isConsoleRole } from '../../core/role-home';
   styleUrl: './login.scss',
 })
 export class Login {
+  /**
+   * 3.31 - which branch this node serves.
+   *
+   * The kicker beside the photograph was the words "BULAN, SORSOGON", typed in.
+   * On the Bulan node that was indistinguishable from the truth, which is
+   * exactly why it survived: the one screen anybody checked could not reveal
+   * the fault. On Daraga it simply said the wrong place.
+   */
+  protected site = inject(NodeStore);
+
+  constructor() { this.site.ensure(); }
+
   private auth = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
