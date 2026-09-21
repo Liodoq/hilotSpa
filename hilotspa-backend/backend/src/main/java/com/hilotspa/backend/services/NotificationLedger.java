@@ -48,10 +48,11 @@ public class NotificationLedger {
      * do nothing rather than send a second email.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public NotificationLog claim(Appointment a, NotificationLog prior, String recipient) {
+    public NotificationLog claim(Appointment a, NotificationKind kind,
+                                 NotificationLog prior, String recipient) {
         NotificationLog row = prior != null ? prior : new NotificationLog();
         row.setAppointment(a);
-        row.setKind(NotificationKind.REMINDER_DAY_BEFORE);
+        row.setKind(kind);
         row.setChannel(NotificationChannel.EMAIL);
         row.setStatus(NotificationStatus.SENDING);
         row.setRecipient(recipient);

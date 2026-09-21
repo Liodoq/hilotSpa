@@ -268,7 +268,7 @@ export class OpsApi {
       : firstValueFrom(this.http.post<MassageDto>(`${API_BASE}/massages/create`, body));
   }
 
-  saveBranch(id: string | null, body: { name: string; address: string }): Promise<Branch> {
+  saveBranch(id: string | null, body: { name: string; address: string; contactNumber?: string }): Promise<Branch> {
     return id
       ? firstValueFrom(this.http.put<Branch>(`${API_BASE}/branches/${id}`, body))
       : firstValueFrom(this.http.post<Branch>(`${API_BASE}/branches/create`, body));

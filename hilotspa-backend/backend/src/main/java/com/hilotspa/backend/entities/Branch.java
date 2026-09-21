@@ -37,6 +37,18 @@ public class Branch {
     @Column(nullable = false)
     private String address;
 
+    /**
+     * The number a client rings to reach THIS branch (3.37).
+     *
+     * Deliberately on the branch rather than in the environment. SPA_PHONE is
+     * one value per node, and a node holds every branch's data - so a reminder
+     * about a Daraga visit sent from any node would print whichever number that
+     * machine was configured with. Null means nobody has entered one, and every
+     * reader must omit the line rather than print an empty label.
+     */
+    @Column(name = "contact_number", length = 40)
+    private String contactNumber;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -26,6 +26,11 @@ public class BranchServiceImpl implements BranchService {
         Branch branch = new Branch();
         branch.setName(model.getName());
         branch.setAddress(model.getAddress());
+        // Blank clears it. "No number on file" and "an empty string" must be the
+        // same thing, or the email prints a label with nothing after it.
+        branch.setContactNumber(model.getContactNumber() == null
+                || model.getContactNumber().isBlank()
+                ? null : model.getContactNumber().trim());
         
         return branchTransform.transform(branchRepository.save(branch));
     }
@@ -51,6 +56,11 @@ public class BranchServiceImpl implements BranchService {
         
         branch.setName(model.getName());
         branch.setAddress(model.getAddress());
+        // Blank clears it. "No number on file" and "an empty string" must be the
+        // same thing, or the email prints a label with nothing after it.
+        branch.setContactNumber(model.getContactNumber() == null
+                || model.getContactNumber().isBlank()
+                ? null : model.getContactNumber().trim());
         
         return branchTransform.transform(branchRepository.save(branch));
     }

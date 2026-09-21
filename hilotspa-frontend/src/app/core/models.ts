@@ -30,7 +30,14 @@ export interface RegisterRequest {
 
 export interface LoginRequest { email: string; password: string; }
 
-export interface Branch { id: string; name?: string; branchName?: string; address?: string; }
+export interface Branch {
+  id: string;
+  name?: string;
+  branchName?: string;
+  address?: string;
+  /** The number a client rings to reach THIS branch (3.37). Null until set. */
+  contactNumber?: string | null;
+}
 
 /* --- the 24 conditions + Others, verbatim from Appendix A --- */
 export type ComplaintType =

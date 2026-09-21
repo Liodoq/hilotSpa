@@ -11,6 +11,7 @@ public class BranchModel {
     private UUID id;
     private String name;
     private String address;
+    private String contactNumber;
     
     @CreationTimestamp
     private LocalDateTime createdAt;

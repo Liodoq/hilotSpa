@@ -2,19 +2,23 @@ package com.hilotspa.backend.services;
 
 import java.time.LocalDate;
 
-/** The day-before reminder (adviser's revision). */
+import com.hilotspa.backend.entities.NotificationKind;
+
+/** The two reminders: roughly a day before a visit, and roughly an hour before. */
 public interface ReminderService {
 
     /**
-     * Send the reminder for every live visit on {@code visitDay}.
+     * Send the day-before reminder for every live visit on {@code visitDay}.
      *
-     * Separated from the schedule so it can be called for a named day - which
-     * is what makes this demonstrable in front of a panel without waiting until
-     * 9 AM tomorrow, and testable without a clock.
+     * Kept after 3.38 made the reminders time-driven, because it answers a
+     * different question: the sweep asks "which visits are due a reminder
+     * now?", and this asks "send Thursday's, now, because I say so". That is
+     * what makes the feature demonstrable in front of a panel without waiting
+     * for a clock, and it is what the administrator's Send button calls.
      *
      * @param branchIds the branches to remind for. Null or empty means every
-     *                  branch this node holds - which is what the nightly run
-     *                  passes, and what only an administrator may ask for.
+     *                  branch this node holds - which only an administrator may
+     *                  ask for.
      * @return how many were sent on this call. Already-sent visits count zero.
      */
     int remindFor(LocalDate visitDay, java.util.Collection<java.util.UUID> branchIds);
@@ -35,4 +39,12 @@ public interface ReminderService {
      * @return true when the mail server accepted it.
      */
     boolean remindOne(java.util.UUID appointmentId, String by);
+
+    /**
+     * The time-driven sweep (3.38). Sends whatever is due right now.
+     *
+     * @param kind which of the two reminders to consider.
+     * @return how many were sent on this call.
+     */
+    int sweep(NotificationKind kind);
 }

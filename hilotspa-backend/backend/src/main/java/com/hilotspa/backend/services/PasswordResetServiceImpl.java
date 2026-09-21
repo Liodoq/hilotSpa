@@ -95,6 +95,21 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
     private final SecureRandom rng = new SecureRandom();
 
+    /**
+     * Say out loud, once, where reset links will point.
+     *
+     * Because getting it wrong is silent. FRONTEND_ORIGIN is a comma-separated
+     * LIST - it has to be, so a node can answer on an old and a new hostname
+     * while a rename settles - and taking the first entry means a node that
+     * still lists a retired name sends every client to it. Nothing fails; the
+     * link simply opens somewhere that cannot redeem the token. One line at
+     * startup turns that into something a person can notice.
+     */
+    @jakarta.annotation.PostConstruct
+    void announceLinkBase() {
+        LOG.info("Password reset links will point at {}", resetLink("<token>"));
+    }
+
     // --------------------------------------------------------------- public
 
     /**

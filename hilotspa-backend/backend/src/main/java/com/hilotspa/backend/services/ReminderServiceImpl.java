@@ -97,43 +97,136 @@ public class ReminderServiceImpl implements ReminderService {
     @Value("${hilotspa.node.id:local-dev}")           private String nodeId;
     @Value("${hilotspa.node.branch-id:}")              private String nodeBranchId;
     @Value("${hilotspa.reminders.max-attempts:3}")    private int maxAttempts;
+    @Value("${hilotspa.reminders.enabled:true}")      private boolean enabled;
+    @Value("${hilotspa.reminders.lead-hours:24}")     private int leadHours;
+    @Value("${hilotspa.reminders.final-lead-minutes:60}") private int finalLeadMinutes;
     @Value("${spring.mail.host:}")                    private String mailHost;
     @Value("${hilotspa.reminders.from:}")             private String mailFrom;
     @Value("${hilotspa.reminders.reply-to:}")         private String replyTo;
 
     /**
-     * Runs once a day, in the SPA's timezone rather than the server's.
+     * The sweep (3.38). Every few minutes, send whatever has become due.
      *
-     * The zone is stated explicitly because this is the one place where getting
-     * it wrong is invisible: a container running UTC would fire this at 5 PM
-     * Manila time and the reminders would still go out, just in the evening,
-     * and nothing would ever report a fault.
+     * The adviser asked for reminders driven by the appointment, not by the
+     * clock, and the difference is not pedantic. The old job ran at 9 AM and
+     * told everybody booked the following day that their visit was "tomorrow".
+     * For a 10 PM booking that email arrived THIRTY-SEVEN hours early, and for
+     * anything booked after 9 AM for the next morning it never arrived at all.
+     * Measuring from each visit's own start time fixes both, and it is the only
+     * reading of "one hour before" that means anything.
+     *
+     * Why a fixed DELAY and not a cron: this is the whole job, so two runs must
+     * never overlap. fixedDelay counts from the END of the previous run, so a
+     * slow mail server postpones the next sweep instead of stacking on top of
+     * it. The claim row would stop a double send either way; not needing it to
+     * is better.
+     *
+     * The granularity of the reminder is the sweep interval. At five minutes an
+     * "hour before" email lands between 55 and 60 minutes ahead, which is what
+     * "about an hour" means to a person and is why the copy says "about".
      */
-    @Scheduled(cron = "${hilotspa.reminders.cron:0 0 9 * * *}",
-               zone = "${hilotspa.booking.timezone:Asia/Manila}")
-    public void nightlyRun() {
-        LocalDate tomorrow = LocalDate.now(ZoneId.of(timezone)).plusDays(1);
+    @Scheduled(fixedDelayString = "${hilotspa.reminders.sweep-ms:300000}",
+               initialDelayString = "${hilotspa.reminders.sweep-initial-ms:60000}")
+    public void sweepRun() {
+        if (!enabled) {
+            return;
+        }
         try {
-            // Scoped to the branch this NODE owns, not to every branch it holds
-            // - and those are different things the moment a second node exists.
-            //
-            // A replica holds a full copy of the business, so an unscoped run on
-            // node 2 would mail every Bulan client a reminder node 1 had already
-            // sent. The ledger that prevents a double send is notification_log,
-            // which is deliberately NOT replicated: what this node has emailed
-            // is a local fact, so node 2 cannot learn that node 1 already went.
-            //
-            // Null when the node declares no branch - a single-node deployment,
-            // where "every branch it holds" is the right answer and always was.
-            Collection<UUID> scope = ownBranch();
-            int sent = remindFor(tomorrow, scope);
-            LOG.info("Day-before reminders for {} ({}): {} sent", tomorrow,
-                     scope == null ? "every branch" : "own branch only", sent);
+            int day = sweep(NotificationKind.REMINDER_DAY_BEFORE);
+            int hour = sweep(NotificationKind.REMINDER_HOUR_BEFORE);
+            if (day > 0 || hour > 0) {
+                // Silent when there is nothing to do. A line every five minutes
+                // saying "0 sent" is a log nobody reads, which is a log that
+                // hides the line that matters.
+                LOG.info("Reminder sweep: {} day-before, {} hour-before", day, hour);
+            }
         } catch (Exception e) {
-            // A scheduled method that throws is silently not rescheduled in some
-            // configurations, and a reminder job that stops running is worse
-            // than one that fails loudly once.
-            LOG.error("Day-before reminder run for {} failed outright", tomorrow, e);
+            // A scheduled method that throws is silently not rescheduled in
+            // some configurations, and a reminder job that stops running is
+            // worse than one that fails loudly once.
+            LOG.error("Reminder sweep failed outright", e);
+        }
+    }
+
+    /**
+     * Everything of one kind that is due right now.
+     *
+     * "Due" is: the visit has not started, it is within this kind's lead time,
+     * and this node owns its branch. The lead times are half-open windows from
+     * now, so a visit cannot be due for a kind twice - and the unique
+     * constraint on (appointment, kind) is the backstop if it somehow is.
+     */
+    @Override
+    public int sweep(NotificationKind kind) {
+        LocalDateTime now = LocalDateTime.now(ZoneId.of(timezone));
+        LocalDateTime until = kind == NotificationKind.REMINDER_HOUR_BEFORE
+                ? now.plusMinutes(finalLeadMinutes)
+                : now.plusHours(leadHours);
+
+        Collection<UUID> own = ownBranch();
+        List<UUID> scope = (own == null || own.isEmpty())
+                ? branchRepository.findAll().stream().map(Branch::getId).toList()
+                : List.copyOf(own);
+
+        List<Appointment> due = scope.stream()
+                .flatMap(b -> appointmentRepository
+                        .findByBranchIdAndStartTimeBetween(b, now, until).stream())
+                .filter(a -> LIVE.contains(a.getStatus()))
+                // A visit already under way needs no reminder, and one that has
+                // been and gone needs one even less.
+                .filter(a -> a.getStartTime().isAfter(now))
+                .toList();
+
+        if (due.isEmpty()) {
+            return 0;
+        }
+
+        Map<UUID, NotificationLog> already = new HashMap<>();
+        notificationLogRepository
+                .findByKindAndAppointmentIdIn(kind,
+                        due.stream().map(Appointment::getId).toList())
+                .forEach(r -> already.put(r.getAppointment().getId(), r));
+
+        int sent = 0;
+        for (Appointment a : due) {
+            NotificationLog prior = already.get(a.getId());
+            if (prior != null && !retryable(prior)) {
+                continue;
+            }
+            // A visit booked an hour before it happens is inside BOTH windows on
+            // the very first sweep. Sending both would be two emails a minute
+            // apart saying different things about the same appointment. The
+            // day-before one is the one that has been overtaken, so it is
+            // recorded as skipped - a row, not a silence, because "did you send
+            // me a reminder?" is exactly the question this log exists to answer.
+            if (kind == NotificationKind.REMINDER_DAY_BEFORE
+                    && !a.getStartTime().isAfter(now.plusMinutes(finalLeadMinutes))) {
+                skip(a, kind, prior, "Booked less than " + finalLeadMinutes + " minutes before the "
+                        + "visit, so the day-before reminder was already overtaken. The "
+                        + "hour-before one covers it.");
+                continue;
+            }
+            if (sendOne(a, kind, prior, null)) {
+                sent++;
+            }
+        }
+        return sent;
+    }
+
+    /**
+     * Record a reminder we deliberately did not send, and why.
+     *
+     * `prior` is passed through rather than always inserting: a FAILED row that
+     * has since been overtaken must be UPDATED to SKIPPED, not duplicated. A
+     * fresh insert would collide with the unique constraint, be swallowed here,
+     * and leave a FAILED row that the next sweep would try again forever.
+     */
+    private void skip(Appointment a, NotificationKind kind, NotificationLog prior, String why) {
+        try {
+            NotificationLog row = ledger.claim(a, kind, prior, recipientOf(a));
+            ledger.finish(row, NotificationStatus.SKIPPED, why);
+        } catch (DataIntegrityViolationException e) {
+            LOG.debug("Skip row for {} {} already exists", a.getId(), kind);
         }
     }
 
@@ -193,7 +286,7 @@ public class ReminderServiceImpl implements ReminderService {
             if (prior != null && !retryable(prior)) {
                 continue;
             }
-            if (sendOne(a, prior, null)) {
+            if (sendOne(a, NotificationKind.REMINDER_DAY_BEFORE, prior, null)) {
                 sent++;
             }
         }
@@ -236,19 +329,20 @@ public class ReminderServiceImpl implements ReminderService {
                 ? "Re-sent by hand by " + (by == null ? "the front desk" : by) + "."
                 : null;
 
-        return sendOne(a, prior, note);
+        return sendOne(a, NotificationKind.REMINDER_DAY_BEFORE, prior, note);
     }
 
     /**
      * @param note set when a human asked for this, which also FORCES the send
      *             past a prior SENT row. Null for the automatic job.
      */
-    private boolean sendOne(Appointment a, NotificationLog prior, String note) {
+    private boolean sendOne(Appointment a, NotificationKind kind,
+                            NotificationLog prior, String note) {
         String to = recipientOf(a);
 
         NotificationLog row;
         try {
-            row = ledger.claim(a, prior, to);
+            row = ledger.claim(a, kind, prior, to);
         } catch (DataIntegrityViolationException e) {
             // Another run got here first. Not an error - this is the lock doing
             // exactly what it exists to do.
@@ -287,8 +381,8 @@ public class ReminderServiceImpl implements ReminderService {
             if (replyTo != null && !replyTo.isBlank()) {
                 mail.setReplyTo(replyTo);
             }
-            mail.setSubject("Your visit tomorrow - " + a.getService().getName());
-            mail.setText(body(a));
+            mail.setSubject(subject(a, kind));
+            mail.setText(body(a, kind));
             sender.send(mail);
             ledger.finish(row, NotificationStatus.SENT, note);
             return true;
@@ -309,27 +403,93 @@ public class ReminderServiceImpl implements ReminderService {
     }
 
     /**
+     * The subject line, which on a phone is often the whole message.
+     *
+     * The timing goes FIRST because a lock screen shows about forty characters.
+     * "Your visit tomorrow - Hilotin Signature Massage" truncates to something
+     * useful; the same words the other way round do not.
+     */
+    private String subject(Appointment a, NotificationKind kind) {
+        String when = kind == NotificationKind.REMINDER_HOUR_BEFORE
+                ? "Your visit in about an hour"
+                : "Your visit tomorrow";
+        return when + " - " + a.getService().getName();
+    }
+
+    /**
      * Plain text, not HTML.
      *
      * It has to be readable on a cheap phone with images off, and the only
      * thing it needs to carry is when, where and with whom. An email that
      * arrives as a broken layout is worse than one that arrives as a sentence.
+     *
+     * EVERY place name and number here comes from the appointment's own branch.
+     * This method used to end with the words "Knead Wellness Spa / Bulan,
+     * Sorsogon" typed into the Java, which meant a Daraga client was told to
+     * ring Bulan - and, exactly like B139 and the login kicker before it, it was
+     * invisible on the one node where anybody was reading the emails, because
+     * on Bulan the hardcoded words and the true ones are the same words. That
+     * is now the fourth time this shape of fault has appeared in this codebase.
+     * The rule it keeps teaching: if a value differs per branch, it is never a
+     * literal, however obviously correct it looks on the node in front of you.
      */
-    private String body(Appointment a) {
+    private String body(Appointment a, NotificationKind kind) {
         String name = a.getCustomer() == null ? "there" : a.getCustomer().getFirstName();
-        return "Hello " + name + ",\n\n"
-             + "This is a reminder of your visit tomorrow at Knead Wellness Spa.\n\n"
-             + "  " + a.getService().getName() + "\n"
-             + "  " + a.getStartTime().format(WHEN) + "\n"
-             + "  " + a.getTherapist().getFirstName() + " " + a.getTherapist().getLastName()
-             + ", " + a.getRoom().getName() + "\n"
-             + "  " + a.getBranch().getName() + "\n\n"
-             + "Please arrive about 10 minutes early. There is nothing to pay online - "
-             + "you settle at the counter.\n\n"
-             + "If you can no longer come, please cancel from Your visits on the website, "
-             + "or call the branch. Cancelling online closes an hour before the visit.\n\n"
-             + "Knead Wellness Spa\n"
-             + "Bulan, Sorsogon\n";
+        Branch branch = a.getBranch();
+
+        String opening = kind == NotificationKind.REMINDER_HOUR_BEFORE
+                ? "This is a reminder that your visit is in about an hour."
+                : "This is a reminder of your visit tomorrow.";
+
+        String arrive = kind == NotificationKind.REMINDER_HOUR_BEFORE
+                ? "Please make your way over now if you have not already - we hold the room "
+                  + "for your booked time.\n\n"
+                : "Please arrive about 10 minutes early. There is nothing to pay online - "
+                  + "you settle at the counter.\n\n";
+
+        StringBuilder out = new StringBuilder();
+        out.append("Hello ").append(name).append(",\n\n")
+           .append(opening).append("\n\n")
+           .append("  ").append(a.getService().getName()).append("\n")
+           .append("  ").append(a.getStartTime().format(WHEN)).append("\n")
+           .append("  ").append(a.getTherapist().getFirstName()).append(" ")
+           .append(a.getTherapist().getLastName())
+           .append(", ").append(a.getRoom().getName()).append("\n");
+
+        if (branch != null) {
+            out.append("  ").append(branch.getName()).append("\n");
+            if (branch.getAddress() != null && !branch.getAddress().isBlank()) {
+                out.append("  ").append(branch.getAddress().trim()).append("\n");
+            }
+            if (branch.getContactNumber() != null && !branch.getContactNumber().isBlank()) {
+                out.append("  ").append(branch.getContactNumber().trim()).append("\n");
+            }
+        }
+
+        out.append("\n").append(arrive);
+
+        // The cancellation sentence changes with the reminder, because by the
+        // time the second one goes out the online cancellation has already
+        // closed. Telling somebody to cancel from a page whose button is
+        // greyed out is worse than telling them nothing.
+        if (kind == NotificationKind.REMINDER_HOUR_BEFORE) {
+            out.append("If something has come up, please ring the branch")
+               .append(hasNumber(branch) ? " on the number above" : "")
+               .append(" - online cancellation has closed for this visit.\n\n");
+        } else {
+            out.append("If you can no longer come, please cancel from Your visits on the "
+                    + "website, or ring the branch. Cancelling online closes an hour "
+                    + "before the visit.\n\n");
+        }
+
+        out.append(branch == null ? "Knead Wellness Spa" : branch.getName()).append("\n");
+        if (branch != null && branch.getAddress() != null && !branch.getAddress().isBlank()) {
+            out.append(branch.getAddress().trim()).append("\n");
+        }
+        return out.toString();
     }
 
+    private static boolean hasNumber(Branch b) {
+        return b != null && b.getContactNumber() != null && !b.getContactNumber().isBlank();
+    }
 }

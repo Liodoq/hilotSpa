@@ -141,6 +141,14 @@
         <label class="lab2" for="ba">ADDRESS <span class="req">*</span></label>
         <input id="ba" class="input" [value]="d.address" (input)="patch({ address: val($event) })">
       </div>
+      <div>
+        <label class="lab2" for="bp">CONTACT NUMBER</label>
+        <input id="bp" class="input" type="tel" autocomplete="off" placeholder="e.g. 0917 000 0000"
+               [value]="d.contactNumber" (input)="patch({ contactNumber: val($event) })">
+        <p class="help" style="margin-top:8px">Printed in this branch's reminder emails so a client
+          can ring the right place to cancel. Leave it blank and the line is left out entirely —
+          better than an email with an empty label on it.</p>
+      </div>
       <div class="note warm"><span class="b"></span>
         <span>A new branch starts with no therapists and no rooms, so it can take no bookings until both
           exist. Add them from that branch's own resources screen.</span></div>

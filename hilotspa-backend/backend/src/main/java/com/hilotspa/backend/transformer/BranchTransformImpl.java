@@ -15,6 +15,7 @@ public class BranchTransformImpl implements BranchTransform {
         branchModel.setId(branchEntity.getId());
         branchModel.setName(branchEntity.getName());
         branchModel.setAddress(branchEntity.getAddress());
+        branchModel.setContactNumber(branchEntity.getContactNumber());
         branchModel.setCreatedAt(branchEntity.getCreatedAt());
         return branchModel;
     }
@@ -27,6 +28,7 @@ public class BranchTransformImpl implements BranchTransform {
         branchEntity.setId(branchModel.getId());
         branchEntity.setName(branchModel.getName());
         branchEntity.setAddress(branchModel.getAddress());
+        branchEntity.setContactNumber(branchModel.getContactNumber());
         
         // Logical Transform: Handle metadata for Sprint 1
         if (branchModel.getCreatedAt() == null) {

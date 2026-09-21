@@ -43,7 +43,7 @@ export class AdminBranches implements OnInit {
   error = signal<string | null>(null);
 
   /** Add / edit a branch. Null when the drawer is closed. */
-  drawer = signal<{ id: string | null; name: string; address: string } | null>(null);
+  drawer = signal<{ id: string | null; name: string; address: string; contactNumber: string } | null>(null);
   saving = signal(false);
 
   current = computed<NodeCard | null>(() =>
@@ -113,14 +113,15 @@ export class AdminBranches implements OnInit {
 
   // ------------------------------------------------------------- the drawer
 
-  addBranch(): void { this.drawer.set({ id: null, name: 'Knead Wellness Spa - ', address: '' }); }
+  addBranch(): void { this.drawer.set({ id: null, name: 'Knead Wellness Spa - ', address: '', contactNumber: '' }); }
 
   editBranch(n: NodeCard): void {
     const b = this.branches().find(x => x.id === n.branchId);
-    this.drawer.set({ id: n.branchId, name: b?.name ?? n.branchName, address: b?.address ?? '' });
+    this.drawer.set({ id: n.branchId, name: b?.name ?? n.branchName, address: b?.address ?? '',
+      contactNumber: b?.contactNumber ?? '' });
   }
 
-  patch(part: Partial<{ name: string; address: string }>): void {
+  patch(part: Partial<{ name: string; address: string; contactNumber: string }>): void {
     this.drawer.update(d => d ? { ...d, ...part } : d);
   }
 
@@ -133,7 +134,8 @@ export class AdminBranches implements OnInit {
     if (!d || !this.canSave() || this.saving()) return;
     this.saving.set(true);
     try {
-      await this.ops.saveBranch(d.id, { name: d.name.trim(), address: d.address.trim() });
+      await this.ops.saveBranch(d.id, { name: d.name.trim(), address: d.address.trim(),
+        contactNumber: d.contactNumber.trim() });
       this.drawer.set(null);
       await this.load();
       this.toast.show(d.id
