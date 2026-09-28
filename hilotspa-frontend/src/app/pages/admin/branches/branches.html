@@ -48,9 +48,21 @@
                  process actually serves, and say plainly that the others are
                  not running yet, which is Sprint 3 and already stated at the
                  bottom of this screen. -->
+            <!-- Sprint 3 made the @else above false. It was written when one
+                 backend served every branch, so "no node running here yet" was
+                 the truth and the only other case. There are now two nodes, and
+                 this screen was still telling an administrator standing on
+                 Daraga that Bulan had nothing running - on the one screen whose
+                 job is to show that the branches ARE separate nodes.
+                 NodeCard carries no state field, so this does not claim the
+                 peer is reachable; A1 Overview is the health screen and says
+                 so there. This says only what is registered, which is all this
+                 card can honestly know. -->
             <span class="chips bnode">
               @if (n.thisNode) {
                 <span class="pill ok"><i class="dotx"></i>{{ n.nodeId }} · this node</span>
+              } @else if (n.nodeId) {
+                <span class="pill"><i class="dotx"></i>{{ n.nodeId }} · peer node</span>
               } @else {
                 <span class="pill mute">no node running here yet</span>
               }
@@ -117,10 +129,16 @@
         <span>No branch is open. Pick one above to switch context into it.</span></div>
     }
 
+    <!-- This note used to open "Cross-node behaviour is Sprint 3 and is not
+         built". Sprint 3 shipped; the sentence did not. The second half was
+         always the important part and is unchanged, because the rule it states
+         is what makes the first half safe rather than merely working. -->
     <div class="note warm wide"><span class="b"></span>
-      <span>Cross-node behaviour — queued writes, last-synced state, gossip — is Sprint 3 and is not built.
-      What <b>is</b> true today is the rule that makes it safe: a therapist and a room belong to exactly one
-      branch, so only that branch can book them, and two nodes can never award the same slot.</span>
+      <span>Each branch runs its own node and pulls the other's appointments every few seconds, resuming
+      from the last change it saw. What makes that safe is the rule underneath it: a therapist and a room
+      belong to exactly one branch, so only that branch can book them, and two nodes can never award the
+      same slot. Appointments cross between nodes; the treatment menu, staff accounts and branch details
+      are configured at each node.</span>
     </div>
   </div>
 </app-dash-shell>
