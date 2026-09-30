@@ -140,7 +140,7 @@ export class Review {
         JSON.stringify((e as { error?: unknown })?.error, null, 2));
       console.error('[review] we sent:',
         JSON.stringify(this.store.toFormsModel(usedBranch), null, 2));
-      this.error.set(describeHttpError(e, 'We could not save your assessment.'));
+      this.error.set(describeHttpError(e, 'We could not save your wellness profile.'));
     } finally {
       this.busy.set(false);
     }

@@ -11,10 +11,10 @@
           <p class="s">Everything we offer. Create an account and tell us where it hurts, and
             we will check each treatment against your own record before offering it.</p>
         } @else if (cat.unjudged()) {
-          <p class="s">The full menu. Complete a pre-assessment and we will check each
+          <p class="s">The full menu. Complete a wellness profile and we will check each
             treatment against your own record before offering it.</p>
         } @else {
-          <p class="s">Checked against your most recent pre-assessment. Prices are what you
+          <p class="s">Checked against your most recent wellness profile. Prices are what you
             pay at the counter.</p>
         }
       </div>
@@ -36,7 +36,7 @@
       <p class="s">Loading the menu…</p>
     }
 
-    <!-- Only a signed-in client with an assessment has exclusions. Showing this
+    <!-- Only a signed-in client with a wellness profile has exclusions. Showing this
          to a visitor would describe a judgement that was never made. -->
     @if (!cat.anonymous() && hidden().length) {
       <div class="note warm"><span class="b"></span>
@@ -64,7 +64,7 @@
             <span class="mname">{{ s.name }}</span>
             <span class="mwhat">
               {{ s.durationMinutes }} minutes
-              @if (best(s)) { <b class="tag good">Suits your assessment</b> }
+              @if (best(s)) { <b class="tag good">Suits your wellness profile</b> }
               @if (!s.suitable) { <b class="tag no">Not advised for you</b> }
             </span>
             @if (!s.suitable && s.reason) {

@@ -70,9 +70,9 @@
         </div>
         @if (s.hasAssessment) {
           <a class="btn btn-ghost btn-sm" [routerLink]="['/staff/report']"
-             [queryParams]="{ formId: s.formId }">Open assessment</a>
+             [queryParams]="{ formId: s.formId }">Open wellness profile</a>
         } @else {
-          <span class="pill bad">No assessment</span>
+          <span class="pill bad">No wellness profile</span>
         }
         <button type="button" class="btn btn-ghost btn-sm" style="margin-left:8px"
                 [disabled]="closing()" (click)="openMove(s)">Move</button>

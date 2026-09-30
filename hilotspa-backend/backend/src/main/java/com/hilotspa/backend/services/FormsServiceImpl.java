@@ -155,7 +155,7 @@ public class FormsServiceImpl implements FormsService {
         }
         if (ownerId != null && walkInName != null && !walkInName.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "An assessment belongs to an account or to a named walk-in, not both");
+                    "A wellness profile belongs to an account or to a named walk-in, not both");
         }
 
         Branch branch = branchRepository.findById(branchId)
@@ -280,7 +280,7 @@ public class FormsServiceImpl implements FormsService {
         if (source.getCreatedAt() != null
                 && source.getCreatedAt().isBefore(LocalDateTime.now().minusDays(REUSE_MAX_DAYS))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "That assessment is more than " + REUSE_MAX_DAYS
+                    "That wellness profile is more than " + REUSE_MAX_DAYS
                     + " days old. Please answer the short form again.");
         }
 
@@ -306,7 +306,7 @@ public class FormsServiceImpl implements FormsService {
         copy.setTherapyDetail(source.getTherapyDetail());
         copy.setStatus(source.getStatus());
 
-        String note = "Reused from the assessment of "
+        String note = "Reused from the wellness profile of "
                 + (source.getCreatedAt() == null ? "an earlier visit"
                         : source.getCreatedAt().toLocalDate())
                 + "; the client confirmed nothing had changed.";
@@ -412,7 +412,7 @@ public class FormsServiceImpl implements FormsService {
                     && !model.getMainComplaintOther().isBlank());
         if (!named) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "A pain assessment needs a main complaint, or a description under Others.");
+                    "A pain profile needs a main complaint, or a description under Others.");
         }
     }
 

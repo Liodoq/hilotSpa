@@ -33,7 +33,7 @@
       <div>
         <h2 class="sec-head">{{ editing() ? 'About you' : 'What we have' }}</h2>
         <p class="sec-why">Date of birth, sex and civil status are needed before a
-          pre-assessment. The rest helps, and none of it is shared.</p>
+          wellness profile. The rest helps, and none of it is shared.</p>
       </div>
       @if (!editing()) {
         <button type="button" class="link-act" (click)="startEdit()">Edit</button>
@@ -151,7 +151,7 @@
       </div>
       @if (!store.isComplete()) {
         <p class="help" style="margin-top:12px">Date of birth, sex and civil status are
-          needed before an assessment.</p>
+          needed before a wellness profile.</p>
       }
     }
   </section>

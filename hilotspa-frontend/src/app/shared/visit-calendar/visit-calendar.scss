@@ -1,0 +1,61 @@
+:host { display: block; }
+
+.cal { border: 1px solid var(--color-line); border-radius: var(--radius-md);
+       padding: 14px; background: #fff; }
+
+.calhead { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.mlabel { font-family: var(--font-display); font-size: 22px; margin: 0;
+          flex: 1; text-align: center; color: var(--color-forest-900); }
+.nav { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--color-line);
+       background: #fff; font-size: 24px; line-height: 1; cursor: pointer;
+       color: var(--color-forest-900); }
+.nav:hover { background: var(--color-sage-100); }
+.today { margin-left: 4px; }
+
+.dow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+       margin-bottom: 4px; }
+.dow span { text-align: center; font-size: 13px; font-weight: 600;
+            color: var(--color-ink-600); letter-spacing: .04em; }
+
+.grid { display: flex; flex-direction: column; gap: 4px; }
+.wk { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+
+/* Square cells, sized by the column. Seven 68px targets do not fit a phone,
+   so the grid takes the width it has and the squares stay square - which keeps
+   them comfortably above the 44px the staff screens use. */
+.cell { position: relative; aspect-ratio: 1; min-height: 44px;
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 4px;
+        border: 1px solid transparent; border-radius: var(--radius-sm);
+        background: transparent; cursor: default; padding: 0;
+        font-family: inherit; }
+.cell .num { font-size: 16px; color: var(--color-ink-900); line-height: 1; }
+.cell.out .num { color: var(--color-ink-600); opacity: .45; }
+.cell.today { border-color: var(--color-sage-300); }
+.cell.today .num { font-weight: 700; color: var(--color-forest-700); }
+.cell.has { cursor: pointer; background: var(--color-cream); }
+.cell.has:hover { background: var(--color-sage-100); }
+.cell.on { background: var(--color-sage-100); border-color: var(--color-forest-500); }
+
+.dots { display: flex; align-items: center; gap: 3px; height: 8px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: block; }
+.dot.next { background: var(--color-forest-500); }
+.dot.ok   { background: var(--color-sage-300); }
+.dot.warn { background: var(--color-gold-500); }
+.dot.bad  { background: var(--color-danger-600); opacity: .55; }
+.more { font-size: 11px; color: var(--color-ink-600); line-height: 1; }
+
+.picked { list-style: none; margin: 12px 0 0; padding: 12px 0 0;
+          border-top: 1px solid var(--color-line-soft); }
+.picked li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
+             padding: 7px 0; }
+.picked .t { font-weight: 700; color: var(--color-forest-900); min-width: 76px; }
+.picked .s { flex: 1; }
+.picked .br { font-size: 14px; color: var(--color-ink-600); }
+
+.hint { margin: 12px 0 0; }
+
+@media (max-width: 380px) {
+  .cal { padding: 10px; }
+  .cell .num { font-size: 15px; }
+}

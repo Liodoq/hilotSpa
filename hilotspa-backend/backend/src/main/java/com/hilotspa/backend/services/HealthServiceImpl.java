@@ -177,7 +177,7 @@ public class HealthServiceImpl implements HealthService {
             if (calls.isEmpty()) {
                 return new Check("Assistant", State.DEGRADED,
                         "No assistant call has ever been recorded, so nothing here is known to "
-                        + "work. Submit one assessment to find out.");
+                        + "work. Submit one wellness profile to find out.");
             }
 
             AuditLog latest = calls.get(0);

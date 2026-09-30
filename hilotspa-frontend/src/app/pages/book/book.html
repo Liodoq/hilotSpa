@@ -32,7 +32,7 @@
           : 'Checking which services suit your assessment…' }}</p></div>
       }
 
-      <!-- Reached without an assessment: from Home's "book again", from the
+      <!-- Reached without a wellness profile: from Home's "book again", from the
            session report, or by typing the URL. Process Rule #2 still holds,
            but refusing and stopping made this screen a dead end - a client who
            had already answered the form was told to go and answer it again. -->
@@ -40,7 +40,7 @@
         <div class="offer">
           <div class="help">BEFORE I CAN SUGGEST ANYTHING</div>
           @if (previous(); as p) {
-            <div class="offer-line">Your last assessment was on <b>{{ p.date }}</b>
+            <div class="offer-line">Your last wellness profile was on <b>{{ p.date }}</b>
               @if (p.complaint) { — {{ p.complaint }} }</div>
             <div class="ctx-dim sm">
               I will copy those answers onto a new record dated today. Nothing old is
@@ -52,7 +52,7 @@
                       (click)="startAssessment()">Answer the form again</button>
             </div>
           } @else {
-            <div class="offer-line">I need a short pre-assessment before I can suggest
+            <div class="offer-line">I need a short wellness profile before I can suggest
               anything — it takes about a minute.</div>
             <button type="button" class="btn btn-primary leftalign"
                     (click)="startAssessment()">Start the short form</button>
@@ -97,7 +97,7 @@
           </div>
           <!-- Which day. The count is the point: a day with two times left says
                so before you open it. -->
-          <div class="daystrip" role="tablist" aria-label="Days with open times">
+          <div class="daystrip" role="tablist" aria-label="Days with open slots">
             @for (d of days(); track d.day) {
               <button type="button" class="day" role="tab"
                       [attr.aria-selected]="activeDay() === d.day"
@@ -105,7 +105,7 @@
                       [disabled]="confirming() || thinking()"
                       (click)="chooseDay(d.day)">
                 <span class="d1">{{ d.day }}</span>
-                <span class="d2">{{ d.count }} {{ d.count === 1 ? 'time' : 'times' }}</span>
+                <span class="d2">{{ d.count }} {{ d.count === 1 ? 'slot' : 'slots' }}</span>
               </button>
             }
           </div>
@@ -347,7 +347,7 @@
         }
         @if (a.notes) { <div><span class="pill warn">{{ a.notes }}</span></div> }
       } @else {
-        <div class="ctx-dim">No assessment loaded.</div>
+        <div class="ctx-dim">No wellness profile loaded.</div>
       }
     </div>
 

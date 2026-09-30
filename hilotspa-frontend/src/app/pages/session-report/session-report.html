@@ -81,7 +81,7 @@
               @for (f of s.flags; track f) { <span class="pill warn">{{ f }}</span> }
             </div>
           } @else {
-            <p class="s">Nothing was flagged at the pre-assessment.</p>
+            <p class="s">Nothing was flagged at the wellness profile.</p>
           }
           @if (s.pressure) {
             <p class="help" style="margin-top:6px">Preferred pressure: <b>{{ s.pressure }}</b></p>
@@ -104,7 +104,7 @@
                 <app-body-map view="FRONT" [points]="points()" [interactive]="false" />
                 <app-body-map view="BACK"  [points]="points()" [interactive]="false" />
               </div>
-              <p class="help">From the pre-assessment you completed before this session.</p>
+              <p class="help">From the wellness profile you completed before this session.</p>
             } @else {
               <p class="s" style="font-size:19px">No body map for this visit.</p>
             }

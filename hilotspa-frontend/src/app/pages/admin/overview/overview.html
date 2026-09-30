@@ -17,7 +17,7 @@
       <div class="tiles">
         <div class="stat lead"><div class="n">{{ d.bookingsToday }}</div><div class="k">Bookings today, all branches</div></div>
         <div class="stat"><div class="n">{{ d.bookingsThisWeek }}</div><div class="k">Bookings this week</div></div>
-        <div class="stat"><div class="n">{{ d.assessmentsThisWeek }}</div><div class="k">Assessments this week</div></div>
+        <div class="stat"><div class="n">{{ d.assessmentsThisWeek }}</div><div class="k">Wellness profiles this week</div></div>
         <div class="stat" [class.warn]="d.nodesOnline < d.nodesTotal">
           <div class="n">{{ d.nodesOnline }} / {{ d.nodesTotal }}</div>
           <div class="k">Nodes online</div></div>
@@ -125,7 +125,7 @@
               <div class="fig"><div class="figN">{{ n.therapistsAvailable }} / {{ n.therapists }}</div>
                 <div class="help">therapists available</div></div>
               <div class="fig"><div class="figN">{{ n.rooms }}</div><div class="help">rooms</div></div>
-              <div class="fig"><div class="figN">{{ n.assessmentsThisWeek }}</div><div class="help">assessments (7d)</div></div>
+              <div class="fig"><div class="figN">{{ n.assessmentsThisWeek }}</div><div class="help">wellness profiles (7d)</div></div>
             </div>
             <button type="button" class="btn btn-ghost btn-sm start"
                     (click)="open(n)">Manage this branch</button>
@@ -149,7 +149,7 @@
               <b>{{ c.count }}</b>
             </div>
           } @empty {
-            <p class="s">No assessments in the last 30 days.</p>
+            <p class="s">No wellness profiles in the last 30 days.</p>
           }
           <p class="help" style="margin-top:6px">Aggregated and de-identified. Useful for staffing, and it
             is the same data that validates the 24-item complaint list.</p>

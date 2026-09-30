@@ -1,7 +1,7 @@
 <app-dash-shell role="STAFF"
-  scopeNote="Assessments are visible to this branch only.">
+  scopeNote="Wellness profiles are visible to this branch only.">
   <span bar style="font-size:18px">
-    @if (form(); as f) { Assessment {{ f.id?.slice(0, 8)?.toUpperCase() }} } @else { No assessment open }
+    @if (form(); as f) { Wellness profile {{ f.id?.slice(0, 8)?.toUpperCase() }} } @else { No wellness profile open }
   </span>
 
   <!-- A detail page opened from a list needs a way back to that list. The
@@ -25,7 +25,7 @@
       <div>
         <h2 class="t-s tight">Visit log</h2>
         <p class="help nomar">Every visit this branch recorded, and how it ended.
-          Open a row to read the client's own pre-assessment, where there is one.</p>
+          Open a row to read the client's own wellness profile, where there is one.</p>
       </div>
       <div class="weeknav">
         <button type="button" class="btn btn-quiet btn-sm" (click)="shiftWeek(-1)"
@@ -93,9 +93,9 @@
               </div>
               <span class="pill" [class]="'pill ' + outcomeTone(r)">{{ outcome(r) }}</span>
               @if (r.hasAssessment && r.formId) {
-                <button type="button" class="link-go" (click)="load(r.formId)">Open assessment →</button>
+                <button type="button" class="link-go" (click)="load(r.formId)">Open wellness profile →</button>
               } @else {
-                <span class="help noass">No assessment</span>
+                <span class="help noass">No wellness profile</span>
               }
             </div>
           }
@@ -111,7 +111,7 @@
   @if (form(); as f) {
     <div class="cols">
       <div class="card" style="display:flex;flex-direction:column;gap:12px">
-        <div><div class="help">ASSESSMENT</div>
+        <div><div class="help">WELLNESS PROFILE</div>
           <div style="font-size:21px;font-weight:600;color:var(--color-forest-900)">
             {{ session()?.client || 'Client on file' }}</div>
           <div class="help">{{ f.intent }} · submitted {{ submitted() }}</div></div>
@@ -220,14 +220,14 @@
             <div style="font-size:18px;color:var(--color-ink-600)">{{ s.time }} · {{ s.therapist }} · {{ s.room }}</div>
             <span class="pill mute" style="align-self:flex-start">{{ s.status }}</span>
           } @else {
-            <p class="s">This assessment has no session booked today.</p>
+            <p class="s">This wellness profile has no session booked today.</p>
           }
         </div>
         <div class="card" style="display:flex;flex-direction:column;gap:12px;flex:1">
           <h2 class="t-s" style="font-size:22px">Client's remarks</h2>
           <textarea class="input" rows="5" readonly [value]="notes()"
             placeholder="The client left no remarks."></textarea>
-          <p class="help">Read-only here. The assessment is the client's own answers; a practitioner's
+          <p class="help">Read-only here. The wellness profile is the client's own answers; a practitioner's
             observations belong in the findings table above, where they are dated and attributable.</p>
         </div>
       </aside>

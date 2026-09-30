@@ -7,7 +7,7 @@
       <div class="hero" [style.background-image]="photo(s.imageName)">
         <div class="scrim"></div>
         <div class="heroText">
-          @if (best()) { <span class="pill ok"><i class="dotx"></i>RECOMMENDED FOR YOUR ASSESSMENT</span> }
+          @if (best()) { <span class="pill ok"><i class="dotx"></i>RECOMMENDED FOR YOUR WELLNESS PROFILE</span> }
           <h1 class="t" style="color:#fff">{{ s.name }}</h1>
           <p style="font-size:21px;color:var(--color-sage-100)">{{ s.durationMinutes }} minutes ·
             {{ priceLabel(s.price) }} · pay at counter</p>
@@ -41,20 +41,20 @@
                 hurts, this page says plainly whether this treatment is advised for you — and if
                 it is not, which rule ruled it out.</p>
             } @else if (cat.unjudged()) {
-              <p class="s">You have no pre-assessment on record yet, so nothing has been checked
+              <p class="s">You have no wellness profile on record yet, so nothing has been checked
                 against your history. Complete one and this page will say why this treatment is or
                 is not advised for you.</p>
             } @else if (!s.suitable) {
               <div class="note bad"><span class="b"></span>
                 <span><b>{{ s.rule }}</b> — {{ s.reason }}</span></div>
               <p class="help" style="margin-top:12px">This rule was written and signed by the spa's
-                bone setter. Your pre-assessment is checked against it before anything is offered
+                bone setter. Your wellness profile is checked against it before anything is offered
                 to you. The app applies the rule; it does not make one.</p>
             } @else {
               <div class="note ok"><span class="b"></span>
                 <span><b>{{ s.rule }}</b>{{ s.reason ? ' — ' + s.reason : '' }}</span></div>
               <p class="help" style="margin-top:12px">Checked against your most recent
-                pre-assessment. Nothing on your record rules this treatment out.</p>
+                wellness profile. Nothing on your record rules this treatment out.</p>
             }
           </div>
         </div>
@@ -75,9 +75,9 @@
             } @else {
               <button type="button" class="btn btn-primary btn-block" (click)="book(s)">Book this</button>
               <!-- Process Rule #2: the assistant is gated behind a completed
-                   assessment, so choosing a service starts one rather than
+                   wellness profile, so choosing a service starts one rather than
                    jumping to a booking the system could not safely make. -->
-              <p class="help">Next: a short pre-assessment, then the booking assistant finds you a
+              <p class="help">Next: a short wellness profile, then the booking assistant finds you a
                 time. It takes about three minutes.</p>
             }
           </div>

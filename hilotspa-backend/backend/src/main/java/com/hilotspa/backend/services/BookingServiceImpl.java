@@ -450,7 +450,7 @@ public class BookingServiceImpl implements BookingService {
             // scope "my bookings" by, so it cannot go down the online path -
             // staff record the visit at the counter instead.
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "That assessment belongs to a walk-in. Record the visit from the "
+                    "That wellness profile belongs to a walk-in. Record the visit from the "
                     + "counter instead.");
         }
         UUID customerId = form.getUser().getId();
@@ -950,7 +950,7 @@ public class BookingServiceImpl implements BookingService {
         UUID me = CurrentUser.id().orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.UNAUTHORIZED, "Not authenticated"));
         if (form.getUser() == null || !me.equals(form.getUser().getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your assessment");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your wellness profile");
         }
         return form;
     }
@@ -1240,7 +1240,7 @@ public class BookingServiceImpl implements BookingService {
         if (want != null) {
             return "No " + want.getDisplayName().toLowerCase()
                  + " therapist is free at that time. Please choose another time, or change "
-                 + "your preference on your assessment.";
+                 + "your preference on your wellness profile.";
         }
         return "That time was just taken";
     }
@@ -1363,11 +1363,11 @@ public class BookingServiceImpl implements BookingService {
         Forms walkInForm = null;
         if (req.formId() != null) {
             walkInForm = formsRepository.findById(req.formId()).orElseThrow(() ->
-                    new ResponseStatusException(HttpStatus.NOT_FOUND, "Assessment not found"));
+                    new ResponseStatusException(HttpStatus.NOT_FOUND, "Wellness profile not found"));
             if (walkInForm.getBranch() == null
                     || !branchId.equals(walkInForm.getBranch().getId())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                        "That assessment belongs to another branch");
+                        "That wellness profile belongs to another branch");
             }
         }
 

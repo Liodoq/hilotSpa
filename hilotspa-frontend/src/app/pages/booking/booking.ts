@@ -7,6 +7,7 @@ import { ToastService } from '../../core/toast.service';
 import { FormsApi } from '../../core/forms.api';
 import { BookingModel } from '../../core/models';
 import { describeHttpError } from '../../core/http-error';
+import { VisitCalendar } from '../../shared/visit-calendar/visit-calendar';
 
 /** Statuses that still hold a therapist and a room, i.e. a live booking. */
 const OPEN = new Set(['PENDING', 'CONFIRMED', 'IN_PROGRESS']);
@@ -23,7 +24,7 @@ const OPEN = new Set(['PENDING', 'CONFIRMED', 'IN_PROGRESS']);
  */
 @Component({
   selector: 'app-booking',
-  imports: [AppNav, Toast, RouterLink, DatePipe],
+  imports: [AppNav, Toast, RouterLink, DatePipe, VisitCalendar],
   templateUrl: './booking.html',
   styleUrl: './booking.scss',
 })

@@ -239,7 +239,7 @@ function toLog(f: FormsModel): SessionLog {
     createdAt: f.createdAt ?? '',
     // Still honest when there is no visit: this client filled the form and never
     // booked, and saying "Pre-assessment" is exactly right for that row.
-    service: v ? v.serviceName : 'Pre-assessment',
+    service: v ? v.serviceName : 'Wellness profile',
     minutes: v ? v.durationMinutes : 0,
     complaint: f.intent === 'LEISURE'
       ? 'Here to relax'

@@ -1,4 +1,4 @@
-<app-shell [step]="5" [wide]="true" nextLabel="Submit my assessment"
+<app-shell [step]="5" [wide]="true" nextLabel="Submit my wellness profile"
            hint="This is the only step that writes to your record."
            [nextDisabled]="!draft().consented || busy() || !!problem()"
            (back)="back()" (next)="submit()" (exit)="leave()">
@@ -103,7 +103,7 @@
 
       <!-- The submit button lives in the footer only. Two of them on one screen
            made it ambiguous which one actually saved. -->
-      <p class="help centre">Tick the box above, then use <b>Submit my assessment</b> at the
+      <p class="help centre">Tick the box above, then use <b>Submit my wellness profile</b> at the
         bottom of the page. You can update it any time at the front desk.</p>
     </aside>
   </div>

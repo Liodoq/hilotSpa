@@ -66,7 +66,7 @@ export class ServiceDetail implements OnInit {
 
     this.store.resetAll();
     this.store.wantedService.set(s.name);
-    this.toast.show(`${s.name} chosen — a short pre-assessment first`, 2800);
+    this.toast.show(`${s.name} chosen — a short wellness profile first`, 2800);
     this.router.navigateByUrl(this.profile.isComplete()
       ? '/assessment/intent'
       : '/profile?next=/assessment/intent');

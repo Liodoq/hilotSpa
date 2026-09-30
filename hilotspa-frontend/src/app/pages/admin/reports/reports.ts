@@ -12,6 +12,19 @@ import { Branch } from '../../../core/models';
 import { describeHttpError } from '../../../core/http-error';
 
 /**
+ * A yyyy-mm-dd in the BROWSER'S timezone.
+ *
+ * Date.toISOString() converts to UTC first, so in Manila (UTC+8) it names
+ * yesterday until 08:00. Every date this screen sends to the server is a
+ * calendar date the user meant locally, so it must be formed locally.
+ */
+function isoLocal(d: Date): string {
+  const m = `${d.getMonth() + 1}`.padStart(2, '0');
+  const day = `${d.getDate()}`.padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+/**
  * A3 - most-availed treatment and peak month.
  *
  * Every figure is counted from the appointment table when the page loads, like
@@ -169,6 +182,20 @@ export class AdminReports implements OnInit {
     }
   }
 
+  /**
+   * Today only - the end-of-day figure the panel asked for.
+   *
+   * isoLocal, not toISOString(). The spa runs at UTC+8, so the UTC date is
+   * still yesterday for the whole of the Manila morning. An end-of-day report
+   * that silently reports yesterday is worse than no button at all.
+   */
+  today(): void {
+    const d = isoLocal(new Date());
+    this.from.set(d);
+    this.to.set(d);
+    void this.load();
+  }
+
   /** Twelve months back, which is also what the server does with no range. */
   clearRange(): void {
     this.from.set('');
@@ -180,7 +207,7 @@ export class AdminReports implements OnInit {
   thisYear(): void {
     const now = new Date();
     this.from.set(`${now.getFullYear()}-01-01`);
-    this.to.set(now.toISOString().slice(0, 10));
+    this.to.set(isoLocal(now));
     void this.load();
   }
 

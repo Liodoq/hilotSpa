@@ -35,6 +35,10 @@
                 (click)="load()">{{ loading() ? 'Counting…' : 'Generate' }}</button>
       </div>
       <div class="quick">
+        <!-- Today first: "what happened today" is the end-of-day question, and
+             it was the one this screen could not answer in a single click. -->
+        <button type="button" class="link" (click)="today()">Today</button>
+        <span class="sep">·</span>
         <button type="button" class="link" (click)="clearRange()">Last 12 months</button>
         <span class="sep">·</span>
         <button type="button" class="link" (click)="thisYear()">This year so far</button>

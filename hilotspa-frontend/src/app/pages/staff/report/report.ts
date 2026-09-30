@@ -290,7 +290,7 @@ export class StaffReport implements OnInit {
       this.notes.set(f.remarks ?? '');
       this.catalogue.set(await this.ops.catalogue(id).catch(() => [] as CatalogueEntry[]));
     } catch {
-      this.error.set('We could not open that assessment.');
+      this.error.set('We could not open that wellness profile.');
     } finally {
       this.loading.set(false);
     }

@@ -135,6 +135,33 @@
 
 	<build>
 		<plugins>
+			<!--
+			  JaCoCo - test coverage, for the QA appendix.
+
+			  Adds no tests. It instruments the suite that already exists and
+			  writes target/site/jacoco/index.html, which is the artefact the
+			  appendix needs: a figure produced by a tool rather than a number
+			  typed into a table by the people being measured.
+
+			  Bound to `verify` rather than `test` so an ordinary `mvn test`
+			  stays as fast as it is now.
+			-->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.12</version>
+				<executions>
+					<execution>
+						<id>prepare-agent</id>
+						<goals><goal>prepare-agent</goal></goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>verify</phase>
+						<goals><goal>report</goal></goals>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

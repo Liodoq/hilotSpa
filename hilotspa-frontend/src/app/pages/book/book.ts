@@ -241,10 +241,10 @@ export class Book implements OnDestroy {
       this.loading.set(false);
       const prev = this.previous();
       this.say(prev
-        ? `I do not have today\u2019s assessment open. I can reuse your answers from `
+        ? `I do not have today\u2019s wellness profile open. I can reuse your answers from `
           + `<b>${prev.date}</b> \u2014 that copies them onto a new record dated today, `
           + `so nothing old is passed off as current.`
-        : 'Please complete a short pre-assessment first, and I can suggest what suits you.');
+        : 'Please complete a short wellness profile first, and I can suggest what suits you.');
       return;
     }
     try {
@@ -282,7 +282,7 @@ export class Book implements OnDestroy {
     // asked.
     this.say(this.relaxing()
       ? `Kumusta po. For a relaxing visit, I would suggest ${names}.`
-      : `Kumusta po. Based on your assessment, I would suggest ${names}.`);
+      : `Kumusta po. Based on your wellness profile, I would suggest ${names}.`);
     for (const r of res.recommendations) {
       this.say(`<b>${r.name}</b>, ${r.durationMinutes} minutes — ${r.reason}`);
     }
@@ -415,7 +415,7 @@ export class Book implements OnDestroy {
       console.error('[book] reuse failed', e);
       const status = (e as { status?: number })?.status;
       this.say(status === 409
-        ? 'That assessment is too old to reuse. Please answer the short form again.'
+        ? 'That wellness profile is too old to reuse. Please answer the short form again.'
         : 'I could not reuse that just now. Please answer the short form, or ask the front desk.');
     } finally {
       this.reusing.set(false);
@@ -477,7 +477,7 @@ export class Book implements OnDestroy {
       this.say(prev
         ? `I can reuse your answers from <b>${prev.date}</b> \u2014 tap \u201cUse it\u201d below `
           + `and I will pick up from there.`
-        : 'I need a short pre-assessment before I can suggest anything. '
+        : 'I need a short wellness profile before I can suggest anything. '
           + 'Tap the button below \u2014 it takes about a minute.');
       return;
     }
@@ -620,7 +620,7 @@ export class Book implements OnDestroy {
       if (!clip) { this.toast.show('I did not catch that. Try again, or type it.'); return; }
 
       const formId = this.formId();
-      if (!formId) { this.toast.show('Start a pre-assessment first.'); return; }
+      if (!formId) { this.toast.show('Start a wellness profile first.'); return; }
 
       const res = await this.api.transcribe(formId, clip.base64, clip.mimeType, this.wantLang());
       const said = (res?.transcript ?? '').trim();
@@ -693,7 +693,7 @@ export class Book implements OnDestroy {
         // therapist" over an empty list would be asking for something we cannot
         // deliver - the honest answer is that the time went.
         this.picked.set(null);
-        this.say('That time has just been taken. Here are the times that are still open.');
+        this.say('That time has just been taken. Here are the slots that are still open.');
         await this.refreshTimes(id, slot.serviceId);
       } else {
         this.say(`${slot.dayLabel} ${slot.timeLabel} it is. Check the details below and `

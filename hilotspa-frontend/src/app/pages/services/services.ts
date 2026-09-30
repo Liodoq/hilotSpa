@@ -62,7 +62,7 @@ export class Services implements OnInit {
 
   open(s: CatalogueEntry): void {
     if (!s.suitable) {
-      this.toast.show(`${s.name} is not advised — ${s.reason || 'see your assessment'}`, 3200);
+      this.toast.show(`${s.name} is not advised — ${s.reason || 'see your wellness profile'}`, 3200);
       return;
     }
     this.router.navigateByUrl(`/services/${s.serviceId}`);
@@ -73,7 +73,7 @@ export class Services implements OnInit {
     const s = this.hidden()[0];
     this.toast.show(s
       ? `Rule: ${s.name} — ${s.rule}. ${s.reason || ''}`.trim()
-      : 'No exclusions apply to your assessment.', 3600);
+      : 'No exclusions apply to your wellness profile.', 3600);
   }
 
   retry(): void { void this.cat.load(true); }

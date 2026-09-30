@@ -87,7 +87,7 @@ export class Intent implements OnInit {
       } catch (e: unknown) {
         const status = (e as { status?: number })?.status;
         this.toast.show(status === 409
-          ? 'That assessment is too old to reuse. Please answer the short form again.'
+          ? 'That wellness profile is too old to reuse. Please answer the short form again.'
           : 'We could not reuse that. Check the backend is running, then try again.', 3800);
         this.reuse.set(false);
       } finally {

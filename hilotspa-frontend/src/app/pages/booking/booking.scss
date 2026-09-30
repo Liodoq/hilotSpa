@@ -111,3 +111,8 @@
   .wrap { padding: 20px; }
   .when .dnum { font-size: 34px; }
 }
+
+/* The calendar block. Sits above the lists and is visually quieter than the
+   next-visit card, which must stay the loudest thing on the page. */
+.calwrap { margin-bottom: 26px; }
+.calhead { margin: 0 0 10px; }

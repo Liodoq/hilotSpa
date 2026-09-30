@@ -64,9 +64,9 @@
               @default { <span class="pill mute">Upcoming</span> }
             }
             @if (s.hasAssessment) {
-              <button type="button" class="btn btn-ghost btn-sm" routerLink="/staff/report">View assessment</button>
+              <button type="button" class="btn btn-ghost btn-sm" routerLink="/staff/report">View wellness profile</button>
             } @else {
-              <span class="pill bad">No assessment</span>
+              <span class="pill bad">No wellness profile</span>
             }
           </div>
         }
@@ -78,7 +78,7 @@
           @if (withoutAssessment()) {
             <div class="note bad"><span class="b"></span>
               <span>{{ withoutAssessment() }}
-                {{ withoutAssessment() === 1 ? 'booking has' : 'bookings have' }} no pre-assessment
+                {{ withoutAssessment() === 1 ? 'booking has' : 'bookings have' }} no wellness profile
                 on file — Process Rule #2 says one is taken before the session.</span></div>
           }
           @if (!available() && onDuty()) {

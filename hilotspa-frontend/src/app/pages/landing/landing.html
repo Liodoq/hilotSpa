@@ -7,7 +7,7 @@
        The map is the one thing that makes this spa different from every
        other spa in Sorsogon, and a stranger who taps it has already used
        the product. It promises nothing clinical — tapping names the area
-       and says what happens with it, which is what the real assessment
+       and says what happens with it, which is what the real wellness profile
        does too.
        ================================================================== -->
   <header class="hero">
@@ -36,11 +36,11 @@
         <p class="eyebrow">You marked</p>
         <p class="answer-name">{{ pickedLabel() }}</p>
         <p class="answer-what">
-          In a real pre-assessment we would also ask how bad it is and what it feels like —
+          In a real wellness profile we would also ask how bad it is and what it feels like —
           then your bone setter reads all of it before you sit down.
         </p>
         <button type="button" class="btn btn-primary btn-block" (click)="start()">
-          Start a pre-assessment</button>
+          Start a wellness profile</button>
         <p class="say answer-note">About three minutes. Nothing is paid online.</p>
       } @else {
         <p class="answer-idle">
@@ -48,7 +48,7 @@
           starts from what you marked instead of from an empty room.
         </p>
         <button type="button" class="btn btn-ghost btn-block" (click)="start()">
-          Start a pre-assessment</button>
+          Start a wellness profile</button>
         <a class="link-go answer-link" routerLink="/services">Or just see the treatments</a>
       }
     </aside>
@@ -172,7 +172,7 @@
     <p>Walk-ins are always welcome. Marking where it hurts beforehand just saves you
        explaining it twice.</p>
     <div>
-      <button type="button" class="btn btn-primary" (click)="start()">Start a pre-assessment</button>
+      <button type="button" class="btn btn-primary" (click)="start()">Start a wellness profile</button>
       <a class="btn btn-ghost" routerLink="/about">What is hilot?</a>
     </div>
   </section>

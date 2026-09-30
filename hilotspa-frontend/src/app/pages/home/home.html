@@ -5,7 +5,7 @@
       @if (!profileStore.isComplete()) {
         <div class="note warm"><span class="b"></span>
           <span><b>Your profile is not finished.</b> Date of birth, sex and civil status are needed
-            before an assessment — once, not every visit.
+            before a wellness profile — once, not every visit.
             <button type="button" class="link" (click)="editProfile()">Complete it now</button></span>
         </div>
       }
@@ -174,7 +174,7 @@
           </table>
           @if (unbooked() > 0) {
             <p class="help unbooked">
-              You also have {{ unbooked() }} pre-assessment{{ unbooked() === 1 ? '' : 's' }}
+              You also have {{ unbooked() }} wellness profile{{ unbooked() === 1 ? '' : 's' }}
               that did not become a visit. They are kept on your record.
             </p>
           }
@@ -188,7 +188,7 @@
         <h2 class="t-s sec-h tight">Your wellness profile</h2>
 
         @if (latest(); as a) {
-          <p class="help">From your last assessment, {{ a.date }}.</p>
+          <p class="help">From your last wellness profile, {{ a.date }}.</p>
           <div class="profrow">
             <div class="thumbs">
               <app-body-map view="FRONT" [points]="points()" [interactive]="false" />
@@ -208,18 +208,18 @@
           </div>
         } @else {
           <p class="help">Nothing here yet.</p>
-          <p class="empty-why">Once you complete a pre-assessment, the areas you marked and your
+          <p class="empty-why">Once you complete a wellness profile, the areas you marked and your
             main complaint will show here, so your bone setter can see how things change between visits.</p>
         }
 
         <hr class="hr sep">
-        <!-- "Start pre-assessment" and "Update my assessment" did the same thing
+        <!-- "Start wellness profile" and "Update my wellness profile" did the same thing
              from two places. One action, named for what it actually does. -->
         <button type="button" class="btn btn-quiet btn-block" (click)="editProfile()">My details</button>
       </div>
 
       <div class="note"><span class="b"></span>
-        <span>Your assessments stay on your account, so your bone setter can see whether something is
+        <span>Your wellness profiles stay on your account, so your bone setter can see whether something is
         getting better or worse over time.</span>
       </div>
     </aside>

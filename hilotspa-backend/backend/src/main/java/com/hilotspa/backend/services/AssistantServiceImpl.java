@@ -1494,7 +1494,7 @@ public class AssistantServiceImpl implements AssistantService {
             if ("INDICATED".equals(s.rule())) {
                 out.add(new Recommendation(s.serviceId(), s.name(), out.size() + 1,
                         s.rationale().isBlank()
-                                ? "Listed for this assessment in the spa's own service protocol."
+                                ? "Listed for this wellness profile in the spa's own service protocol."
                                 : s.rationale(),
                         s.durationMinutes(), s.price()));
             }
@@ -1585,7 +1585,7 @@ public class AssistantServiceImpl implements AssistantService {
         UUID me = CurrentUser.id().orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.UNAUTHORIZED, "Not authenticated"));
         if (form.getUser() == null || !me.equals(form.getUser().getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your assessment");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your wellness profile");
         }
     }
 

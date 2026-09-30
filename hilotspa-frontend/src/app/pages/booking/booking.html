@@ -24,6 +24,20 @@
       </p>
     </header>
 
+    <!-- The month, before the lists.
+         The lists answer "when is my next one". They answer badly the question
+         a client on a course of treatment actually asks - "how often am I
+         coming, and is there anything the week after next?" - because a list
+         makes the reader do the date arithmetic themselves. Same array, second
+         view: it fetches nothing of its own, so it cannot disagree with the
+         lists below it. -->
+    @if (all().length) {
+      <section class="calwrap">
+        <h2 class="t-s calhead">Your calendar</h2>
+        <app-visit-calendar [visits]="all()" />
+      </section>
+    }
+
     @if (upcoming().length) {
       <ul class="visits">
         @for (v of upcoming(); track v.id; let first = $first) {
@@ -112,7 +126,7 @@
       <div class="card empty">
         <h2 class="t-s">No upcoming visit</h2>
         <p class="help">When you book through the assistant, the details will appear here.</p>
-        <a class="btn btn-primary" routerLink="/assessment/intent">Start a pre-assessment</a>
+        <a class="btn btn-primary" routerLink="/assessment/intent">Start a wellness profile</a>
       </div>
     }
 

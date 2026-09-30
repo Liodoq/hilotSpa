@@ -1,0 +1,64 @@
+<!--
+  The grid is a control, not a picture. Every day carrying a visit is a button,
+  because "which day is busy" is always followed by "what is on it".
+-->
+<div class="cal">
+
+  <div class="calhead">
+    <button type="button" class="nav" (click)="step(-1)"
+            aria-label="Previous month">&lsaquo;</button>
+    <h3 class="mlabel">{{ monthLabel() }}</h3>
+    <button type="button" class="nav" (click)="step(1)"
+            aria-label="Next month">&rsaquo;</button>
+    <button type="button" class="link today" (click)="goToday()">Today</button>
+  </div>
+
+  <div class="dow" aria-hidden="true">
+    @for (w of weekdays; track w) { <span>{{ w }}</span> }
+  </div>
+
+  <div class="grid" role="grid" [attr.aria-label]="'Your visits, ' + monthLabel()">
+    @for (week of weeks(); track $index) {
+      <div class="wk" role="row">
+        @for (cell of week; track cell.iso) {
+          <button type="button" role="gridcell" class="cell"
+                  [class.out]="!cell.inMonth"
+                  [class.today]="cell.isToday"
+                  [class.has]="cell.visits.length"
+                  [class.on]="selected() === cell.iso"
+                  [disabled]="!cell.visits.length"
+                  [attr.aria-label]="cellLabel(cell)"
+                  (click)="choose(cell)">
+            <span class="num">{{ cell.dayNum }}</span>
+            <!-- At most three dots. A day with four visits is a day the client
+                 opens anyway, and a row of dots that wraps breaks the square. -->
+            @if (cell.visits.length) {
+              <span class="dots">
+                @for (v of cell.visits.slice(0, 3); track v.id) {
+                  <i class="dot" [class]="'dot ' + tone(v)"></i>
+                }
+                @if (cell.visits.length > 3) { <span class="more">+</span> }
+              </span>
+            }
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- The chosen day, spelled out. The grid says WHEN; this says WHAT. -->
+  @if (chosen().length) {
+    <ul class="picked">
+      @for (v of chosen(); track v.id) {
+        <li>
+          <span class="t">{{ timeOf(v) }}</span>
+          <span class="s">{{ v.serviceName }}</span>
+          <span class="br">{{ v.branch }}</span>
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="help hint">Days with a mark have a visit. Tap one to see it.</p>
+  }
+
+</div>
