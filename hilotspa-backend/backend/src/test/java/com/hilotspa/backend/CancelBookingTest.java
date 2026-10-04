@@ -2,6 +2,8 @@ package com.hilotspa.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,7 +60,28 @@ class CancelBookingTest {
         assertThat(slots)
                 .as("the seeded branch must have open times, or nothing below can be tested")
                 .isNotEmpty();
-        String start = slots.get(0).get("start").asText();
+        // NOT slots.get(0). That is the EARLIEST open time, which during trading
+        // hours is usually minutes away - and BR1 refuses a CUSTOMER cancellation
+        // inside the 60-minute cutoff, so this fixture made the three cancel tests
+        // pass or fail depending on the time of day they were run. Run at 09:00 it
+        // was green; run at 11:39 against a 12:00 slot it returned 409 and the
+        // suite looked broken while the server was behaving exactly as specified.
+        //
+        // Three hours is the cutoff plus comfortable margin. Availability spans
+        // several days, so late in the evening this simply rolls to tomorrow.
+        LocalDateTime safeAfter = LocalDateTime.now().plusHours(3);
+        String start = null;
+        for (JsonNode slot : slots) {
+            String candidate = slot.get("start").asText();
+            if (LocalDateTime.parse(candidate).isAfter(safeAfter)) {
+                start = candidate;
+                break;
+            }
+        }
+        assertThat(start)
+                .as("no open time more than 3 hours away, so a customer cancellation "
+                  + "would be refused by the cutoff rather than tested")
+                .isNotNull();
 
         MvcResult res = api.postRaw(ana, "/api/v1/appointments", """
                 {"formId":"%s","serviceId":"%s","start":"%s",
