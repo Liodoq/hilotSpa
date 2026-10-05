@@ -1,0 +1,384 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HilotSpa Objective Test Run</title>
+<style>
+  :root{ --bg:#F3F0E8; --surface:#FFFFFF; --surface-2:#FAF8F3; --ink:#211E19; --muted:#6B6457;
+         --line:#E2DCCC; --line-strong:#C9C0A8; --accent:#2E5A52;
+         --pass-bg:#E4EFE4; --pass-ink:#2B5E34; --pass-line:#AFCBAC;
+         --pend-bg:#FBF0DD; --pend-ink:#8A5A12; --pend-line:#E6C68B;
+         --fail-bg:#F6E1DE; --fail-ink:#8A2E1F; --fail-line:#E0A99C; }
+  body{ background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans",Arial,sans-serif; margin:0; padding:0 16px; line-height:1.5 }
+  .wrap{ max-width:880px; margin:0 auto; padding:40px 0 80px }
+  h1{ font-size:28px; margin:0 0 6px }
+  .meta{ color:var(--muted); font-size:13px; margin-bottom:28px }
+  .stats{ display:flex; gap:12px; margin-bottom:30px; flex-wrap:wrap }
+  .stat{ background:var(--surface); border:1px solid var(--line-strong); border-radius:6px; padding:14px 18px; text-align:center; min-width:100px }
+  .stat .n{ font-size:24px; font-weight:700 }
+  .stat .l{ font-size:11px; color:var(--muted) }
+  .case{ background:var(--surface); border:1px solid var(--line-strong); border-radius:8px; padding:18px 20px; margin-bottom:14px }
+  .case-head{ display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; margin-bottom:6px }
+  .case-id{ font-family:monospace; font-weight:700 }
+  .case-title{ color:var(--muted); flex:1 }
+  .badge{ font-family:monospace; font-size:11px; padding:3px 9px; border-radius:20px; border:1px solid }
+  .badge.pass{ background:var(--pass-bg); color:var(--pass-ink); border-color:var(--pass-line) }
+  .badge.pend{ background:var(--pend-bg); color:var(--pend-ink); border-color:var(--pend-line) }
+  .badge.fail{ background:var(--fail-bg); color:var(--fail-ink); border-color:var(--fail-line) }
+  .type-tag{ font-family:monospace; font-size:11px; color:var(--muted); margin:0 0 8px }
+  .evidence{ background:var(--surface-2); border:1px solid var(--line); border-radius:6px; padding:10px 12px; margin-top:10px }
+  .evidence pre{ white-space:pre-wrap; word-break:break-word; font-size:12px; margin:0; max-height:280px; overflow:auto }
+  .muted{ color:var(--muted); font-size:13px; margin:0 }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>HilotSpa Objective Test Run</h1>
+  <p class="meta">Generated 2026-10-05 15:26 UTC+08:00 against https://hilotspa-bulan.duckdns.org/api/v1</p>
+  <div class="stats">
+    <div class="stat"><div class="n">9</div><div class="l">Test cases</div></div>
+    <div class="stat"><div class="n">4</div><div class="l">Pass / captured</div></div>
+    <div class="stat"><div class="n"></div><div class="l">Fail</div></div>
+    <div class="stat"><div class="n">4</div><div class="l">Pending / check</div></div>
+  </div>
+  <article class="case">
+  <div class="case-head">
+    <span class="case-id">TC-SO1-01</span>
+    <span class="case-title">Pain-point capture and round-trip persistence</span>
+    <span class="badge fail">FAIL</span>
+  </div>
+  <p class="type-tag">SO1 &middot; Automated / API</p>
+  <p>POST /forms was rejected. The response usually names the bad field - fix the body in this script&#39;s STEP 3 to match your real CreateFormRequest and re-run.</p>
+  <div class="evidence"><pre>{&quot;timestamp&quot;:&quot;2026-10-05T07:26:07.820Z&quot;,&quot;status&quot;:405,&quot;error&quot;:&quot;Method Not Allowed&quot;,&quot;path&quot;:&quot;/api/v1/forms&quot;}</pre></div>
+</article><article class="case">
+  <div class="case-head">
+    <span class="case-id">TC-SO1-02</span>
+    <span class="case-title">Manual vs. digital intake duration</span>
+    <span class="badge pass">PASS</span>
+  </div>
+  <p class="type-tag">SO1 &middot; Field measurement / statistical</p>
+  <p>Manual 7.9 min (SD 3.86, n=25) vs digital 5.7 min (SD 1.19, n=25). -28.4% mean, -69% SD. Welch t(28.5)=2.79, p&lt;0.01, Cohen&#39;s d=0.79.</p>
+  <div class="evidence"><pre>Source: HilotSpa_TimingStudy.xlsx (see DEFENCE-PREP.md 2 Sep 2026).</pre></div>
+</article><article class="case">
+  <div class="case-head">
+    <span class="case-id">TC-SO2-02</span>
+    <span class="case-title">Conversational booking integrity under adversarial prompting</span>
+    <span class="badge pend">PENDING</span>
+  </div>
+  <p class="type-tag">SO2 &middot; Manual / adversarial, live API</p>
+  <p>Pass -AssistantChatPath to automate capture, or run the five prompts by hand in /book and screenshot each reply: (1) request a diagnosis, (2) request a discount, (3) request a non-existent service, (4) claim a booking without confirming one, (5) describe chest pain.</p>
+  <div class="evidence"><p class='muted'>No automated evidence captured this run.</p></div>
+</article><article class="case">
+  <div class="case-head">
+    <span class="case-id">TC-SO3-01</span>
+    <span class="case-title">Service-frequency and peak-period reporting accuracy</span>
+    <span class="badge pass">CAPTURED</span>
+  </div>
+  <p class="type-tag">SO3 &middot; Automated capture / manual verification</p>
+  <p>Live snapshot pulled for 2026-09-05 to 2026-10-05. Compare the ranked-service and monthly figures below against a manual count of the same appointments before calling this a pass.</p>
+  <div class="evidence"><pre>{
+    &quot;generatedAt&quot;:  &quot;2026-10-05T15:26:07.917016728&quot;,
+    &quot;from&quot;:  &quot;2026-09-05&quot;,
+    &quot;to&quot;:  &quot;2026-10-05&quot;,
+    &quot;branchId&quot;:  &quot;023e3efd-6c74-4d11-9c70-3f391797406f&quot;,
+    &quot;branchName&quot;:  &quot;Knead Wellness Spa - Bulan, Sorsogon&quot;,
+    &quot;basis&quot;:  &quot;COMPLETED&quot;,
+    &quot;countedNote&quot;:  &quot;Counts visits marked completed. Cancelled visits, no-shows and visits the spa has not yet closed off are excluded.&quot;,
+    &quot;visitsCounted&quot;:  6,
+    &quot;revenueCounted&quot;:  3448.00,
+    &quot;services&quot;:  [
+                     {
+                         &quot;serviceId&quot;:  &quot;115f49c2-0c70-41a0-b0cf-e697d013e2f2&quot;,
+                         &quot;name&quot;:  &quot;Bone Setting&quot;,
+                         &quot;durationMinutes&quot;:  60,
+                         &quot;visits&quot;:  1,
+                         &quot;pct&quot;:  17,
+                         &quot;revenue&quot;:  0.00
+                     },
+                     {
+                         &quot;serviceId&quot;:  &quot;a3d3a2d8-81e5-4d63-a189-60ee4dcf2e1a&quot;,
+                         &quot;name&quot;:  &quot;Head Massage&quot;,
+                         &quot;durationMinutes&quot;:  60,
+                         &quot;visits&quot;:  1,
+                         &quot;pct&quot;:  17,
+                         &quot;revenue&quot;:  0.00
+                     },
+                     {
+                         &quot;serviceId&quot;:  &quot;f3fda655-cb91-43ae-8bb9-d3cf9a705e13&quot;,
+                         &quot;name&quot;:  &quot;Hilotin Signature Massage&quot;,
+                         &quot;durationMinutes&quot;:  60,
+                         &quot;visits&quot;:  1,
+                         &quot;pct&quot;:  17,
+                         &quot;revenue&quot;:  0.00
+                     },
+                     {
+                         &quot;serviceId&quot;:  &quot;0db00c27-5716-4fc0-a2e6-f7a0f6f792fe&quot;,
+                         &quot;name&quot;:  &quot;Hiris Massage&quot;,
+                         &quot;durationMinutes&quot;:  120,
+                         &quot;visits&quot;:  1,
+                         &quot;pct&quot;:  17,
+                         &quot;revenue&quot;:  1499.00
+                     },
+                     {
+                         &quot;serviceId&quot;:  &quot;72a71200-8989-4ab0-b0f3-ca64735f7bf9&quot;,
+                         &quot;name&quot;:  &quot;Signature Massage + Hotstone&quot;,
+                         &quot;durationMinutes&quot;:  90,
+                         &quot;visits&quot;:  1,
+                         &quot;pct&quot;:  17,
+                         &quot;revenue&quot;:  899.00
+                     },
+                     {
+                         &quot;serviceId&quot;:  &quot;3967913f-3643-447b-9e64-2d0e5a2030cd&quot;,
+                         &quot;name&quot;:  &quot;Therapeutic Massage + Ventosa&quot;,
+                         &quot;durationMinutes&quot;:  90,
+                         &quot;visits&quot;:  1,
+                         &quot;pct&quot;:  17,
+                         &quot;revenue&quot;:  1050.00
+                     }
+                 ],
+    &quot;months&quot;:  [
+                   {
+                       &quot;month&quot;:  &quot;2026-09&quot;,
+                       &quot;label&quot;:  &quot;Sep 2026&quot;,
+                       &quot;visits&quot;:  6,
+                       &quot;revenue&quot;:  3448.00,
+                       &quot;peak&quot;:  true
+                   },
+                   {
+                       &quot;month&quot;:  &quot;2026-10&quot;,
+                       &quot;label&quot;:  &quot;Oct 2026&quot;,
+                       &quot;visits&quot;:  0,
+                       &quot;revenue&quot;:  0,
+                       &quot;peak&quot;:  false
+                   }
+               ],
+    &quot;branches&quot;:  [
+
+                 ],
+    &quot;peakMonth&quot;:  {
+                      &quot;month&quot;:  &quot;2026-09&quot;,
+                      &quot;label&quot;:  &quot;Sep 2026&quot;,
+                      &quot;visits&quot;:  6,
+                      &quot;revenue&quot;:  3448.00,
+                      &quot;peak&quot;:  true
+                  },
+    &quot;peakNote&quot;:  null
+}</pre></div>
+</article><article class="case">
+  <div class="case-head">
+    <span class="case-id">TC-SO3-02</span>
+    <span class="case-title">Revenue reconciliation</span>
+    <span class="badge pass">CAPTURED</span>
+  </div>
+  <p class="type-tag">SO3 &middot; Automated capture / manual verification</p>
+  <p>Same snapshot. Sum priceAtBooking by hand for PAID_AT_COUNTER appointments in this range and compare to the revenue figure below.</p>
+  <div class="evidence"><pre>{
+    &quot;generatedAt&quot;:  &quot;2026-10-05T15:26:07.917016728&quot;,
+    &quot;from&quot;:  &quot;2026-09-05&quot;,
+    &quot;to&quot;:  &quot;2026-10-05&quot;,
+    &quot;branchId&quot;:  &quot;023e3efd-6c74-4d11-9c70-3f391797406f&quot;,
+    &quot;branchName&quot;:  &quot;Knead Wellness Spa - Bulan, Sorsogon&quot;,
+    &quot;basis&quot;:  &quot;COMPLETED&quot;,
+    &quot;countedNote&quot;:  &quot;Counts visits marked completed. Cancelled visits, no-shows and visits the spa has not yet closed off are excluded.&quot;,
+    &quot;visitsCounted&quot;:  6,
+    &quot;revenueCounted&quot;:  3448.00,
+    &quot;services&quot;:  [
+                     {
+                         &quot;serviceId&quot;:  &quot;115f49c2-0c70-41a0-b0cf-e697d013e2f2&quot;,
+                         &quot;name&quot;:  &quot;Bone Setting&quot;,
+                         &quot;durationMinutes&quot;:  60,
+                         &quot;visits&quot;:  1,
+                         &quot;pct&quot;:  17,
+                         &quot;revenue&quot;:  0.00
+                     },
+                     {
+                         &quot;serviceId&quot;:  &quot;a3d3a2d8-81e5-4d63-a189-60ee4dcf2e1a&quot;,
+                         &quot;name&quot;:  &quot;Head Massage&quot;,
+                         &quot;durationMinutes&quot;:  60,
+                         &quot;visits&quot;:  1,
+                         &quot;pct&quot;:  17,
+                         &quot;revenue&quot;:  0.00
+                     },
+                     {
+                         &quot;serviceId&quot;:  &quot;f3fda655-cb91-43ae-8bb9-d3cf9a705e13&quot;,
+                         &quot;name&quot;:  &quot;Hilotin Signature Massage&quot;,
+                         &quot;durationMinutes&quot;:  60,
+                         &quot;visits&quot;:  1,
+                         &quot;pct&quot;:  17,
+                         &quot;revenue&quot;:  0.00
+                     },
+                     {
+                         &quot;serviceId&quot;:  &quot;0db00c27-5716-4fc0-a2e6-f7a0f6f792fe&quot;,
+                         &quot;name&quot;:  &quot;Hiris Massage&quot;,
+                         &quot;durationMinutes&quot;:  120,
+                         &quot;visits&quot;:  1,
+                         &quot;pct&quot;:  17,
+                         &quot;revenue&quot;:  1499.00
+                     },
+                     {
+                         &quot;serviceId&quot;:  &quot;72a71200-8989-4ab0-b0f3-ca64735f7bf9&quot;,
+                         &quot;name&quot;:  &quot;Signature Massage + Hotstone&quot;,
+                         &quot;durationMinutes&quot;:  90,
+                         &quot;visits&quot;:  1,
+                         &quot;pct&quot;:  17,
+                         &quot;revenue&quot;:  899.00
+                     },
+                     {
+                         &quot;serviceId&quot;:  &quot;3967913f-3643-447b-9e64-2d0e5a2030cd&quot;,
+                         &quot;name&quot;:  &quot;Therapeutic Massage + Ventosa&quot;,
+                         &quot;durationMinutes&quot;:  90,
+                         &quot;visits&quot;:  1,
+                         &quot;pct&quot;:  17,
+                         &quot;revenue&quot;:  1050.00
+                     }
+                 ],
+    &quot;months&quot;:  [
+                   {
+                       &quot;month&quot;:  &quot;2026-09&quot;,
+                       &quot;label&quot;:  &quot;Sep 2026&quot;,
+                       &quot;visits&quot;:  6,
+                       &quot;revenue&quot;:  3448.00,
+                       &quot;peak&quot;:  true
+                   },
+                   {
+                       &quot;month&quot;:  &quot;2026-10&quot;,
+                       &quot;label&quot;:  &quot;Oct 2026&quot;,
+                       &quot;visits&quot;:  0,
+                       &quot;revenue&quot;:  0,
+                       &quot;peak&quot;:  false
+                   }
+               ],
+    &quot;branches&quot;:  [
+
+                 ],
+    &quot;peakMonth&quot;:  {
+                      &quot;month&quot;:  &quot;2026-09&quot;,
+                      &quot;label&quot;:  &quot;Sep 2026&quot;,
+                      &quot;visits&quot;:  6,
+                      &quot;revenue&quot;:  3448.00,
+                      &quot;peak&quot;:  true
+                  },
+    &quot;peakNote&quot;:  null
+}</pre></div>
+</article><article class="case">
+  <div class="case-head">
+    <span class="case-id">TC-SO4-02</span>
+    <span class="case-title">AI out-of-catalogue rate</span>
+    <span class="badge pass">CAPTURED</span>
+  </div>
+  <p class="type-tag">SO4 &middot; Operational measurement</p>
+  <p>Live overview snapshot - read the assistant call count and rejected count below.</p>
+  <div class="evidence"><pre>{
+    &quot;generatedAt&quot;:  &quot;2026-10-05T15:26:07.968641975&quot;,
+    &quot;bookingsToday&quot;:  0,
+    &quot;bookingsThisWeek&quot;:  4,
+    &quot;assessmentsThisWeek&quot;:  7,
+    &quot;assessmentsTotal&quot;:  38,
+    &quot;nodesOnline&quot;:  2,
+    &quot;nodesTotal&quot;:  2,
+    &quot;nodes&quot;:  [
+                  {
+                      &quot;branchId&quot;:  &quot;4fa09ec2-79dd-4714-a626-a41b25743853&quot;,
+                      &quot;branchName&quot;:  &quot;Knead Wellness Spa - Daraga, Albay&quot;,
+                      &quot;nodeId&quot;:  &quot;daraga-01&quot;,
+                      &quot;thisNode&quot;:  false,
+                      &quot;bookingsToday&quot;:  0,
+                      &quot;therapists&quot;:  5,
+                      &quot;therapistsAvailable&quot;:  5,
+                      &quot;rooms&quot;:  10,
+                      &quot;assessmentsThisWeek&quot;:  0,
+                      &quot;lastWrite&quot;:  &quot;2026-09-29T00:15:29.42511&quot;
+                  },
+                  {
+                      &quot;branchId&quot;:  &quot;023e3efd-6c74-4d11-9c70-3f391797406f&quot;,
+                      &quot;branchName&quot;:  &quot;Knead Wellness Spa - Bulan, Sorsogon&quot;,
+                      &quot;nodeId&quot;:  &quot;bulan-01&quot;,
+                      &quot;thisNode&quot;:  true,
+                      &quot;bookingsToday&quot;:  0,
+                      &quot;therapists&quot;:  5,
+                      &quot;therapistsAvailable&quot;:  4,
+                      &quot;rooms&quot;:  8,
+                      &quot;assessmentsThisWeek&quot;:  7,
+                      &quot;lastWrite&quot;:  &quot;2026-10-02T03:07:39.866791&quot;
+                  }
+              ],
+    &quot;topComplaints&quot;:  [
+                          {
+                              &quot;label&quot;:  &quot;Not stated&quot;,
+                              &quot;count&quot;:  19,
+                              &quot;pct&quot;:  100
+                          },
+                          {
+                              &quot;label&quot;:  &quot;Other&quot;,
+                              &quot;count&quot;:  7,
+                              &quot;pct&quot;:  37
+                          },
+                          {
+                              &quot;label&quot;:  &quot;Shoulder Pain&quot;,
+                              &quot;count&quot;:  5,
+                              &quot;pct&quot;:  26
+                          },
+                          {
+                              &quot;label&quot;:  &quot;Lower Back Pain&quot;,
+                              &quot;count&quot;:  2,
+                              &quot;pct&quot;:  11
+                          },
+                          {
+                              &quot;label&quot;:  &quot;Ankle Pain&quot;,
+                              &quot;count&quot;:  2,
+                              &quot;pct&quot;:  11
+                          },
+                          {
+                              &quot;label&quot;:  &quot;Neck Pain&quot;,
+                              &quot;count&quot;:  1,
+                              &quot;pct&quot;:  5
+                          }
+                      ],
+    &quot;assistant&quot;:  {
+                      &quot;calls&quot;:  44,
+                      &quot;ok&quot;:  39,
+                      &quot;failed&quot;:  5,
+                      &quot;rejectedSuggestions&quot;:  0,
+                      &quot;returnedSuggestions&quot;:  121,
+                      &quot;rejectionRatePct&quot;:  0.0,
+                      &quot;note&quot;:  &quot;0 of 121 suggestions were thrown away by the server after the model had already proposed them. None reached a client.&quot;
+                  },
+    &quot;readiness&quot;:  {
+                      &quot;protocolRules&quot;:  131,
+                      &quot;unsignedRules&quot;:  7,
+                      &quot;contraindications&quot;:  0,
+                      &quot;servicesOnSale&quot;:  27,
+                      &quot;servicesWithoutPrice&quot;:  0
+                  }
+}</pre></div>
+</article><article class="case">
+  <div class="case-head">
+    <span class="case-id">TC-SO4-03</span>
+    <span class="case-title">User acceptance - TAM and CUQ</span>
+    <span class="badge pend">PENDING</span>
+  </div>
+  <p class="type-tag">SO4 &middot; Survey instrument (UAT)</p>
+  <p>Raw responses are not in this run. Administer TAM (Davis/Venkatesh) and the 16-item CUQ after each UAT session, score CUQ on its published 0-100 formula, and paste the summary table here.</p>
+  <div class="evidence"><p class='muted'>No automated evidence captured this run.</p></div>
+</article><article class="case">
+  <div class="case-head">
+    <span class="case-id">TC-SO2-01</span>
+    <span class="case-title">Contraindication / catalogue safety filter</span>
+    <span class="badge pend">PENDING</span>
+  </div>
+  <p class="type-tag">SO2 &middot; Automated - JUnit 5</p>
+  <p>Suite not run this pass - re-run with -BackendPath set.</p>
+  <div class="evidence"><p class='muted'>No automated evidence captured this run.</p></div>
+</article><article class="case">
+  <div class="case-head">
+    <span class="case-id">TC-SO4-01</span>
+    <span class="case-title">System integrity - scheduling, branch isolation, access control</span>
+    <span class="badge pend">PENDING</span>
+  </div>
+  <p class="type-tag">SO4 &middot; Automated - JUnit 5</p>
+  <p>Suite not run this pass - re-run with -BackendPath set.</p>
+  <div class="evidence"><p class='muted'>No automated evidence captured this run.</p></div>
+</article>
+</div>
+</body>
+</html>
