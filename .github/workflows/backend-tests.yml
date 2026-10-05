@@ -1,4 +1,4 @@
-# 0.18 - the 23 integration tests, on every push.
+# 0.18 - the integration suite (37 tests), on every push.
 #
 # Why this exists: booting is currently the only real check this project has.
 # Spring Data derives queries from METHOD NAMES, so a renamed field compiles
@@ -53,6 +53,19 @@ jobs:
       DB_HOST: localhost
       DB_PORT: 5432
       DB_NAME: hilotspa_db
+      # src/test/resources/application-dev.properties sends the suite to its own
+      # database so a developer's working data cannot change a test result. On
+      # the runner the whole Postgres instance is already throwaway and empty,
+      # so the isolation is free and the name just has to match what the service
+      # container actually created. Without this the suite dies on every test
+      # with FATAL: database "hilotspa_test" does not exist.
+      TEST_DB_NAME: hilotspa_db
+      # The runner is UTC. The spa runs in Asia/Manila, slot times come back in
+      # the spa's zone, and CancelBookingTest compares them against the JVM's
+      # idea of "now" - eight hours adrift here, which would have it choosing a
+      # slot already in the past. The suite must run on the clock the business
+      # keeps, not the clock the machine happens to have.
+      TZ: Asia/Manila
       DB_USERNAME: postgres
       DB_PASSWORD: ci_only_password
       # Throwaway, and only ever used against a throwaway database. The real one
